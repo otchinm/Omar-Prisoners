@@ -219,7 +219,11 @@ namespace PrisonersOfOmar.Gameplay
             if (!CanStart(out var why)) { LastError = why; return false; }
             Players.RemoveAll(p => p.IsBot);
             if (FindOmar() == null)
-                Players.Add(new PlayerInfo { Id = PlayerInfo.BotId, Name = "OMAR", Role = PlayerRole.Omar, Skin = CharacterSkin.Omar, Ready = true, IsBot = true });
+            {
+                int botId = 253;
+                while (botId > 1 && Find(botId) != null) botId--;
+                Players.Add(new PlayerInfo { Id = botId, Name = "OMAR", Role = PlayerRole.Omar, Skin = CharacterSkin.Omar, Ready = true, IsBot = true });
+            }
             Settings.Seed = Environment.TickCount ^ (int)(DateTime.UtcNow.Ticks & 0x7FFFFFFF);
             var w = Begin(Msg.StartMatch);
             Settings.Write(w);
@@ -246,7 +250,8 @@ namespace PrisonersOfOmar.Gameplay
 
         public float GetRtt(int playerId)
         {
-            if (IsHost && _server != null && playerId != LocalId && playerId != PlayerInfo.BotId) return _server.GetRtt(playerId);
+            var p = Find(playerId);
+            if (IsHost && _server != null && playerId != LocalId && (p == null || !p.IsBot)) return _server.GetRtt(playerId);
             if (!IsHost && _client != null) return _client.Rtt;
             return 0f;
         }
@@ -292,7 +297,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (!IsHost) return;
             if (playerId == LocalId) { DispatchLocal(0); return; }
-            if (playerId == PlayerInfo.BotId) return;
+            var target = Find(playerId);
+            if (target != null && target.IsBot) return;
             if (_server != null && _server.IsRunning) _server.Send(playerId, _w, ch);
         }
 

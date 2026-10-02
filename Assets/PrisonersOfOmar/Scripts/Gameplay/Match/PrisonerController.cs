@@ -110,6 +110,13 @@ namespace PrisonersOfOmar.Gameplay
             {
                 if (_arms != null) _arms.SetVisible(false);
                 SetHandLights(false, false);
+                // let the capture / death static fade out, clear the rest
+                _captureFx = Mathf.MoveTowards(_captureFx, 0f, dt * 0.6f);
+                VhsEffect.StaticOverride = Mathf.Clamp01(_captureFx * 1.4f);
+                if (_captureFx <= 0f) AudioManager.SetDistortion(0f);
+                VhsEffect.Damage = 0f;
+                VhsEffect.Hiding = 0f;
+                AudioManager.SetMuffle(0f);
                 return;
             }
 

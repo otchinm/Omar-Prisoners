@@ -225,7 +225,7 @@ namespace PrisonersOfOmar.Gameplay
         void OnHideState(int sender, NetReader r)
         {
             int spot = r.ReadByte();
-            int occ = r.ReadSByte();
+            int occ = r.ReadByte(); if (occ == 255) occ = -1;
             bool searched = r.ReadBool();
             if (spot < 0 || spot >= Hiding.Length) return;
             Hiding[spot].Apply(occ, searched);
@@ -235,7 +235,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             int cage = r.ReadByte();
             bool open = r.ReadBool();
-            int occ = r.ReadSByte();
+            int occ = r.ReadByte(); if (occ == 255) occ = -1;
             if (cage < 0 || cage >= Cages.Length) return;
             Cages[cage].Apply(open, occ);
         }
@@ -244,7 +244,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             int id = r.ReadShort();
             var state = (TrapState)r.ReadByte();
-            int victim = r.ReadSByte();
+            int victim = r.ReadByte(); if (victim == 255) victim = -1;
             bool fired = r.ReadBool();
             if (id < 0 || id >= Traps.Count) return;
             var t = Traps[id];

@@ -5,7 +5,7 @@ namespace PrisonersOfOmar.Gameplay
     /// <summary>A participant (human or bot) as known by the lobby / match.</summary>
     public sealed class PlayerInfo
     {
-        /// <summary>Host = 0, clients = connection id (1..254), AI Omar = <see cref="BotId"/>.</summary>
+        /// <summary>Host = 0, clients = connection id (1..254), AI Omar = an unused id picked when the match starts.</summary>
         public int Id;
         public string Name = "";
         public PlayerRole Role = PlayerRole.Prisoner;
@@ -14,7 +14,6 @@ namespace PrisonersOfOmar.Gameplay
         public bool IsBot;
         public bool Connected = true;
 
-        public const int BotId = 250;
 
         public bool IsPrisoner => Role == PlayerRole.Prisoner;
         public bool IsOmar => Role == PlayerRole.Omar;

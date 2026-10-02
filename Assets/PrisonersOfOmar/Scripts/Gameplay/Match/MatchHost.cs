@@ -183,7 +183,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             var w = S.Begin(Msg.HideState);
             w.WriteByte((byte)spot);
-            w.WriteSByte((sbyte)occupant);
+            w.WriteByte((byte)(occupant < 0 ? 255 : occupant));
             w.WriteBool(searched);
             S.SendToAll(NetChannel.Reliable);
         }
@@ -193,7 +193,7 @@ namespace PrisonersOfOmar.Gameplay
             var w = S.Begin(Msg.CageState);
             w.WriteByte((byte)cage);
             w.WriteBool(open);
-            w.WriteSByte((sbyte)occupant);
+            w.WriteByte((byte)(occupant < 0 ? 255 : occupant));
             S.SendToAll(NetChannel.Reliable);
         }
 
@@ -202,7 +202,7 @@ namespace PrisonersOfOmar.Gameplay
             var w = S.Begin(Msg.TrapState);
             w.WriteShort((short)t.Index);
             w.WriteByte((byte)state);
-            w.WriteSByte((sbyte)victim);
+            w.WriteByte((byte)(victim < 0 ? 255 : victim));
             w.WriteBool(fired);
             S.SendToAll(NetChannel.Reliable);
         }
