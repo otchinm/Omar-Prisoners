@@ -1,0 +1,18 @@
+{
+ "cellW": 18,
+ "cellH": 34,
+ "cols": 28,
+ "rows": 4,
+ "first": 32,
+ "glyphs": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~▶◀■●▲▼",
+ "advance": 16,
+ "lineHeight": 34,
+ "atlasW": 512,
+ "atlasH": 256,
+ "padding": 1,
+ "glyphW": 16,
+ "glyphH": 32,
+ "baseline": 27,
+ "source": "VT323 (SIL OFL 1.1) 40px, thresholded",
+ "note": "glyph i is the cellW x cellH rect at (i % cols * cellW, i / cols * cellH) from the TOP-LEFT of the atlas; its ink starts at (padding, padding) inside the cell. Draw the cell at (penX - padding, penY - padding) and advance penX by 'advance'; new line = lineHeight. Unknown chars -> '?'."
+}
