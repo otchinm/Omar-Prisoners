@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Scenario tests for the UDP transport (Assets/PrisonersOfOmar/Scripts/Net) on plain .NET, over 127.0.0.1.
+    The transport sources are compiled in directly (no copies), minus the UnityEngine-only extensions.
+      dotnet run (in this folder)           all tests
+      dotnet run [double-dash] reliable lan only tests whose name contains one of the words
+      dotnet run [double-dash] -v           also print transport warnings
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>PrisonersOfOmar.NetTests</AssemblyName>
+    <RootNamespace>PrisonersOfOmar.NetTests</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/PrisonersOfOmar/Scripts/Net/*.cs" Exclude="../../Assets/PrisonersOfOmar/Scripts/Net/NetUnityExtensions.cs" LinkBase="Net" />
+    <Compile Include="../../Assets/PrisonersOfOmar/Scripts/Core/GameInfo.cs" Link="Core/GameInfo.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>

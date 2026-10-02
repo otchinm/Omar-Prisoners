@@ -6,9 +6,13 @@ namespace PrisonersOfOmar.Net
 {
     public enum NetChannel : byte
     {
-        /// <summary>Fire and forget, may be lost or arrive out of order (state snapshots).</summary>
+        /// <summary>
+        /// Fire and forget, may be lost, duplicated or arrive out of order (state snapshots). Messages larger than
+        /// NetProtocol.FragmentSize (1100 B) are fragmented (up to 64 KB) and delivered only if every part arrives
+        /// within 1 s, so keep them small.
+        /// </summary>
         Unreliable = 0,
-        /// <summary>Guaranteed, in-order delivery (events, RPCs). Messages up to 64 KB (fragmented).</summary>
+        /// <summary>Guaranteed, in-order, exactly-once delivery (events, RPCs). Messages up to 64 KB (fragmented).</summary>
         Reliable = 1,
     }
 
@@ -43,6 +47,7 @@ namespace PrisonersOfOmar.Net
         public IPEndPoint EndPoint;
     }
 
+    /// <summary>Traffic counters: UDP payload bytes / datagrams, and reliable message resends.</summary>
     public struct NetStats
     {
         public long BytesSent, BytesReceived, PacketsSent, PacketsReceived, Resends;

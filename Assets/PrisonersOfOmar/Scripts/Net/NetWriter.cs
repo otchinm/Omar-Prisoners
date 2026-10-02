@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace PrisonersOfOmar.Net
@@ -42,8 +43,9 @@ namespace PrisonersOfOmar.Net
         public void WriteULong(ulong v) { WriteUInt((uint)v); WriteUInt((uint)(v >> 32)); }
         public void WriteLong(long v) => WriteULong((ulong)v);
 
-        public unsafe void WriteFloat(float v) { uint u = *(uint*)&v; WriteUInt(u); }
-        public unsafe void WriteDouble(double v) { ulong u = *(ulong*)&v; WriteULong(u); }
+        // Bit casts go through an explicit-layout union so no 'unsafe' code (and no "Allow unsafe code" setting) is needed.
+        public void WriteFloat(float v) { var b = new NetBits { F = v }; WriteUInt(b.U); }
+        public void WriteDouble(double v) { var b = new NetBits { D = v }; WriteULong(b.UL); }
 
         /// <summary>UTF8 string with ushort byte-length prefix (null -> empty).</summary>
         public void WriteString(string s)
@@ -59,15 +61,17 @@ namespace PrisonersOfOmar.Net
 
         public void WriteBytes(byte[] data, int offset, int count)
         {
+            if (count <= 0) return;
             Ensure(count);
             System.Buffer.BlockCopy(data, offset, _buf, _len, count);
             _len += count;
         }
 
-        /// <summary>ushort length prefix + bytes.</summary>
+        /// <summary>ushort length prefix + bytes (null -> empty). Throws if longer than 65535 bytes.</summary>
         public void WriteByteArray(byte[] data)
         {
             if (data == null) { WriteUShort(0); return; }
+            if (data.Length > ushort.MaxValue) throw new ArgumentException("byte array too long (max 65535)");
             WriteUShort((ushort)data.Length);
             WriteBytes(data, 0, data.Length);
         }
@@ -78,5 +82,15 @@ namespace PrisonersOfOmar.Net
             System.Buffer.BlockCopy(_buf, 0, r, 0, _len);
             return r;
         }
+    }
+
+    /// <summary>Float/int reinterpretation without unsafe code (works on Mono and IL2CPP).</summary>
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct NetBits
+    {
+        [FieldOffset(0)] public float F;
+        [FieldOffset(0)] public uint U;
+        [FieldOffset(0)] public double D;
+        [FieldOffset(0)] public ulong UL;
     }
 }

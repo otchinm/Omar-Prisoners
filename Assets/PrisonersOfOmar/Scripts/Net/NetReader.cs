@@ -16,9 +16,12 @@ namespace PrisonersOfOmar.Net
         public void SetBuffer(byte[] data, int offset, int count) { _buf = data; _pos = offset; _end = offset + count; }
 
         public int Remaining => _end - _pos;
+        /// <summary>Absolute index of the next byte in the underlying buffer.</summary>
         public int Position => _pos;
+        /// <summary>The underlying buffer (transport internal: used to slice messages without copying).</summary>
+        internal byte[] Data => _buf;
 
-        void Need(int n) { if (_pos + n > _end) throw new NetReadException("read past end"); }
+        void Need(int n) { if (n < 0 || _pos + n > _end) throw new NetReadException("read past end"); }
 
         public byte ReadByte() { Need(1); return _buf[_pos++]; }
         public sbyte ReadSByte() => (sbyte)ReadByte();
@@ -34,8 +37,8 @@ namespace PrisonersOfOmar.Net
         public int ReadInt() => (int)ReadUInt();
         public ulong ReadULong() { ulong lo = ReadUInt(); ulong hi = ReadUInt(); return lo | (hi << 32); }
         public long ReadLong() => (long)ReadULong();
-        public unsafe float ReadFloat() { uint u = ReadUInt(); return *(float*)&u; }
-        public unsafe double ReadDouble() { ulong u = ReadULong(); return *(double*)&u; }
+        public float ReadFloat() { var b = new NetBits { U = ReadUInt() }; return b.F; }
+        public double ReadDouble() { var b = new NetBits { UL = ReadULong() }; return b.D; }
 
         public string ReadString()
         {
@@ -55,6 +58,14 @@ namespace PrisonersOfOmar.Net
             Buffer.BlockCopy(_buf, _pos, r, 0, n);
             _pos += n;
             return r;
+        }
+
+        /// <summary>Copy <paramref name="count"/> raw bytes (no length prefix) into <paramref name="dest"/>.</summary>
+        public void ReadBytes(byte[] dest, int offset, int count)
+        {
+            Need(count);
+            Buffer.BlockCopy(_buf, _pos, dest, offset, count);
+            _pos += count;
         }
 
         public void Skip(int n) { Need(n); _pos += n; }
