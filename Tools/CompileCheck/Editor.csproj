@@ -7,7 +7,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>PrisonersOfOmar.EditorCompileCheck</AssemblyName>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <NoWarn>CS0649;CS0169;CS0414;CS1591;CS0618</NoWarn>
     <DefineConstants>UNITY_EDITOR;UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;UNITY_STANDALONE_WIN;ENABLE_LEGACY_INPUT_MANAGER</DefineConstants>
     <UnityRefDir Condition="'$(UnityRefDir)' == ''">/opt/unity-ref</UnityRefDir>

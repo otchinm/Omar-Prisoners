@@ -41,3 +41,6 @@ Tools/**/__pycache__/
 Tools/**/.cache/
 *.pyc
 .DS_Store
+
+# Claude Code local state / agent worktrees
+/.claude/
