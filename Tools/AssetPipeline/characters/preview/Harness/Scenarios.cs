@@ -99,12 +99,7 @@ namespace PreviewHarness
                         break;
                 }
             }
-            if (skin == CharacterSkin.Omar && an.Hold == HoldPose.None && !mode.Contains("hold:"))
-            {
-                an.Hold = HoldPose.Cleaver;
-                var cl = ItemMeshFactory.BuildCleaver();
-                cl.transform.SetParent(rig.RightHandSocket, false);
-            }
+            // Omar gets his cleaver from HumanoidFactory.Build
             an.Velocity = vel;
             const float dt = 1f / 60f;
             var steps = new List<string>();

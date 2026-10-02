@@ -908,8 +908,8 @@ namespace PrisonersOfOmar.Characters
             if (t < tUp)
             {
                 float k = Smooth01(t / tUp);
-                flex = Mathf.Lerp(-12f, -168f, k); abd = Mathf.Lerp(12f, 48f, k); twist = Mathf.Lerp(0f, -10f, k);
-                elbow = Mathf.Lerp(22f, 125f, k); hand = Mathf.Lerp(38f, -30f, k);
+                flex = Mathf.Lerp(-12f, -172f, k); abd = Mathf.Lerp(12f, 38f, k); twist = Mathf.Lerp(0f, -10f, k);
+                elbow = Mathf.Lerp(22f, 72f, k); hand = Mathf.Lerp(38f, -45f, k);
                 chestY = Mathf.Lerp(0f, -22f, k); chestX = Mathf.Lerp(0f, -10f, k); spineX = Mathf.Lerp(0f, -5f, k);
                 hipsDrop = 0f; hipsFwd = Mathf.Lerp(0f, -0.04f, k);
                 lFlex = Mathf.Lerp(0f, -50f, k); lAbd = Mathf.Lerp(5f, 20f, k); lElbow = Mathf.Lerp(10f, 50f, k);
@@ -918,8 +918,8 @@ namespace PrisonersOfOmar.Characters
             {
                 float k = (t - tUp) / (tHit - tUp);
                 k = k * k; // accelerate into the hit
-                flex = Mathf.Lerp(-168f, -55f, k); abd = Mathf.Lerp(48f, 10f, k); twist = Mathf.Lerp(-10f, 0f, k);
-                elbow = Mathf.Lerp(125f, 8f, k); hand = Mathf.Lerp(-30f, 25f, k);
+                flex = Mathf.Lerp(-172f, -55f, k); abd = Mathf.Lerp(38f, 10f, k); twist = Mathf.Lerp(-10f, 0f, k);
+                elbow = Mathf.Lerp(72f, 8f, k); hand = Mathf.Lerp(-45f, 25f, k);
                 chestY = Mathf.Lerp(-22f, 10f, k); chestX = Mathf.Lerp(-10f, 24f, k); spineX = Mathf.Lerp(-5f, 14f, k);
                 hipsDrop = Mathf.Lerp(0f, 0.05f, k); hipsFwd = Mathf.Lerp(-0.04f, 0.07f, k);
                 lFlex = Mathf.Lerp(-50f, -15f, k); lAbd = Mathf.Lerp(20f, 26f, k); lElbow = Mathf.Lerp(50f, 30f, k);

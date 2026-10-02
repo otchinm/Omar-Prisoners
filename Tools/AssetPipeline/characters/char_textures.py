@@ -282,7 +282,7 @@ def torso_ao(h, w, th, t, female=False):
     lum = np.ones((h, w), np.float32)
     lum *= 1 - 0.10 * smoothstep(60, 95, ath) * (1 - smoothstep(95, 130, ath))  # sides
     lum *= 1 - 0.25 * np.exp(-((t - 0.80) / 0.05) ** 2) * np.exp(-((ath - 90) / 18) ** 2)  # armpits
-    lum *= 1 - 0.25 * np.exp(-(t / 0.06) ** 2)  # crotch
+    lum *= 1 - 0.12 * np.exp(-(t / 0.05) ** 2)  # crotch
     if female:
         lum *= 1 - 0.18 * np.exp(-((t - 0.585) / 0.03) ** 2) * (1 - smoothstep(25, 55, ath))  # under bust
     return lum

@@ -137,6 +137,7 @@ namespace PrisonersOfOmar.Characters
                 float y = Mathf.Lerp(b.CrotchY, b.NeckY, T[k]);
                 Ring r = b.Torso[k];
                 if (k == 7) r.W *= 0.95f;
+                if (k == 0) { r.W *= 0.86f; r.F *= 0.9f; }
                 for (int i = 0; i <= N; i++)
                 {
                     float th = Theta(i, N);
@@ -149,7 +150,9 @@ namespace PrisonersOfOmar.Characters
                     if (k == 6 && b.Bust > 0) z += b.Bust * 0.25f * Bump(ath, 30f, 22f);
                     if ((k == 2 || k == 3) && b.Belly > 0) z += b.Belly * Bump(ath, 0f, 45f);
                     if (k == 1) z -= 0.012f * b.Scale * Bump(ath, 150f, 25f);
-                    Vector3 p = new Vector3(q.x, y, z);
+                    float vy = y;
+                    if (k == 7) vy -= 0.022f * b.Scale * Mathf.Pow(Mathf.Abs(Mathf.Sin(th * Mathf.Deg2Rad)), 4f); // sloping shoulders
+                    Vector3 p = new Vector3(q.x, vy, z);
                     mb.Add(p, reg.UV((float)i / N, T[k]), TorsoWeight(k, th));
                 }
             }
@@ -162,7 +165,7 @@ namespace PrisonersOfOmar.Characters
                 }
             // crotch cap (fan), seen from below
             Ring r0 = b.Torso[0];
-            int c = mb.Add(new Vector3(0, b.CrotchY - 0.015f * b.Scale, (r0.F - r0.B) * 0.3f), reg.UV(0.5f, 0f), SkinWeight.One(BoneId.Hips));
+            int c = mb.Add(new Vector3(0, b.CrotchY + 0.004f * b.Scale, (r0.F * 0.9f - r0.B) * 0.3f), reg.UV(0.5f, 0f), SkinWeight.One(BoneId.Hips));
             for (int i = 0; i < N; i++) mb.Tri(SkinMeshBuilder.Opaque, c, first + i, first + i + 1);
             mb.EndSmoothPart();
         }
@@ -277,7 +280,7 @@ namespace PrisonersOfOmar.Characters
             {
                 case HairStyle.Spiky:
                     hl = Curve(ath, 0, 0.80f, 30, 0.78f, 55, 0.71f, 68, 0.66f, 86, 0.64f, 102, 0.64f, 110, 0.34f, 140, 0.16f, 180, 0.12f);
-                    d = 0.006f;
+                    d = 0.012f;
                     break;
                 case HairStyle.Short:
                     hl = Curve(ath, 0, 0.79f, 30, 0.77f, 55, 0.70f, 68, 0.64f, 86, 0.62f, 102, 0.62f, 110, 0.30f, 140, 0.12f, 180, 0.08f);
@@ -574,9 +577,9 @@ namespace PrisonersOfOmar.Characters
                 Vector3 dir = Vector3.Slerp(Vector3.up, outward, 0.35f);
                 dir = Quaternion.AngleAxis(-tilt * 0.5f, Vector3.Cross(Vector3.up, outward).sqrMagnitude > 1e-4f ? Vector3.Cross(Vector3.up, outward).normalized : Vector3.right) * dir;
                 dir = (dir + Vector3.back * 0.35f).normalized;
-                Vector3 tip = basePos + dir * 0.05f * size;
+                Vector3 tip = basePos + dir * 0.068f * size;
                 Frame(dir, out Vector3 rt, out Vector3 fw);
-                float bw = 0.022f * size;
+                float bw = 0.026f * size;
                 Vector3 c0 = basePos - dir * 0.01f;
                 Vector3 p0 = c0 + rt * bw + fw * bw, p1 = c0 - rt * bw + fw * bw, p2 = c0 - rt * bw - fw * bw, p3 = c0 + rt * bw - fw * bw;
                 Vector3[] ps = { p0, p1, p2, p3 };
@@ -651,28 +654,29 @@ namespace PrisonersOfOmar.Characters
                 Vector3 t1 = new Vector3(sx * (head.W * hh * 0.9f + 0.016f * s), sk.ChinY + 0.1f * hh, axisZ - 0.005f * s);
                 float frontZ = torsoSh.F + 0.03f * s;
                 Vector3 t2 = new Vector3(sx * (wavy ? 0.115f : 0.09f) * s, b.NeckY - 0.02f * s, wavy ? frontZ * 0.6f : frontZ * 0.4f);
-                Vector3 t3 = new Vector3(sx * (wavy ? 0.12f : 0.1f) * s, yEnd + (wavy ? 0.06f : 0.1f) * s, (torsoChest.F + (wavy ? 0.02f : 0.02f) * s) * 0.85f);
+                Vector3 t3 = new Vector3(sx * (wavy ? 0.12f : 0.1f) * s, yEnd + (wavy ? 0.06f : 0.1f) * s, torsoChest.F * 0.75f + b.Bust * 0.6f + 0.03f * s);
                 Vector3[] spine = { t0, t1, t2, t3 };
-                float[] widths = { 0.04f * s, 0.05f * s, 0.06f * s, wavy ? 0.06f * s : 0.05f * s };
+                float[] widths = wavy ? new[] { 0.05f * s, 0.075f * s, 0.095f * s, 0.10f * s } : new[] { 0.045f * s, 0.06f * s, 0.075f * s, 0.07f * s };
                 SkinWeight[] ws = { SkinWeight.One(BoneId.Head), SkinWeight.Two(BoneId.Head, BoneId.Neck, 0.3f), SkinWeight.Two(BoneId.Chest, BoneId.Neck, 0.35f), SkinWeight.One(BoneId.Chest) };
                 float[] vs = { 0.95f, 0.65f, 0.4f, 0f };
                 int f0 = mb.V.Count;
                 mb.BeginPart();
                 for (int r = 0; r < spine.Length; r++)
                 {
-                    Vector3 dirOut = new Vector3(sx, 0, 0);
                     Vector3 along = r < spine.Length - 1 ? spine[r + 1] - spine[r] : spine[r] - spine[r - 1];
-                    Vector3 across = Vector3.Cross(along.normalized, dirOut).normalized; // roughly front/back
-                    if (across.z < 0) across = -across;
+                    // strip faces forward (hair lying over the shoulder / framing the face)
+                    Vector3 across = Vector3.Cross(along.normalized, Vector3.forward);
+                    if (across.sqrMagnitude < 1e-6f) across = Vector3.right;
+                    across.Normalize();
+                    if (across.x < 0) across = -across;
                     float u0 = side == 0 ? 0.0f : 0.6f, u1 = u0 + 0.4f;
-                    mb.Add(spine[r] - across * widths[r] * 0.5f + dirOut * 0.004f, reg.UV(u0, vs[r]), ws[r]);
-                    mb.Add(spine[r] + across * widths[r] * 0.5f + dirOut * 0.004f, reg.UV(u1, vs[r]), ws[r]);
+                    mb.Add(spine[r] - across * widths[r] * 0.5f, reg.UV(u0, vs[r]), ws[r]);
+                    mb.Add(spine[r] + across * widths[r] * 0.5f, reg.UV(u1, vs[r]), ws[r]);
                 }
                 for (int r = 0; r < spine.Length - 1; r++)
                 {
                     int a = f0 + r * 2;
-                    if (side == 1) mb.Quad(SkinMeshBuilder.Cutout, a + 2, a, a + 1, a + 3);
-                    else mb.Quad(SkinMeshBuilder.Cutout, a + 3, a + 1, a, a + 2);
+                    mb.Quad(SkinMeshBuilder.Cutout, a + 3, a + 1, a, a + 2);
                 }
                 mb.EndSmoothPart();
             }
@@ -882,9 +886,9 @@ namespace PrisonersOfOmar.Characters
                         case 3: w = SkinWeight.One(BoneId.Hips); break;
                         case 4: w = SkinWeight.One(BoneId.Hips).Plus(leg, 0.2f * sideK); break;
                         default:
-                            float lw = Mathf.Lerp(0.35f, 0.7f, sideK) * (r == 5 ? 0.75f : 1f);
+                            float lw = Mathf.Lerp(0.45f, 0.85f, sideK) * (r == 5 ? 0.8f : 1f);
                             w = SkinWeight.One(BoneId.Hips).Plus(leg, lw);
-                            if (sideK < 0.2f) w = SkinWeight.One(BoneId.Hips).Plus(BoneId.LUpperLeg, 0.3f).Plus(BoneId.RUpperLeg, 0.3f);
+                            if (sideK < 0.2f) w = SkinWeight.Two(BoneId.LUpperLeg, BoneId.RUpperLeg, 0.5f).Plus(BoneId.Hips, 0.24f); // symmetric
                             break;
                     }
                     mb.Add(new Vector3(x, ys[r], z), reg.UV(f, v), w);

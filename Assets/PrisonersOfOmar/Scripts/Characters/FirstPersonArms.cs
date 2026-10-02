@@ -75,6 +75,8 @@ namespace PrisonersOfOmar.Characters
             BuildForearm(_lArm, mat, armR, -1f, omar);
             SetLeftVisible(false);
 
+            // empty-handed prisoners start with the hand lowered out of view
+            _raise = _raiseTarget = omar ? 1f : 0f;
             if (omar)
             {
                 _cleaver = ItemMeshFactory.BuildCleaver();
@@ -196,11 +198,20 @@ namespace PrisonersOfOmar.Characters
             if (visible) SetLeftVisible(_leftW > 0.02f);
         }
 
+        Renderer[] _leftRenderers;
+
         void SetLeftVisible(bool v)
         {
             if (_lHand == null) return;
-            foreach (var r in _lHand.GetComponentsInChildren<Renderer>(true)) r.enabled = v && _visible;
-            foreach (var r in _lArm.GetComponentsInChildren<Renderer>(true)) r.enabled = v && _visible;
+            if (_leftRenderers == null)
+            {
+                var a = _lHand.GetComponentsInChildren<Renderer>(true);
+                var b = _lArm.GetComponentsInChildren<Renderer>(true);
+                _leftRenderers = new Renderer[a.Length + b.Length];
+                a.CopyTo(_leftRenderers, 0);
+                b.CopyTo(_leftRenderers, a.Length);
+            }
+            for (int i = 0; i < _leftRenderers.Length; i++) if (_leftRenderers[i] != null) _leftRenderers[i].enabled = v && _visible;
         }
 
         /// <summary>Where the item's grip sits relative to the fist (lighter on top of the fist, others through it).</summary>

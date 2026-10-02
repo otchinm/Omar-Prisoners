@@ -148,7 +148,8 @@ namespace PrisonersOfOmar.Characters
                 new Ring(0.150f, 0.095f, 0.085f), new Ring(0.168f, 0.112f, 0.090f), new Ring(0.188f, 0.122f, 0.100f),
                 new Ring(0.200f, 0.112f, 0.104f), new Ring(0.228f, 0.078f, 0.080f), new Ring(0.064f, 0.055f, 0.060f, -0.01f));
             MaleLimbs(s, 1.08f);
-            ShoulderX = 0.185f * s; ElbowX = 0.205f * s; WristX = 0.215f * s;
+            ArmR = Arr(s, 0.028f, 0.037f, 0.044f, 0.040f, 0.050f, 0.056f, 0.060f); // muscular arms
+            ShoulderX = 0.188f * s; ElbowX = 0.212f * s; WristX = 0.222f * s;
             Hair = HairStyle.Spiky;
             HandScale = 1.05f;
         }

@@ -17,13 +17,22 @@ namespace PrisonersOfOmar.Characters
         /// <summary>
         /// Builds an animated character as a child of <paramref name="parent"/> (local origin, facing +Z).
         /// The returned rig has a <see cref="HumanoidAnimator"/>. Layer of all parts = <paramref name="layer"/>.
+        /// Omar comes with his cleaver already in the right hand (child "Cleaver" of RightHandSocket) and
+        /// Hold = <see cref="HoldPose.Cleaver"/>.
         /// </summary>
         public static HumanoidRig Build(CharacterSkin skin, Transform parent, int layer = Layers.Player)
         {
             var spec = BodySpec.For(skin);
             var rig = BuildRig("Humanoid_" + skin, spec, parent, layer);
             rig.Skin = skin;
-            rig.gameObject.AddComponent<HumanoidAnimator>();
+            var anim = rig.gameObject.AddComponent<HumanoidAnimator>();
+            if (skin == CharacterSkin.Omar)
+            {
+                var cleaver = ItemMeshFactory.BuildCleaver();
+                cleaver.transform.SetParent(rig.RightHandSocket, false);
+                GeoUtil.SetLayerRecursive(cleaver, layer);
+                anim.Hold = HoldPose.Cleaver;
+            }
             return rig;
         }
 
