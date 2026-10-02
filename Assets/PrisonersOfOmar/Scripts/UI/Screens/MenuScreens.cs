@@ -66,7 +66,7 @@ namespace PrisonersOfOmar.UI
     public sealed class MainMenuScreen : UIScreen
     {
         int _sel;
-        static readonly string[] Items = { "HOST GAME", "JOIN GAME", "PLAY ALONE (VS AI OMAR)", "SETTINGS", "CREDITS", "QUIT" };
+        static readonly string[] Items = { "HOST GAME", "JOIN GAME", "PLAY ALONE (VS AI OMAR)", "HOW TO PLAY", "SETTINGS", "CREDITS", "QUIT" };
 
         public override void OnOpen()
         {
@@ -87,9 +87,10 @@ namespace PrisonersOfOmar.UI
                 case 0: GameRoot.Instance.HostGame(false); break;
                 case 1: UIManager.Instance.Push(new JoinScreen()); break;
                 case 2: GameRoot.Instance.HostGame(true); break;
-                case 3: UIManager.Instance.Push(new SettingsScreen()); break;
-                case 4: UIManager.Instance.Push(new CreditsScreen()); break;
-                case 5: GameRoot.Instance.QuitGame(); break;
+                case 3: UIManager.Instance.Push(new HowToPlayScreen()); break;
+                case 4: UIManager.Instance.Push(new SettingsScreen()); break;
+                case 5: UIManager.Instance.Push(new CreditsScreen()); break;
+                case 6: GameRoot.Instance.QuitGame(); break;
             }
         }
     }
@@ -260,6 +261,46 @@ namespace PrisonersOfOmar.UI
         }
 
         static string Pct(float v) => Mathf.RoundToInt(v * 100f) + "%";
+    }
+
+    public sealed class HowToPlayScreen : UIScreen
+    {
+        int _page;
+        static readonly string[] Titles = { "THE PRISONERS", "OMAR", "GETTING OUT" };
+        static readonly string[] Pages =
+        {
+            "WASD MOVE   SHIFT SPRINT   C CROUCH   E INTERACT (HOLD FOR LONG ACTIONS)\n" +
+            "F / LMB USE ITEM   1-3 / WHEEL SELECT   G DROP   TAB INVENTORY\n\n" +
+            "YOU CARRY 3 THINGS. YOUR LIGHTER IS YOUR ONLY LIGHT - AND HE SEES THE FLAME.\n" +
+            "RUNNING, DOORS AND BROKEN GLASS MAKE NOISE. DARKNESS AND CROUCHING HIDE YOU.\n" +
+            "HIDE IN WARDROBES, LOCKERS, UNDER BEDS. WATCH YOUR FEET: WIRES TRIGGER HIS SIREN.\n" +
+            "ONE HIT AND YOU BLEED. TWO AND HE DRAGS YOU BACK TO THE CAGE. THE THIRD TIME IS THE LAST.\n" +
+            "WHEN THE PICTURE HISSES AND TEARS, HE IS CLOSE.",
+            "WASD MOVE   SHIFT RUN   LMB CLEAVER   RMB SCREAM\n" +
+            "E OPEN / UNLOCK / SEARCH HIDING SPOTS / SMASH BOARDS\n" +
+            "T STRING A TRIPWIRE ACROSS A DOORWAY   G SET A BEAR TRAP   Q SENSE NEARBY PRISONERS\n\n" +
+            "YOU SEE THEIR NOISE AS RIPPLES THROUGH THE WALLS. A SIREN MEANS SOMEONE HIT YOUR WIRE.\n" +
+            "LOOK AT THEM LONG ENOUGH AND THEY KNOW YOU SAW THEM.\n" +
+            "KEEP EVERY ONE OF THEM UNTIL DAWN.",
+            "THE GATE: BOLT CUTTERS ON THE PADLOCK, THEN DOWN THE ROAD.\n" +
+            "THE CAR: GAS, KEYS - MAYBE A NEW BATTERY. EVERYONE WHO GETS IN LEAVES.\n" +
+            "THE SHELTER: 4 NUMBERS ARE WRITTEN SOMEWHERE IN THE BASE. THE KEYPAD IS IN THE BASEMENT.\n" +
+            "THE RADIO: A FUSE FOR THE FUSE BOX, THEN CALL FOR HELP AND REACH THE CORN FIELD IN TIME.\n" +
+            "THE DRUMS BEHIND THE BARN: LIGHTER FUEL AND A FLAME. RUN.\n\n" +
+            "FREE YOUR FRIENDS WITH THE CAGE KEY, A LOCKPICK OR BOLT CUTTERS. EVERY NIGHT IS DIFFERENT.",
+        };
+
+        public override void Draw(VhsUI ui, bool input)
+        {
+            UIStyle.Dim(ui, 0.85f);
+            UIStyle.Header(ui, "HOW TO PLAY - " + Titles[_page], 14);
+            ui.TextWrapped(Pages[_page], ui.Width * 0.5f, 40, Mathf.Min(ui.Width - 30, 400), VhsUI.White, 1, Align.Center);
+            UIStyle.Footer(ui, "◀ " + (_page + 1) + "/" + Pages.Length + " ▶      ESC BACK");
+            if (!input) return;
+            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D) || ui.Click) { _page = (_page + 1) % Pages.Length; AudioManager.Play2D(Snd.UiMove, 0.6f, 1f, AudioCategory.Ui); }
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) { _page = (_page + Pages.Length - 1) % Pages.Length; AudioManager.Play2D(Snd.UiMove, 0.6f, 1f, AudioCategory.Ui); }
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Return)) { AudioManager.Play2D(Snd.UiBack, 0.7f, 1f, AudioCategory.Ui); UIManager.Instance.Remove(this); }
+        }
     }
 
     public sealed class CreditsScreen : UIScreen

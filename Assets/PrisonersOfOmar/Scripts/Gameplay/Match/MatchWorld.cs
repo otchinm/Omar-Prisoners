@@ -119,6 +119,7 @@ namespace PrisonersOfOmar.Gameplay
 
             BuildEntities();
             SpawnItems();
+            if (IsHost) Host = new MatchHost(this); // before avatars: the AI Omar needs it
             SpawnAvatars();
             RegisterHandlers();
 
@@ -127,7 +128,6 @@ namespace PrisonersOfOmar.Gameplay
             Ambience = gameObject.AddComponent<AmbienceController>();
             StartEmitters();
 
-            if (IsHost) Host = new MatchHost(this);
             Session.MatchBegan += OnMatchBegan;
             Session.PlayerLeft += OnPlayerLeft;
         }

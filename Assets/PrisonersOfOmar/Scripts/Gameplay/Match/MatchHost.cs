@@ -1142,6 +1142,7 @@ namespace PrisonersOfOmar.Gameplay
         void CheckEnd()
         {
             if (_ended || !W.Running) return;
+            if (!_cagesOpened) return; // everyone starts caged
             int free = 0, escaped = 0, prisoners = 0;
             foreach (var p in S.Players)
             {
