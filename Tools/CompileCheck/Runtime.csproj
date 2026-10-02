@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compile-only sanity check for the Unity C# sources, used when the Unity Editor
+    is not available (CI / headless containers). Unity itself never reads this file.
+    Reference assemblies are expected in $(UnityRefDir) (see check.sh).
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>PrisonersOfOmar.CompileCheck</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>CS0649;CS0169;CS0414;CS1591</NoWarn>
+    <DefineConstants>UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;UNITY_STANDALONE_WIN;ENABLE_LEGACY_INPUT_MANAGER</DefineConstants>
+    <UnityRefDir Condition="'$(UnityRefDir)' == ''">/opt/unity-ref</UnityRefDir>
+    <ProjectRoot>$(MSBuildThisFileDirectory)../../</ProjectRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(ProjectRoot)Assets/**/*.cs" Exclude="$(ProjectRoot)Assets/**/Editor/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(UnityRefDir)/*.dll" Private="false" />
+  </ItemGroup>
+</Project>

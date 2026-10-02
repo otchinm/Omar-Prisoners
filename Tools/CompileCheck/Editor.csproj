@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compile-only check of the whole project including Editor scripts (see check.sh). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>PrisonersOfOmar.EditorCompileCheck</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CS0649;CS0169;CS0414;CS1591;CS0618</NoWarn>
+    <DefineConstants>UNITY_EDITOR;UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;UNITY_STANDALONE_WIN;ENABLE_LEGACY_INPUT_MANAGER</DefineConstants>
+    <UnityRefDir Condition="'$(UnityRefDir)' == ''">/opt/unity-ref</UnityRefDir>
+    <ProjectRoot>$(MSBuildThisFileDirectory)../../</ProjectRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(ProjectRoot)Assets/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(UnityRefDir)/*.dll" Private="false" />
+    <Reference Include="$(UnityRefDir)/editor/UnityEditor.dll" Private="false" />
+  </ItemGroup>
+</Project>
