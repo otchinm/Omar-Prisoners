@@ -60,11 +60,21 @@ potex/foliage.py    Textures/Foliage  (recursive dead trees, conifers, bushes, g
 potex/sky.py        Textures/Sky
 potex/fx.py         Textures/FX       (4-frame looping flames / fire / explosions, VHS noise sources)
 potex/ui.py         Textures/UI       (fonts + JSON, logo, icons, vignettes, VHS cover, ending stills)
+potex/pixelfont.py  glyph table of the compact 5x7 VCR font (font_vhs_small)
 potex/qa.py         contact sheets
 fonts/              the .woff fonts + OFL licence texts
 ```
 
-### Bitmap font JSON (`UI/font_vhs.json`, `UI/font_vhs_big.json`)
+### Bitmap font JSON (`UI/font_vhs.json`, `UI/font_vhs_big.json`, `UI/font_vhs_small.json`)
+
+| font | glyph box | advance | lineHeight | lines per 240 px | atlas | source |
+|---|---|---|---|---|---|---|
+| `font_vhs_small` | 5×9 (5×7 caps + 2 descender rows) | 6 | 11 | 21 | 128×128 | hand-made VCR / OSD pixel font (`potex/pixelfont.py`) |
+| `font_vhs` | 8×16 | 8 | 18 | 13 | 256×128 | VT323 20 px, thresholded |
+| `font_vhs_big` | 16×32 | 16 | 34 | 7 | 512×256 | VT323 40 px, thresholded |
+
+`--qa` also writes `UI_font_<name>.png`. Each one renders sample text through the JSON, exactly as the
+game would, at 1× on a 426×240 screen and again at 3×.
 
 ```json
 {"cellW":10,"cellH":18,"cols":16,"rows":7,"first":32,"glyphs":" !\"#…~▶◀■●▲▼","advance":8,"lineHeight":18,

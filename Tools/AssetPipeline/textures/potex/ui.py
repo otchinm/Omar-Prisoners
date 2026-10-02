@@ -96,15 +96,20 @@ def build_font(L, name):
             ImageDraw.Draw(gim).text((0, -L["top"]), ch, font=f, fill=255)
             a = (np.asarray(gim)[:L["gh"], :L["gw"]] > L["thr"]).astype(np.uint8) * 255
         atlas[cy + L["pad"]:cy + L["pad"] + L["gh"], cx + L["pad"]:cx + L["pad"] + L["gw"]] = a
+    return write_font(atlas, L, glyphs, name, "VT323 (SIL OFL 1.1) %dpx, thresholded" % L["size"])
+
+
+def write_font(atlas, L, glyphs, name, source):
+    """white RGBA atlas from a 0/255 coverage array + the JSON metrics file next to it"""
     rgba = np.zeros((L["atlasH"], L["atlasW"], 4), np.uint8)
     rgba[..., :3] = 255
     rgba[..., 3] = atlas
     meta = {
         "cellW": L["cw"], "cellH": L["ch"], "cols": L["cols"], "rows": L["rows"], "first": 32,
-        "glyphs": glyphs, "advance": L["adv"], "lineHeight": L["gh"] + 2,
+        "glyphs": glyphs, "advance": L["adv"], "lineHeight": L.get("line", L["gh"] + 2),
         "atlasW": L["atlasW"], "atlasH": L["atlasH"],
         "padding": L["pad"], "glyphW": L["gw"], "glyphH": L["gh"], "baseline": L["baseline"],
-        "source": "VT323 (SIL OFL 1.1) %dpx, thresholded" % L["size"],
+        "source": source,
         "note": "glyph i is the cellW x cellH rect at (i % cols * cellW, i / cols * cellH) from the TOP-LEFT of the atlas; "
                 "its ink starts at (padding, padding) inside the cell. Draw the cell at (penX - padding, penY - padding) "
                 "and advance penX by 'advance'; new line = lineHeight. Unknown chars -> '?'.",
@@ -130,6 +135,31 @@ def font_vhs(ctx):
 @texture("UI/font_vhs_big", (FONT_BIG["atlasW"], FONT_BIG["atlasH"]), k=1, alpha="hard")
 def font_vhs_big(ctx):
     return build_font(FONT_BIG, "font_vhs_big")
+
+
+def compact_layout(cols=16, pad=1):
+    from . import pixelfont as pf
+    cw, chh = pf.GW + 2 * pad, pf.GH + 2 * pad
+    n = 95 + len(SPECIALS)
+    rows = (n + cols - 1) // cols
+    return dict(gw=pf.GW, gh=pf.GH, cw=cw, ch=chh, pad=pad, cols=cols, rows=rows, adv=pf.GW + 1,
+                line=pf.GH + 2, atlasW=_pot(cols * cw), atlasH=_pot(rows * chh), baseline=pad + pf.CAP)
+
+
+FONT_COMPACT = compact_layout()
+
+
+@texture("UI/font_vhs_small", (FONT_COMPACT["atlasW"], FONT_COMPACT["atlasH"]), k=1, alpha="hard")
+def font_vhs_small(ctx):
+    """compact hand-made 5x7 VCR/OSD pixel font (5x9 with descenders) for dense screens"""
+    from . import pixelfont as pf
+    L = FONT_COMPACT
+    glyphs = "".join(chr(c) for c in range(32, 127)) + SPECIALS
+    atlas = np.zeros((L["atlasH"], L["atlasW"]), np.uint8)
+    for i, ch in enumerate(glyphs):
+        cx, cy = (i % L["cols"]) * L["cw"] + L["pad"], (i // L["cols"]) * L["ch"] + L["pad"]
+        atlas[cy:cy + L["gh"], cx:cx + L["gw"]] = pf.glyph_bitmap(ch)
+    return write_font(atlas, L, glyphs, "font_vhs_small", "hand-made 5x7 VCR/OSD pixel font (potex/pixelfont.py)")
 
 
 # ======================================================================================

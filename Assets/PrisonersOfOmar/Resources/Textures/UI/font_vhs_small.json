@@ -1,0 +1,18 @@
+{
+ "cellW": 7,
+ "cellH": 11,
+ "cols": 16,
+ "rows": 7,
+ "first": 32,
+ "glyphs": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~▶◀■●▲▼",
+ "advance": 6,
+ "lineHeight": 11,
+ "atlasW": 128,
+ "atlasH": 128,
+ "padding": 1,
+ "glyphW": 5,
+ "glyphH": 9,
+ "baseline": 8,
+ "source": "hand-made 5x7 VCR/OSD pixel font (potex/pixelfont.py)",
+ "note": "glyph i is the cellW x cellH rect at (i % cols * cellW, i / cols * cellH) from the TOP-LEFT of the atlas; its ink starts at (padding, padding) inside the cell. Draw the cell at (penX - padding, penY - padding) and advance penX by 'advance'; new line = lineHeight. Unknown chars -> '?'."
+}
