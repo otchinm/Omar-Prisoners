@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Offline QA harness for the runtime map (Scripts/Map). Compiles the map code + the Core / Rendering / Characters
+    contracts it uses against a small managed UnityEngine stand-in (UnityStub/), runs MapBuilder.Build and exports
+    MapData + colliders + nav (map.json) and preview renders. Unity never compiles this folder.
+      usage: dotnet run -c Release (from this folder) then pass: outDir [seed] [no-render flag]
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <NoWarn>CS0649;CS0169;CS0414;CS0108;CS0114;CS0067</NoWarn>
+    <ProjectRoot>$(MSBuildThisFileDirectory)../../../../</ProjectRoot>
+    <Scripts>$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/</Scripts>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="UnityStub/*.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="$(Scripts)Core/*.cs" />
+    <Compile Include="$(Scripts)Rendering/PsxLight.cs;$(Scripts)Rendering/PsxMaterials.cs;$(Scripts)Rendering/PsxFx.cs" />
+    <Compile Include="$(Scripts)Characters/HumanoidFactory.cs;$(Scripts)Characters/HumanoidRig.cs;$(Scripts)Characters/HumanoidAnimator.cs;$(Scripts)Characters/CharacterTypes.cs" />
+    <Compile Include="$(Scripts)Map/*.cs" />
+  </ItemGroup>
+</Project>
