@@ -78,8 +78,11 @@ namespace PrisonersOfOmar.UI
         public override void Draw(VhsUI ui, bool input)
         {
             UIStyle.Dim(ui, 0.25f);
-            float bottom = UIStyle.Title(ui, 12, Mathf.Min(ui.Width - 40, 330), ui.Height * 0.46f);
-            int a = ui.Menu(Items, ref _sel, ui.Width * 0.5f, Mathf.Max(bottom + 10, ui.Height * 0.52f), 1, 3, input);
+            float bottom = UIStyle.Title(ui, 8, Mathf.Min(ui.Width - 40, 320), ui.Height * 0.38f);
+            float menuY = Mathf.Max(bottom + 6, ui.Height * 0.43f);
+            float avail = ui.Height - ui.LineHeight() - 12 - menuY;
+            int spacing = Mathf.Clamp(Mathf.FloorToInt(avail / Items.Length) - ui.LineHeight(), 0, 4);
+            int a = ui.Menu(Items, ref _sel, ui.Width * 0.5f, menuY, 1, spacing, input);
             UIStyle.Footer(ui, "MMXXVI  THE BASE OF THE SECOND CLASS  -  v" + GameInfo.Version);
             UIStyle.Osd(ui, "PLAY ▶", UIStyle.TapeCounter());
             switch (a)
@@ -216,9 +219,9 @@ namespace PrisonersOfOmar.UI
         public override void Draw(VhsUI ui, bool input)
         {
             UIStyle.Dim(ui, 0.78f);
-            UIStyle.Header(ui, "SETTINGS", 12);
-            float x = ui.Width * 0.5f - 150, w = 300, y = 34;
-            int lh = ui.LineHeight() + 3;
+            UIStyle.Header(ui, "SETTINGS", 8);
+            float x = ui.Width * 0.5f - 150, w = 300, y = 26;
+            int lh = Mathf.Max(ui.LineHeight(), Mathf.Min(ui.LineHeight() + 3, Mathf.FloorToInt((ui.Height - 26 - 24) / 13f)));
             if (input)
             {
                 if (Input.GetKeyDown(KeyCode.DownArrow) || (Input.GetKeyDown(KeyCode.S) && _sel != 10)) { _sel = (_sel + 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
@@ -247,7 +250,7 @@ namespace PrisonersOfOmar.UI
             d = ui.Stepper("VSYNC", Settings.VSync ? "ON" : "OFF", x, y, w, _sel == 9, input); if (d != 0) { Settings.VSync = !Settings.VSync; Settings.ApplyDisplay(); } y += lh;
             ui.Text((_sel == 10 ? "▶ " : "  ") + "NAME", x, y, _sel == 10 ? VhsUI.White : VhsUI.Dim);
             ui.TextField(ref _name, x + 120, y, (int)w - 120, input && _sel == 10, 14, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- .");
-            y += lh + 4;
+            y += lh;
             bool backSel = _sel == 11;
             ui.Text(backSel ? "▶ BACK ◀" : "BACK", ui.Width * 0.5f, y, backSel ? VhsUI.White : VhsUI.Dim, 1, Align.Center);
             bool back = input && (Input.GetKeyDown(KeyCode.Escape) || (backSel && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)))

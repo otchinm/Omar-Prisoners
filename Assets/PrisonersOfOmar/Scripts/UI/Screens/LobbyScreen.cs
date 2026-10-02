@@ -97,54 +97,58 @@ namespace PrisonersOfOmar.UI
             UIStyle.Header(ui, s.Practice ? "PLAY ALONE" : "LOBBY", 8);
             if (host && !s.Practice) ui.Text("YOUR ADDRESS: " + _hostAddresses + "  PORT " + Settings.Port, ui.Width * 0.5f, 8 + ui.LineHeight(), VhsUI.Dim, 1, Align.Center);
 
-            // ---- player list (left)
-            float lx = 14, ly = 40;
-            int lh = ui.LineHeight() + 2;
-            var panel = UIStyle.Panel(ui, new Rect(lx - 4, ly - 4, ui.Width * 0.5f - 18, lh * 6 + 8), 0.55f);
-            for (int i = 0; i < s.Players.Count && i < 6; i++)
+            // ---- player list (left column)
+            float colW = ui.Width * 0.5f - 16;
+            float lx = 12, ly = 36;
+            int lh = ui.LineHeight() + 1;
+            var panel = UIStyle.Panel(ui, new Rect(lx - 4, ly - 4, colW, lh * 5 + 8), 0.55f);
+            for (int i = 0; i < s.Players.Count && i < 5; i++)
             {
                 var p = s.Players[i];
                 bool mine = p.Id == s.LocalId;
                 Color c = p.Role == PlayerRole.Omar ? VhsUI.Red : (mine ? VhsUI.White : VhsUI.Dim);
                 string ready = p.IsBot ? "" : (p.Ready ? " ●" : " ○");
-                string ping = (!host || p.Id == s.LocalId || p.IsBot) ? "" : "  " + Mathf.RoundToInt(s.GetRtt(p.Id) * 1000f) + "MS";
-                ui.Text((mine ? "▶" : " ") + p.Name, lx, ly + i * lh, c);
-                ui.Text(UIStyle.RoleName(p) + ready + ping, panel.xMax - 6, ly + i * lh, c, 1, Align.Right);
+                string ping = (!host || p.Id == s.LocalId || p.IsBot) ? "" : " " + Mathf.RoundToInt(s.GetRtt(p.Id) * 1000f) + "MS";
+                string name = p.Name.Length > 10 ? p.Name.Substring(0, 10) : p.Name;
+                ui.Text((mine ? "▶" : " ") + name, lx, ly + i * lh, c);
+                string role = p.Role == PlayerRole.Omar ? (p.IsBot ? "OMAR AI" : "OMAR") : p.Role == PlayerRole.Spectator ? "WATCH" : "#" + ((int)p.Skin + 1);
+                ui.Text(role + ready + ping, panel.xMax - 5, ly + i * lh, c, 1, Align.Right);
             }
             if (s.FindOmar() == null)
-                ui.Text(s.Settings.AiOmar ? "OMAR: CONTROLLED BY THE AI" : "OMAR: NOBODY", lx, panel.yMax + 4, new Color(0.6f, 0.2f, 0.2f));
+                ui.Text(s.Settings.AiOmar ? "OMAR: THE AI" : "OMAR: NOBODY", lx, panel.yMax + 3, new Color(0.65f, 0.2f, 0.2f));
 
-            // ---- character (right)
-            float rx = ui.Width * 0.5f + 8, rw = ui.Width * 0.5f - 22;
-            var pr = new Rect(rx + rw * 0.5f - 48, 36, 96, 128);
+            // ---- character (right column)
+            float rx = ui.Width * 0.5f + 6, rw = ui.Width * 0.5f - 16;
+            float ph = Mathf.Min(110f, ui.Height * 0.42f), pw = ph * 0.75f;
+            var pr = new Rect(Mathf.Round(rx + rw * 0.5f - pw * 0.5f), 34, Mathf.Round(pw), Mathf.Round(ph));
             ui.Rect(pr, new Color(0, 0, 0, 0.5f));
             if (_rt != null) ui.Image(_rt, pr, Color.white);
             ui.Frame(pr, new Color(0.5f, 0.5f, 0.5f, 0.6f));
             string cname = _choice == 4 ? "OMAR" : HumanoidFactory.DisplayName((CharacterSkin)_choice);
-            ui.Text("◀ " + cname + " ▶", rx + rw * 0.5f, pr.yMax + 4, _choice == 4 ? VhsUI.Red : VhsUI.White, 1, Align.Center);
-            ui.TextWrapped(Descriptions[_choice], rx + rw * 0.5f, pr.yMax + 18, (int)rw, VhsUI.Dim, 1, Align.Center);
+            ui.Text("◀ " + cname + " ▶", rx + rw * 0.5f, pr.yMax + 3, _choice == 4 ? VhsUI.Red : VhsUI.White, 1, Align.Center);
+            ui.TextWrapped(Descriptions[_choice], rx + rw * 0.5f, pr.yMax + 4 + ui.LineHeight(), (int)rw, VhsUI.Dim, 1, Align.Center);
             bool clickLeft = input && ui.Click && ui.Hover(new Rect(pr.x - 30, pr.y, 30, pr.height));
             bool clickRight = input && ui.Click && ui.Hover(new Rect(pr.xMax, pr.y, 30, pr.height));
 
-            // ---- actions (bottom)
+            // ---- actions (left column, under the list)
             var items = new System.Collections.Generic.List<string>();
             var actions = new System.Collections.Generic.List<int>();
             if (!host) { items.Add(_ready ? "READY ●" : "NOT READY ○"); actions.Add(0); }
             if (host)
             {
-                items.Add("NIGHT LENGTH: " + s.Settings.NightMinutes + " MIN"); actions.Add(1);
-                items.Add("AI OMAR IF NOBODY PLAYS HIM: " + (s.Settings.AiOmar ? "ON" : "OFF")); actions.Add(2);
+                items.Add("NIGHT: " + s.Settings.NightMinutes + " MIN"); actions.Add(1);
+                items.Add("AI OMAR: " + (s.Settings.AiOmar ? "ON" : "OFF")); actions.Add(2);
                 items.Add("START"); actions.Add(3);
             }
             items.Add("LEAVE"); actions.Add(4);
-            float my = ui.Height - (items.Count * (ui.LineHeight() + 3)) - 22;
+            float my = panel.yMax + ui.LineHeight() + 8;
             var arr = items.ToArray();
             var disabled = new bool[arr.Length];
             string why = "";
             if (host) { bool ok = s.CanStart(out why); disabled[actions.IndexOf(3)] = !ok; }
-            int a = ui.Menu(arr, ref _sel, ui.Width * 0.5f, my, 1, 3, input, disabled);
-            if (host && !string.IsNullOrEmpty(why)) ui.Text(why, ui.Width * 0.5f, ui.Height - 14, new Color(0.7f, 0.3f, 0.3f), 1, Align.Center);
-            else UIStyle.Footer(ui, "A / D  OR  ◀ ▶  CHANGE CHARACTER");
+            int a = ui.Menu(arr, ref _sel, lx - 4 + colW * 0.5f, my, 1, 1, input, disabled);
+            if (host && !string.IsNullOrEmpty(why)) ui.Text(why, ui.Width * 0.5f, ui.Height - 13, new Color(0.7f, 0.3f, 0.3f), 1, Align.Center);
+            else UIStyle.Footer(ui, "A / D  CHANGE CHARACTER");
 
             if (!input) return;
             int dir = 0;

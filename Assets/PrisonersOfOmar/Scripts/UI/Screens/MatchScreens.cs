@@ -247,6 +247,7 @@ namespace PrisonersOfOmar.UI
         readonly EndingResult _r;
         float _t;
         bool _musicStarted;
+        bool _results;
         int _sel;
         public EndingScreen(EndingResult r) { _r = r; }
         public override bool Opaque => true;
@@ -287,17 +288,26 @@ namespace PrisonersOfOmar.UI
             var w = MatchWorld.Instance;
             bool omarView = w != null && w.LocalIsOmar;
             string sub = omarView ? (_r.OmarWon ? "YOU KEPT THEM ALL" : _r.Escaped == 1 ? "ONE OF THEM GOT AWAY" : "THEY GOT AWAY") : "";
-            ui.Text("ENDING:", ui.Width * 0.5f, 14, VhsUI.Dim, 1, Align.Center);
-            ui.Text(_r.Title, ui.Width * 0.5f, 26, VhsUI.Red, 2, Align.Center, ui.BigFont);
-            float y = 26 + ui.BigFont.LineHeight * 2 + 6;
+            ui.Text("ENDING:", ui.Width * 0.5f, 10, VhsUI.Dim, 1, Align.Center);
+            ui.Text(_r.Title, ui.Width * 0.5f, 22, VhsUI.Red, 2, Align.Center, ui.BigFont);
+            float y = 22 + ui.BigFont.LineHeight * 2 + 4;
             if (sub.Length > 0) { ui.Text(sub, ui.Width * 0.5f, y, VhsUI.White, 1, Align.Center); y += ui.LineHeight() + 4; }
 
             string text = _r.Text;
             int shown = Mathf.Clamp(Mathf.FloorToInt((_t - 2.2f) * 38f), 0, text.Length);
-            y += ui.TextWrapped(text.Substring(0, shown), ui.Width * 0.5f, y, Mathf.Min(ui.Width - 40, 380), VhsUI.White, 1, Align.Center) + 8;
+            bool textDone = shown >= text.Length;
+            bool confirm = input && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || ui.Click);
 
-            if (shown >= text.Length)
+            if (!_results)
             {
+                // page 1: the epilogue
+                ui.TextWrapped(text.Substring(0, shown), ui.Width * 0.5f, y, Mathf.Min(ui.Width - 30, 410), VhsUI.White, 1, Align.Center);
+                if (textDone) UIStyle.Footer(ui, "PRESS ENTER");
+                if (confirm) { if (!textDone) _t += 60f; else { _results = true; AudioManager.Play2D(Snd.UiSelect, 0.7f, 1f, AudioCategory.Ui); } }
+            }
+            else
+            {
+                // page 2: everyone's fate + what next
                 foreach (var e in _r.Entries)
                 {
                     string line = e.Name + "  -  " + (e.Role == PlayerRole.Omar ? (_r.OmarWon ? "OMAR. SATISFIED." : "OMAR. ENRAGED.") : Endings.Outcome(e));
@@ -311,15 +321,15 @@ namespace PrisonersOfOmar.UI
                 var s = NetSession.Instance;
                 bool host = s != null && s.IsHost;
                 string[] items = host ? new[] { "BACK TO THE LOBBY", "MAIN MENU" } : new[] { "MAIN MENU" };
-                int a = ui.Menu(items, ref _sel, ui.Width * 0.5f, ui.Height - 34, 1, 2, input);
-                if (!host) ui.Text("WAITING FOR THE HOST...", ui.Width * 0.5f, ui.Height - 46, VhsUI.Dim, 1, Align.Center);
+                float my = ui.Height - items.Length * (ui.LineHeight() + 2) - 14;
+                int a = ui.Menu(items, ref _sel, ui.Width * 0.5f, my, 1, 2, input);
+                if (!host) ui.Text("WAITING FOR THE HOST...", ui.Width * 0.5f, my - ui.LineHeight() - 4, VhsUI.Dim, 1, Align.Center);
                 if (a >= 0)
                 {
                     if (items[a] == "BACK TO THE LOBBY") s.HostReturnToLobby();
                     else GameRoot.Instance.LeaveSession();
                 }
             }
-            else if (input && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || ui.Click)) _t += 30f;
             UIStyle.Osd(ui, "PLAY ▶", UIStyle.TapeCounter());
         }
     }
