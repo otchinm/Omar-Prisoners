@@ -63,12 +63,13 @@ namespace PrisonersOfOmar.UI
 
         public static void Header(VhsUI ui, string text, float y)
         {
-            ui.Text("- " + text + " -", ui.Width * 0.5f, y, VhsUI.White, 1, Align.Center);
+            ui.Text("- " + text + " -", ui.Width * 0.5f, y, VhsUI.White, 1, Align.Center, VhsFont.Small);
         }
 
         public static void Footer(VhsUI ui, string text)
         {
-            ui.Text(text, ui.Width * 0.5f, ui.Height - ui.LineHeight() - 6, VhsUI.Dim, 1, Align.Center);
+            var f = VhsFont.Tiny;
+            ui.Text(text, ui.Width * 0.5f, ui.Height - f.LineHeight - 4, VhsUI.Dim, 1, Align.Center, f);
         }
 
         public static bool BackPressed() => Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace) && !Input.GetKey(KeyCode.LeftShift);

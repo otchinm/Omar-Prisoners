@@ -41,7 +41,10 @@ namespace PrisonersOfOmar.UI
         public static readonly Color Green = new Color(0.4f, 0.9f, 0.45f);
         public static readonly Color Blue = new Color(0.45f, 0.65f, 1f);
 
-        public VhsFont Font => VhsFont.Small;
+        /// <summary>Font used by widgets / text when no font is given (screens may switch to VhsFont.Tiny). Reset per screen.</summary>
+        public VhsFont FontOverride;
+        public VhsFont Font => FontOverride ?? VhsFont.Small;
+        public VhsFont TinyFont => VhsFont.Tiny;
         public VhsFont BigFont => VhsFont.Big;
 
         Material Mat
@@ -202,6 +205,8 @@ namespace PrisonersOfOmar.UI
         void DrawLine(string line, float x, float y, Color color, int scale, VhsFont font)
         {
             float cw = font.CellW * scale, ch = font.CellH * scale;
+            x -= font.Padding * scale;
+            y -= font.Padding * scale;
             for (int i = 0; i < line.Length; i++)
             {
                 char c = line[i];
@@ -239,12 +244,21 @@ namespace PrisonersOfOmar.UI
             return result;
         }
 
-        public int TextWrapped(string s, float x, float y, int maxWidth, Color color, int scale = 1, Align align = Align.Left)
+        public int TextWrapped(string s, float x, float y, int maxWidth, Color color, int scale = 1, Align align = Align.Left, VhsFont font = null)
         {
-            var lines = Wrap(s, maxWidth, scale);
+            font = font ?? Font;
+            var lines = Wrap(s, maxWidth, scale, font);
             float ly = y;
-            foreach (var l in lines) { Text(l, x, ly, color, scale, align); ly += LineHeight(scale); }
+            foreach (var l in lines) { Text(l, x, ly, color, scale, align, font); ly += LineHeight(scale, font); }
             return Mathf.RoundToInt(ly - y);
+        }
+
+        /// <summary>Wrapped text in the default font, or the tiny font when it would not fit in <paramref name="maxHeight"/>.</summary>
+        public int TextWrappedFit(string s, float x, float y, int maxWidth, float maxHeight, Color color, Align align = Align.Left)
+        {
+            var font = Font;
+            if (Wrap(s, maxWidth, 1, font).Count * LineHeight(1, font) > maxHeight) font = TinyFont;
+            return TextWrapped(s, x, y, maxWidth, color, 1, align, font);
         }
 
         // ------------------------------------------------------------------ widgets

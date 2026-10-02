@@ -74,10 +74,10 @@ namespace PrisonersOfOmar.UI
             y += ui.LineHeight() + 6;
             if (it != null)
             {
-                y += ui.TextWrapped(it.Def.Description, textX, y, 150, VhsUI.White);
+                y += ui.TextWrapped(it.Def.Description, textX, y, 150, VhsUI.White, 1, Align.Left, ui.TinyFont);
                 if (it.Def.HasCharge) ui.Text((it.Type == ItemType.Lighter ? "FUEL " : "BATTERY ") + Mathf.RoundToInt(it.Charge * 100f) + "%", textX, y + 6, it.Charge < 0.2f ? VhsUI.Red : VhsUI.Yellow);
             }
-            else ui.TextWrapped("NOTHING HERE. I CAN CARRY THREE THINGS.", textX, y, 150, VhsUI.Dim);
+            else ui.TextWrapped("NOTHING HERE. I CAN CARRY THREE THINGS.", textX, y, 150, VhsUI.Dim, 1, Align.Left, ui.TinyFont);
 
             var pr = new Rect(ui.Width * 0.5f - 20, 56, 128, 128);
             if (_model != null) ui.Image(_rt, pr, Color.white);
@@ -199,9 +199,11 @@ namespace PrisonersOfOmar.UI
             if (paper != null) ui.Image(paper, r, Color.white);
             else ui.Rect(r, new Color(0.78f, 0.72f, 0.58f));
             ui.Text(_title, r.center.x, r.y + 10, new Color(0.35f, 0.05f, 0.05f), 1, Align.Center, null, false);
-            var lines = ui.Wrap(_text, (int)pw - 30);
+            var nf = ui.Font;
+            if (ui.Wrap(_text, (int)pw - 30, 1, nf).Count * nf.LineHeight > ph - 50) nf = ui.TinyFont;
+            var lines = ui.Wrap(_text, (int)pw - 30, 1, nf);
             float y = r.y + 30;
-            foreach (var l in lines) { ui.Text(l, r.center.x, y, new Color(0.12f, 0.1f, 0.08f), 1, Align.Center, null, false); y += ui.LineHeight(); }
+            foreach (var l in lines) { ui.Text(l, r.center.x, y, new Color(0.12f, 0.1f, 0.08f), 1, Align.Center, nf, false); y += nf.LineHeight; }
             UIStyle.Footer(ui, "E / ESC  CLOSE");
             if (input && _t > 0.25f && (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) || ui.Click))
             {
@@ -229,7 +231,7 @@ namespace PrisonersOfOmar.UI
             string help = w != null && w.LocalIsOmar
                 ? "WASD MOVE  SHIFT RUN  LMB CLEAVER  RMB SCREAM  E OPEN / SEARCH  T TRIPWIRE  G BEAR TRAP  Q SENSE"
                 : "WASD MOVE  SHIFT RUN  C CROUCH  E INTERACT  F / LMB USE ITEM  1-3 / WHEEL SELECT  G DROP  TAB INVENTORY";
-            ui.TextWrapped(help, ui.Width * 0.5f, ui.Height * 0.72f, ui.Width - 50, VhsUI.Dim, 1, Align.Center);
+            ui.TextWrapped(help, ui.Width * 0.5f, ui.Height * 0.72f, ui.Width - 50, VhsUI.Dim, 1, Align.Center, ui.TinyFont);
             if (!input) return;
             if (Input.GetKeyDown(KeyCode.Escape) && Time.frameCount > 1) { UIManager.Instance.Remove(this); return; }
             if (a < 0) return;
@@ -298,10 +300,13 @@ namespace PrisonersOfOmar.UI
             bool textDone = shown >= text.Length;
             bool confirm = input && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || ui.Click);
 
+            if (_results) ui.FontOverride = ui.TinyFont;
             if (!_results)
             {
                 // page 1: the epilogue
-                ui.TextWrapped(text.Substring(0, shown), ui.Width * 0.5f, y, Mathf.Min(ui.Width - 30, 410), VhsUI.White, 1, Align.Center);
+                // pick the font from the full text so it does not switch while typing
+                var ef = ui.Wrap(text, Mathf.Min(ui.Width - 30, 410), 1, ui.Font).Count * ui.LineHeight() > ui.Height - y - 22 ? ui.TinyFont : ui.Font;
+                ui.TextWrapped(text.Substring(0, shown), ui.Width * 0.5f, y, Mathf.Min(ui.Width - 30, 410), VhsUI.White, 1, Align.Center, ef);
                 if (textDone) UIStyle.Footer(ui, "PRESS ENTER");
                 if (confirm) { if (!textDone) _t += 60f; else { _results = true; AudioManager.Play2D(Snd.UiSelect, 0.7f, 1f, AudioCategory.Ui); } }
             }

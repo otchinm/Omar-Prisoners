@@ -192,9 +192,10 @@ namespace PrisonersOfOmar.UI
                 ui.Text(Mathf.CeilToInt(c.WakeRemaining).ToString(), ui.Width * 0.5f, ui.Height * 0.38f + ui.BigFont.LineHeight * 2 + 4, VhsUI.White, 1, Align.Center);
             }
 
-            // abilities
-            float x = 22, y = ui.Height - 52;
+            // abilities (compact font)
+            ui.FontOverride = ui.TinyFont;
             int lh = ui.LineHeight();
+            float x = 22, y = ui.Height - 14 - lh * 3;
             ui.Text("LMB  CLEAVER", x, y, VhsUI.Dim); y += lh;
             ui.Text("RMB  SCREAM " + (c.ScreamCooldown01 > 0 ? Bar(c.ScreamCooldown01) : "READY"), x, y, c.ScreamCooldown01 > 0 ? VhsUI.Dim : VhsUI.Red); y += lh;
             ui.Text("T WIRE x" + c.TripwireCharges + "   G TRAP x" + c.BearTrapCharges + "   Q SENSE " + (c.SenseCooldown01 > 0 ? Bar(c.SenseCooldown01) : "READY"), x, y, VhsUI.Dim);
@@ -211,6 +212,7 @@ namespace PrisonersOfOmar.UI
                 ui.Text(p.Name + " " + s, ui.Width - 22, ry, col, 1, Align.Right);
                 ry += lh;
             }
+            ui.FontOverride = null;
         }
 
         static string Bar(float cooldown01)

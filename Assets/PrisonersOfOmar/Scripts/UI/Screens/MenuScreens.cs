@@ -78,9 +78,10 @@ namespace PrisonersOfOmar.UI
         public override void Draw(VhsUI ui, bool input)
         {
             UIStyle.Dim(ui, 0.25f);
-            float bottom = UIStyle.Title(ui, 8, Mathf.Min(ui.Width - 40, 320), ui.Height * 0.38f);
-            float menuY = Mathf.Max(bottom + 6, ui.Height * 0.43f);
-            float avail = ui.Height - ui.LineHeight() - 12 - menuY;
+            float bottom = UIStyle.Title(ui, 6, Mathf.Min(ui.Width - 40, 300), ui.Height * 0.32f);
+            float menuY = Mathf.Max(bottom + 4, ui.Height * 0.36f);
+            float avail = ui.Height - VhsFont.Tiny.LineHeight - 8 - menuY;
+            if (avail < Items.Length * ui.LineHeight()) ui.FontOverride = ui.TinyFont;
             int spacing = Mathf.Clamp(Mathf.FloorToInt(avail / Items.Length) - ui.LineHeight(), 0, 4);
             int a = ui.Menu(Items, ref _sel, ui.Width * 0.5f, menuY, 1, spacing, input);
             UIStyle.Footer(ui, "MMXXVI  THE BASE OF THE SECOND CLASS  -  v" + GameInfo.Version);
@@ -121,6 +122,7 @@ namespace PrisonersOfOmar.UI
 
         public override void Draw(VhsUI ui, bool input)
         {
+            ui.FontOverride = ui.TinyFont;
             UIStyle.Dim(ui, 0.7f);
             var s = NetSession.Instance;
             UIStyle.Header(ui, "JOIN GAME", 14);
@@ -218,10 +220,11 @@ namespace PrisonersOfOmar.UI
 
         public override void Draw(VhsUI ui, bool input)
         {
+            ui.FontOverride = ui.TinyFont;
             UIStyle.Dim(ui, 0.78f);
-            UIStyle.Header(ui, "SETTINGS", 8);
-            float x = ui.Width * 0.5f - 150, w = 300, y = 26;
-            int lh = Mathf.Max(ui.LineHeight(), Mathf.Min(ui.LineHeight() + 3, Mathf.FloorToInt((ui.Height - 26 - 24) / 13f)));
+            UIStyle.Header(ui, "SETTINGS", 6);
+            float x = ui.Width * 0.5f - 150, w = 300, y = 28;
+            int lh = Mathf.Max(ui.LineHeight(), Mathf.Min(ui.LineHeight() + 3, Mathf.FloorToInt((ui.Height - 28 - 18) / 13f)));
             if (input)
             {
                 if (Input.GetKeyDown(KeyCode.DownArrow) || (Input.GetKeyDown(KeyCode.S) && _sel != 10)) { _sel = (_sel + 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
@@ -295,6 +298,7 @@ namespace PrisonersOfOmar.UI
 
         public override void Draw(VhsUI ui, bool input)
         {
+            ui.FontOverride = ui.TinyFont;
             UIStyle.Dim(ui, 0.85f);
             UIStyle.Header(ui, "HOW TO PLAY - " + Titles[_page], 14);
             ui.TextWrapped(Pages[_page], ui.Width * 0.5f, 40, Mathf.Min(ui.Width - 30, 400), VhsUI.White, 1, Align.Center);
@@ -310,6 +314,7 @@ namespace PrisonersOfOmar.UI
     {
         public override void Draw(VhsUI ui, bool input)
         {
+            ui.FontOverride = ui.TinyFont;
             UIStyle.Dim(ui, 0.82f);
             UIStyle.Header(ui, "CREDITS", 14);
             string text =

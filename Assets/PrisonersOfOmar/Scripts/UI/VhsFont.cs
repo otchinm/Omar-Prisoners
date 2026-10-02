@@ -10,7 +10,7 @@ namespace PrisonersOfOmar.UI
         [Serializable]
         sealed class Meta
         {
-            public int cellW = 8, cellH = 13, cols = 16, first = 32, advance = 8, lineHeight = 14, atlasW, atlasH;
+            public int cellW = 8, cellH = 13, cols = 16, first = 32, advance = 8, lineHeight = 14, atlasW, atlasH, padding;
             public string glyphs;
         }
 
@@ -19,14 +19,20 @@ namespace PrisonersOfOmar.UI
         public int CellH { get; private set; }
         public int Advance { get; private set; }
         public int LineHeight { get; private set; }
+        /// <summary>Transparent border around each glyph inside its cell (ink starts this many pixels in).</summary>
+        public int Padding { get; private set; }
 
         readonly Dictionary<char, Rect> _uv = new Dictionary<char, Rect>();
         Rect _unknown;
 
-        static VhsFont _small, _big;
+        static VhsFont _small, _big, _tiny;
 
+        /// <summary>Default UI font (VT323 based).</summary>
         public static VhsFont Small => _small ?? (_small = Load("Textures/UI/font_vhs") ?? Load("UIFallback/font_fallback") ?? Builtin());
+        /// <summary>Headings.</summary>
         public static VhsFont Big => _big ?? (_big = Load("Textures/UI/font_vhs_big") ?? Small);
+        /// <summary>Compact font for dense screens (settings, lobby, long texts).</summary>
+        public static VhsFont Tiny => _tiny ?? (_tiny = Load("Textures/UI/font_vhs_small") ?? Load("UIFallback/font_fallback") ?? Small);
 
         public static VhsFont Load(string path)
         {
@@ -42,6 +48,7 @@ namespace PrisonersOfOmar.UI
                 var f = new VhsFont { Texture = tex, CellW = meta.cellW, CellH = meta.cellH };
                 f.Advance = meta.advance > 0 ? meta.advance : meta.cellW;
                 f.LineHeight = meta.lineHeight > 0 ? meta.lineHeight : meta.cellH + 1;
+                f.Padding = Mathf.Max(0, meta.padding);
                 float aw = meta.atlasW > 0 ? meta.atlasW : tex.width;
                 float ah = meta.atlasH > 0 ? meta.atlasH : tex.height;
                 string glyphs = meta.glyphs;

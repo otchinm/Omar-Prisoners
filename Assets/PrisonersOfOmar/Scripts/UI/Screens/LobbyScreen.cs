@@ -92,6 +92,7 @@ namespace PrisonersOfOmar.UI
             var s = NetSession.Instance;
             if (s == null) return;
             UIStyle.Dim(ui, 0.62f);
+            ui.FontOverride = ui.TinyFont;
             UpdatePreview();
             bool host = s.IsHost;
             UIStyle.Header(ui, s.Practice ? "PLAY ALONE" : "LOBBY", 8);

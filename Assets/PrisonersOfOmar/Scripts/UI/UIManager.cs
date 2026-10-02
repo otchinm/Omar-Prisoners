@@ -144,6 +144,7 @@ namespace PrisonersOfOmar.UI
             int first = 0;
             for (int i = _stack.Count - 1; i >= 0; i--) if (_stack[i].Opaque) { first = i; break; }
 
+            UI.FontOverride = null;
             try
             {
                 if (Hud != null && first == 0 && !(_stack.Count > 0 && _stack[0].Opaque)) Hud.Draw(UI, !modal);
@@ -154,11 +155,13 @@ namespace PrisonersOfOmar.UI
             for (int i = first; i < _stack.Count; i++)
             {
                 var s = _stack[i];
+                UI.FontOverride = null;
                 try { s.Draw(UI, s == top && Time.frameCount > s.OpenedFrame); }
                 catch (System.Exception e) { Debug.LogException(e); }
                 if (i >= _stack.Count) break; // screen closed itself
             }
 
+            UI.FontOverride = null;
             UI.CursorVisible = Top != null && Top.ShowCursor;
             GameInput.GameplayBlocked = AnyModal;
             UI.EndFrame();
