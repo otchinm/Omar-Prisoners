@@ -373,7 +373,7 @@ namespace PrisonersOfOmar.Gameplay
             _sendTimer -= dt;
             if (_sendTimer > 0f) return;
             _sendTimer = 0.05f;
-            if (LocalAvatar != null && Session.Online)
+            if (LocalAvatar != null && Session.Online && !IsHost)
             {
                 var st = StatusOf(LocalId);
                 if (st != null && (st.Life == LifeState.Escaped || st.Life == LifeState.Gone)) return;

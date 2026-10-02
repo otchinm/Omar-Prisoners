@@ -14,6 +14,8 @@ namespace PrisonersOfOmar.UI
         public virtual bool ShowCursor => Modal;
         /// <summary>Screens below a non-transparent screen are not drawn.</summary>
         public virtual bool Opaque => false;
+        /// <summary>Frame the screen was pushed (input is ignored during that frame so the opening key does not close it).</summary>
+        internal int OpenedFrame;
         public virtual void OnOpen() { }
         public virtual void OnClose() { }
         /// <summary>Draw and (if <paramref name="hasInput"/>) handle input. Called once per frame in Update.</summary>
@@ -69,6 +71,7 @@ namespace PrisonersOfOmar.UI
         public void Push(UIScreen s)
         {
             if (s == null) return;
+            s.OpenedFrame = Time.frameCount;
             _stack.Add(s);
             s.OnOpen();
         }
@@ -151,7 +154,7 @@ namespace PrisonersOfOmar.UI
             for (int i = first; i < _stack.Count; i++)
             {
                 var s = _stack[i];
-                try { s.Draw(UI, s == top); }
+                try { s.Draw(UI, s == top && Time.frameCount > s.OpenedFrame); }
                 catch (System.Exception e) { Debug.LogException(e); }
                 if (i >= _stack.Count) break; // screen closed itself
             }

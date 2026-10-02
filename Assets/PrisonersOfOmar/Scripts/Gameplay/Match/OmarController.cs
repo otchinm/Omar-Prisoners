@@ -324,6 +324,21 @@ namespace PrisonersOfOmar.Gameplay
 
         // ------------------------------------------------------------------ interaction
 
+        /// <summary>Closest interactable along the ray; trigger volumes up to 0.6 m behind the first solid hit
+        /// still count (interaction volumes often sit inside furniture).</summary>
+        static IInteractable PickInteractable(RaycastHit[] hits)
+        {
+            float block = float.MaxValue;
+            foreach (var h in hits)
+            {
+                if (h.distance > block + 0.6f) break;
+                var it = InteractableRef.From(h.collider);
+                if (it != null && (!h.collider.isTrigger || h.distance <= block + 0.6f)) return it;
+                if (!h.collider.isTrigger && block == float.MaxValue) block = h.distance;
+            }
+            return null;
+        }
+
         void HandleInteraction(float dt)
         {
             _hasPrompt = false;
@@ -334,12 +349,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var hits = Physics.RaycastAll(new Ray(rig.transform.position, rig.transform.forward), Tuning.InteractRange + 0.3f, Layers.InteractRay, QueryTriggerInteraction.Collide);
                 System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                foreach (var h in hits)
-                {
-                    var it = InteractableRef.From(h.collider);
-                    if (it != null) { target = it; break; }
-                    if (!h.collider.isTrigger) break;
-                }
+                target = PickInteractable(hits);
             }
             if (target != _target) { _target = target; _hold = 0; }
             if (_target == null) { _holdLock = false; return; }

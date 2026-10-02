@@ -166,6 +166,11 @@ namespace PrisonersOfOmar.Gameplay
                 else _crouch = !_crouch;
             }
             _motor.SetCrouched(_crouch, dt);
+            if (st.InCar && _seated && _w.Map.Car != null && _w.Map.Car.Root != null)
+            {
+                // ride along (the controller is disabled while seated)
+                _avatar.transform.position = _w.Map.Car.Root.TransformPoint(_seatLocal.position) - Vector3.up * 1.0f;
+            }
 
             Vector2 input = canMove ? GameInput.Move : Vector2.zero;
             bool injured = st.Injured && !PainkillersActive;
@@ -481,6 +486,21 @@ namespace PrisonersOfOmar.Gameplay
 
         // ================================================================== interaction
 
+        /// <summary>Closest interactable along the ray; trigger volumes up to 0.6 m behind the first solid hit
+        /// still count (interaction volumes often sit inside furniture).</summary>
+        static IInteractable PickInteractable(RaycastHit[] hits)
+        {
+            float block = float.MaxValue;
+            foreach (var h in hits)
+            {
+                if (h.distance > block + 0.6f) break;
+                var it = InteractableRef.From(h.collider);
+                if (it != null && (!h.collider.isTrigger || h.distance <= block + 0.6f)) return it;
+                if (!h.collider.isTrigger && block == float.MaxValue) block = h.distance;
+            }
+            return null;
+        }
+
         void HandleInteraction(PlayerStatus st, float dt)
         {
             _who.Status = st;
@@ -524,12 +544,7 @@ namespace PrisonersOfOmar.Gameplay
                 var ray = new Ray(rig.transform.position, rig.transform.forward);
                 var hits = Physics.RaycastAll(ray, Tuning.InteractRange, Layers.InteractRay, QueryTriggerInteraction.Collide);
                 System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                foreach (var h in hits)
-                {
-                    var it = InteractableRef.From(h.collider);
-                    if (it != null) { target = it; break; }
-                    if (!h.collider.isTrigger) break; // blocked by a wall / prop
-                }
+                target = PickInteractable(hits);
             }
             // in a car: the car itself (we look around from inside)
             if (st.InCar)

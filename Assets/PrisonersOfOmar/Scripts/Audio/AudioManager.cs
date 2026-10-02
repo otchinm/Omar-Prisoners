@@ -135,7 +135,16 @@ namespace PrisonersOfOmar.Audio
         void Release(Voice v)
         {
             v.InUse = false; v.Follow = null; v.Persistent = false; v.StopWhenSilent = false;
-            v.Src.clip = null; v.Src.loop = false;
+            // Replace the AudioSource so callers still holding the old one cannot stop a recycled sound
+            // (their reference becomes a destroyed object == null).
+            var go = v.Src != null ? v.Src.gameObject : null;
+            _bySource.Remove(v.Src);
+            if (v.Src != null) { v.Src.Stop(); Destroy(v.Src); }
+            if (go == null) { go = new GameObject("Voice"); go.transform.SetParent(transform, false); }
+            v.Src = go.AddComponent<AudioSource>();
+            v.Src.playOnAwake = false;
+            v.Src.dopplerLevel = 0f;
+            _bySource[v.Src] = v;
         }
 
         Voice Setup(AudioClip clip, float volume, float pitch, AudioCategory cat, bool spatial, Vector3 pos, float minDist, float maxDist, bool loop, Transform follow)
