@@ -51,6 +51,21 @@ namespace PrisonersOfOmar.Map
         public Bounds PlayableBounds;
         /// <summary>Named points for scripted events ("TvLivingRoom", "PhoneKitchen", "Portrait", ...).</summary>
         public readonly Dictionary<string, Transform> Markers = new Dictionary<string, Transform>();
+
+        // ---- additions (map builder v1) ----------------------------------------------------
+        /// <summary>World bounds of every named area (same strings as ItemSpawnInfo.Area / NavGraph.NodeAreas):
+        /// rooms, buildings and outdoor zones. Rooms are listed before the outdoor zones that contain them.</summary>
+        public readonly Dictionary<string, Bounds> AreaBounds = new Dictionary<string, Bounds>();
+        /// <summary>Order in which <see cref="AreaBounds"/> were registered (most specific first).</summary>
+        public readonly List<string> AreaOrder = new List<string>();
+
+        /// <summary>First registered area whose bounds contain <paramref name="p"/> (or "Exterior").</summary>
+        public string AreaAt(Vector3 p)
+        {
+            for (int i = 0; i < AreaOrder.Count; i++)
+                if (AreaBounds.TryGetValue(AreaOrder[i], out var b) && b.Contains(p)) return AreaOrder[i];
+            return "Exterior";
+        }
     }
 
     public sealed class DoorInfo
@@ -71,6 +86,10 @@ namespace PrisonersOfOmar.Map
         public GameObject Boards;
         /// <summary>Center of the doorway at floor height.</summary>
         public Vector3 Center;
+        /// <summary>(addition) Horizontal unit direction the leaf swings towards (into the room it opens into).</summary>
+        public Vector3 SwingDirection;
+        /// <summary>(addition) Area names on the swing side / the other side.</summary>
+        public string AreaSwingSide, AreaOtherSide;
     }
 
     public sealed class HidingSpotInfo
@@ -173,6 +192,14 @@ namespace PrisonersOfOmar.Map
         public Transform[] Headlights = new Transform[0];
         /// <summary>Hood pivot (opens around local X) for the battery swap animation; may be null.</summary>
         public Transform HoodPivot;
+        /// <summary>(addition) Degrees around the hood pivot's local X that open the hood (negative = front edge up).</summary>
+        public float HoodOpenAngle = -60f;
+        /// <summary>(addition) Degrees around local Y that swing the vehicle gate leaves OUTWARD (south, the way the car leaves).</summary>
+        public float VehicleGateLeftOpenAngle = 100f, VehicleGateRightOpenAngle = -100f;
+        /// <summary>(addition) Seat anchors parented to Root (same order as Seats) - follow the car while it drives.</summary>
+        public Transform[] SeatAnchors = new Transform[0];
+        /// <summary>(addition) Solid colliders of the vehicle gate leaves (Layers.Door; disable once smashed open).</summary>
+        public Collider[] VehicleGateBlockers = new Collider[0];
     }
 
     public sealed class ShelterInfo
