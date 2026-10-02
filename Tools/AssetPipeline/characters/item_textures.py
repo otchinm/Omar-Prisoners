@@ -1,0 +1,517 @@
+"""Item textures (Resources/Textures/Items). Region layouts MUST match ItemMeshFactory.cs (pixel rects, origin top-left).
+
+Each function paints at 4x, downsamples and degrades. Returns (rgb float array, alpha or None).
+"""
+import numpy as np
+from PIL import ImageDraw
+
+from paint import (rgb, fill, uv_grid, fbm, photo_detail, smoothstep, mix, shade, blur, text_mask, downsample, degrade,
+                   fabric, blood, blood_color, grime, draw_mask, photo_color)
+
+S = 4
+
+
+class Canvas:
+    def __init__(self, w, h, seed):
+        self.w, self.h = w, h
+        self.img = np.zeros((h * S, w * S, 3), np.float32)
+        self.alpha = None
+        self.rng = np.random.RandomState(seed)
+
+    def region(self, x, y, w, h):
+        return self.img[y * S:(y + h) * S, x * S:(x + w) * S]
+
+    def put(self, x, y, arr):
+        h, w = arr.shape[:2]
+        self.img[y * S:y * S + h, x * S:x * S + w] = arr
+
+    def done(self, bits=5, q=68, desat=0.08):
+        small = downsample(self.img, S)
+        out = degrade(small, self.rng, bits=bits, jpeg_q=q, desat=desat)
+        return out, self.alpha
+
+
+def metal(h, w, color, rng, brushed=True, scratches=0.3, rust=0.0):
+    base = fill(h, w, rgb(color))
+    if brushed:
+        streak = rng.rand(h, 1).astype(np.float32)
+        streak = np.repeat(streak, w, axis=1)
+        streak = blur(streak, (0.5)) if False else streak
+        base = shade(base, 0.9 + 0.2 * streak)
+    base = shade(base, 1 + photo_detail("coins", h, w, rng, zoom=2.5, sigma=2) * 0.06)
+    if scratches:
+        m = np.zeros((h, w), np.float32)
+        for _ in range(int(scratches * 40)):
+            x0, y0 = rng.randint(0, w), rng.randint(0, h)
+            ln = rng.randint(4, max(5, w // 2))
+            ang = rng.uniform(-0.4, 0.4)
+            xs = np.clip((x0 + np.arange(ln) * np.cos(ang)).astype(int), 0, w - 1)
+            ys = np.clip((y0 + np.arange(ln) * np.sin(ang)).astype(int), 0, h - 1)
+            m[ys, xs] = 1
+        base = mix(base, np.clip(rgb(color) * 1.35, 0, 1), m * 0.6)
+    if rust:
+        n = fbm(h, w, 6, rng, octaves=4)
+        r = photo_detail("ihc", h, w, rng, zoom=2, sigma=4)
+        base = mix(base, rgb("#6a3a1c"), smoothstep(0.55, 0.75, n + r * 0.05) * rust)
+        base = mix(base, rgb("#3a2010"), smoothstep(0.7, 0.85, n) * rust * 0.7)
+    return base
+
+
+def plastic(h, w, color, rng, gloss=0.1, dirt=0.2):
+    base = fill(h, w, rgb(color))
+    n = fbm(h, w, 3, rng, octaves=3)
+    base = shade(base, 0.92 + 0.16 * n)
+    base = shade(base, 1 + photo_detail("gravel", h, w, rng, zoom=4, sigma=1) * 0.025)
+    return grime(base, rng, amount=dirt, color=(0.15, 0.12, 0.1), scale=4)
+
+
+def paper(h, w, color, rng, dirt=0.25):
+    base = fill(h, w, rgb(color))
+    base = shade(base, 1 + photo_detail("page", h, w, rng, zoom=1.5, sigma=3) * 0.03)
+    return grime(base, rng, amount=dirt, color=(0.45, 0.4, 0.3), scale=4)
+
+
+def text_lines(h, w, rng, x0, y0, x1, y1, rows, color, img, alpha=0.8, thick=1):
+    m = np.zeros((h, w), np.float32)
+    ys = np.linspace(y0, y1, rows)
+    for y in ys:
+        x = x0
+        while x < x1:
+            ln = rng.randint(2, 8) * S
+            m[int(y):int(y) + thick * S, int(x):int(min(x + ln, x1))] = 1
+            x += ln + S * 1.5
+    return mix(img, rgb(color), m * alpha)
+
+
+# --------------------------------------------------------------------------------------------- items
+def lighter():
+    c = Canvas(64, 64, 11)
+    r = c.rng
+    brass = "#b08a3a"
+    front = metal(32 * S, 32 * S, brass, r, scratches=0.5)
+    # bevel highlight + dark edges
+    u, v = uv_grid(32 * S, 32 * S)
+    front = shade(front, 1 + 0.25 * np.exp(-((u - 0.3) / 0.08) ** 2) - 0.25 * (np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v)) < 0.06))
+    front = mix(front, rgb("#5a4418"), text_mask(32 * S, 32 * S, "Z", 16 * S, 17 * S, 14 * S, stroke=1) * 0.35)
+    c.put(0, 0, grime(front, r, 0.2, (0.2, 0.15, 0.05)))
+    side = metal(32 * S, 16 * S, brass, r, scratches=0.4)
+    side = shade(side, 0.82)
+    c.put(32, 0, side)
+    lid = metal(16 * S, 32 * S, brass, r, scratches=0.4)
+    u, v = uv_grid(16 * S, 32 * S)
+    lid = shade(lid, 1 + 0.2 * np.exp(-((u - 0.3) / 0.08) ** 2))
+    c.put(0, 32, lid)
+    chim = metal(16 * S, 16 * S, "#a8a8a0", r, scratches=0.2)
+    yy, xx = np.mgrid[0:16 * S, 0:16 * S]
+    holes = ((((xx // S) % 4) == 1) & (((yy // S) % 4) == 1)) | ((((xx // S) % 4) == 2) & (((yy // S) % 4) == 1))
+    holes = holes & (((yy // S) % 4) == 1)
+    chim = mix(chim, rgb("#101010"), holes.astype(np.float32))
+    c.put(32, 32, chim)
+    c.put(48, 0, metal(16 * S, 16 * S, brass, r, scratches=0.3))
+    c.put(48, 16, metal(16 * S, 16 * S, "#9a9a92", r, scratches=0.2))
+    c.put(48, 32, metal(16 * S, 16 * S, "#2a2622", r, brushed=False, scratches=0.0))
+    c.put(0, 48, fill(16 * S, 64 * S, rgb("#3a3a36")))
+    return c.done()
+
+
+def lighterfuel():
+    c = Canvas(128, 64, 12)
+    r = c.rng
+    blue = "#1a2a8a"
+    h, w = 64 * S, 64 * S
+    f = metal(h, w, blue, r, brushed=False, scratches=0.15)
+    u, v = uv_grid(h, w)
+    band = (v > 0.48) & (v < 0.86)
+    f = mix(f, rgb("#e8d020"), band.astype(np.float32))
+    f = mix(f, rgb("#0a1a6a"), ((np.abs(v - 0.48) < 0.012) | (np.abs(v - 0.86) < 0.012)).astype(np.float32))
+    t = text_mask(h, w, "LIGHTER\nFUEL", w * 0.5, h * 0.33, int(h * 0.15), stroke=2, spacing=2, stretch_x=0.95)
+    f = mix(f, rgb("#14207a"), t)
+    em = draw_mask(h, w, lambda d: d.ellipse([w * 0.4, h * 0.58, w * 0.6, h * 0.74], fill=255))
+    f = mix(f, rgb("#e8d020"), em)
+    f = text_lines(h, w, r, w * 0.15, h * 0.8, w * 0.85, h * 0.93, 3, "#c8c8e0", f, 0.6)
+    f = grime(f, r, 0.2, (0.1, 0.1, 0.1))
+    c.put(0, 0, f)
+    b = metal(64 * S, 32 * S, blue, r, brushed=False, scratches=0.15)
+    b = text_lines(64 * S, 32 * S, r, 3 * S, 10 * S, 29 * S, 50 * S, 10, "#d0d0e0", b, 0.6)
+    c.put(64, 0, b)
+    c.put(96, 0, metal(64 * S, 16 * S, blue, r, brushed=False, scratches=0.2))
+    c.put(112, 0, metal(16 * S, 16 * S, "#9a9aa0", r))
+    c.put(112, 16, plastic(16 * S, 16 * S, "#b01818", r, dirt=0.1))
+    c.put(112, 32, plastic(16 * S, 16 * S, "#e0e0d8", r, dirt=0.1))
+    c.put(112, 48, fill(16 * S, 16 * S, rgb("#202020")))
+    return c.done()
+
+
+def bandages():
+    c = Canvas(64, 64, 13)
+    r = c.rng
+    h, w = 48 * S, 32 * S
+    f = paper(h, w, "#e8e8e4", r)
+    u, v = uv_grid(h, w)
+    f = mix(f, rgb("#c01818"), (v > 0.86).astype(np.float32))
+    t = text_mask(h, w, "BAND-AIDES", w * 0.5, h * 0.07, int(h * 0.075), stroke=1, stretch_x=0.62)
+    f = mix(f, rgb("#f0f0f0"), t)
+    # bandage strip picture, diagonal
+    strip = draw_mask(h, w, lambda d: d.polygon([(w * 0.1, h * 0.62), (w * 0.75, h * 0.3), (w * 0.9, h * 0.42), (w * 0.25, h * 0.74)], fill=255))
+    f = mix(f, rgb("#d8a070"), strip)
+    pad = draw_mask(h, w, lambda d: d.polygon([(w * 0.38, h * 0.48), (w * 0.55, h * 0.4), (w * 0.62, h * 0.5), (w * 0.45, h * 0.58)], fill=255))
+    f = mix(f, rgb("#f0e8e0"), pad)
+    f = text_lines(h, w, r, w * 0.12, h * 0.72, w * 0.88, h * 0.82, 2, "#2040a0", f, 0.8)
+    c.put(0, 0, grime(f, r, 0.25, (0.5, 0.45, 0.35)))
+    bk = paper(h, w, "#e4e4e0", r)
+    bk = text_lines(h, w, r, w * 0.1, h * 0.1, w * 0.9, h * 0.9, 12, "#404050", bk, 0.6)
+    c.put(32, 0, bk)
+    sd = paper(16 * S, 32 * S, "#e4e4e0", r)
+    sd[6 * S:9 * S] = sd[6 * S:9 * S] * 0.3 + rgb("#2040a0") * 0.7
+    c.put(0, 48, sd)
+    tp = paper(16 * S, 32 * S, "#dcdcd8", r)
+    tp[7 * S:8 * S] *= 0.6
+    c.put(32, 48, tp)
+    return c.done()
+
+
+def flashlight():
+    c = Canvas(64, 64, 14)
+    r = c.rng
+    body = metal(32 * S, 64 * S, "#26262a", r, brushed=False, scratches=0.4)
+    yy, xx = np.mgrid[0:32 * S, 0:64 * S]
+    knurl = (((xx // 2 + yy // 2) % 3) == 0) & (yy > 10 * S) & (yy < 24 * S)
+    body = shade(body, 1 - 0.3 * knurl)
+    body = mix(body, rgb("#8a8a8a"), ((np.abs(yy - 6 * S) < S) | (np.abs(yy - 28 * S) < S)).astype(np.float32) * 0.6)
+    c.put(0, 0, body)
+    c.put(0, 32, metal(16 * S, 32 * S, "#a0a0a4", r, scratches=0.3))
+    u, v = uv_grid(16 * S, 16 * S)
+    d = np.sqrt((u - 0.5) ** 2 + (v - 0.5) ** 2)
+    lens = fill(16 * S, 16 * S, rgb("#d8d0a0"))
+    lens = shade(lens, 1.25 - d * 1.2)
+    lens = mix(lens, rgb("#fff8d0"), smoothstep(0.18, 0.05, d))
+    lens = shade(lens, 1 - 0.3 * (np.abs(d - 0.3) < 0.03))
+    lens = mix(lens, rgb("#606060"), (d > 0.45).astype(np.float32))
+    c.put(32, 32, lens)
+    c.put(48, 32, metal(16 * S, 16 * S, "#1c1c1e", r, scratches=0.2))
+    c.put(0, 48, plastic(16 * S, 16 * S, "#8a1414", r, dirt=0.2))
+    c.put(16, 48, fill(16 * S, 48 * S, rgb("#202020")))
+    return c.done()
+
+
+def batteries():
+    c = Canvas(64, 32, 15)
+    r = c.rng
+    h, w = 32 * S, 48 * S
+    lab = plastic(h, w, "#141414", r, dirt=0.15)
+    u, v = uv_grid(h, w)
+    lab = mix(lab, rgb("#b0602a"), (v > 0.68).astype(np.float32))      # copper top towards the + end
+    lab = mix(lab, rgb("#d8b040"), (np.abs(v - 0.68) < 0.025).astype(np.float32))
+    t = text_mask(h, w, "D", w * 0.25, h * 0.45, int(h * 0.3), stroke=1)
+    lab = mix(lab, rgb("#e0e0e0"), t)
+    t2 = text_mask(h, w, "1.5V", w * 0.7, h * 0.45, int(h * 0.16), stroke=0)
+    lab = mix(lab, rgb("#c0c0c0"), t2)
+    c.put(0, 0, lab)
+    c.put(48, 0, metal(16 * S, 16 * S, "#b0b0b0", r))
+    c.put(48, 16, metal(16 * S, 16 * S, "#8a8a8a", r))
+    return c.done()
+
+
+def soundmeter():
+    c = Canvas(128, 128, 16)
+    r = c.rng
+    h, w = 128 * S, 64 * S
+    f = metal(h, w, "#2a2c2e", r, brushed=False, scratches=0.25)
+    u, v = uv_grid(h, w)
+    # dial window (top quarter)
+    win = (u > 0.1) & (u < 0.9) & (v > 0.72) & (v < 0.96)
+    face = fill(h, w, rgb("#e0d8c0"))
+    face = shade(face, 1 + photo_detail("page", h, w, r, zoom=1, sigma=3) * 0.03)
+    f = mix(f, face, win.astype(np.float32))
+    f = shade(f, 1 - 0.5 * (win & ((np.abs(u - 0.1) < 0.02) | (np.abs(u - 0.9) < 0.02) | (np.abs(v - 0.72) < 0.008) | (np.abs(v - 0.96) < 0.008))))
+    # arc scale centred at the needle pivot (u 0.5, v 0.74)
+    px, py = 0.5 * w, (1 - 0.74) * h
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    dx, dy = xx - px, py - yy
+    rad = np.sqrt(dx * dx + dy * dy)
+    ang = np.degrees(np.arctan2(dx, dy))
+    arc = (np.abs(rad - 0.17 * h) < 1.2 * S) & (np.abs(ang) < 48)
+    f = mix(f, rgb("#202020"), (arc & (ang < 20)).astype(np.float32))
+    f = mix(f, rgb("#c01818"), (arc & (ang >= 20)).astype(np.float32))
+    ticks = (rad > 0.17 * h) & (rad < 0.19 * h) & (np.abs(((ang + 48) % 12) - 6) > 5) & (np.abs(ang) < 49)
+    f = mix(f, rgb("#202020"), ticks.astype(np.float32))
+    f = mix(f, rgb("#202020"), text_mask(h, w, "VU", w * 0.5, h * 0.17, int(h * 0.035)))
+    # knobs, switch, LED, grille, labels
+    for kx in (0.26, 0.74):
+        f = mix(f, rgb("#101010"), draw_mask(h, w, lambda d, kx=kx: d.ellipse([w * kx - 6 * S, h * 0.45 - 6 * S, w * kx + 6 * S, h * 0.45 + 6 * S], fill=255)))
+        f = mix(f, rgb("#8a8a8a"), draw_mask(h, w, lambda d, kx=kx: d.line([w * kx, h * 0.45, w * kx, h * 0.45 - 5 * S], fill=255, width=S)))
+    f = mix(f, rgb("#d02020"), draw_mask(h, w, lambda d: d.ellipse([w * 0.5 - 2 * S, h * 0.36 - 2 * S, w * 0.5 + 2 * S, h * 0.36 + 2 * S], fill=255)))
+    f = mix(f, rgb("#8a8a8a"), draw_mask(h, w, lambda d: d.rectangle([w * 0.45, h * 0.55, w * 0.55, h * 0.6], fill=255)))
+    for gy in np.arange(0.74, 0.92, 0.025):
+        f = mix(f, rgb("#0a0a0a"), draw_mask(h, w, lambda d, gy=gy: d.rectangle([w * 0.2, h * gy, w * 0.8, h * gy + S], fill=255)))
+    f = mix(f, rgb("#c0c0c0"), text_mask(h, w, "SOUND LEVEL", w * 0.5, h * 0.66, int(h * 0.028), stretch_x=0.8))
+    f = grime(f, r, 0.25, (0.08, 0.08, 0.08))
+    c.put(0, 0, f)
+    b = metal(128 * S, 32 * S, "#262829", r, brushed=False)
+    for sy in (0.08, 0.92):
+        for sx in (0.15, 0.85):
+            b = mix(b, rgb("#6a6a6a"), draw_mask(128 * S, 32 * S, lambda d, sx=sx, sy=sy: d.ellipse([32 * S * sx - 2 * S, 128 * S * sy - 2 * S, 32 * S * sx + 2 * S, 128 * S * sy + 2 * S], fill=255)))
+    c.put(64, 0, b)
+    c.put(96, 0, metal(128 * S, 16 * S, "#222324", r, brushed=False))
+    c.put(112, 0, metal(32 * S, 16 * S, "#2a2a2a", r, brushed=False))
+    nd = fill(32 * S, 16 * S, rgb("#0a0a0a"))
+    nd[:8 * S] = rgb("#b01010")
+    c.put(112, 32, nd)
+    c.put(112, 64, fill(64 * S, 16 * S, rgb("#202020")))
+    return c.done()
+
+
+def boltcutters():
+    c = Canvas(64, 64, 17)
+    r = c.rng
+    c.put(0, 0, metal(64 * S, 32 * S, "#3a3c40", r, scratches=0.5, rust=0.3))
+    g = plastic(32 * S, 32 * S, "#a01818", r, dirt=0.35)
+    yy, xx = np.mgrid[0:32 * S, 0:32 * S]
+    g = shade(g, 1 - 0.18 * (((yy // (2 * S)) % 2) == 0))
+    c.put(32, 0, g)
+    j = metal(32 * S, 32 * S, "#2a2c30", r, scratches=0.6, rust=0.2)
+    j[:, :4 * S] = j[:, :4 * S] * 0.5 + rgb("#b0b0b0") * 0.5
+    c.put(32, 32, j)
+    return c.done()
+
+
+def carkeys():
+    c = Canvas(64, 64, 18)
+    r = c.rng
+    k1 = metal(16 * S, 32 * S, "#b8963c", r, scratches=0.3)
+    yy, xx = np.mgrid[0:16 * S, 0:32 * S]
+    k1 = shade(k1, 1 - 0.3 * (((xx // (3 * S)) % 2) == 0) * (yy > 10 * S))
+    c.put(0, 0, k1)
+    c.put(0, 16, metal(16 * S, 32 * S, "#b0b0b4", r, scratches=0.3))
+    fob = plastic(32 * S, 32 * S, "#141416", r, dirt=0.15)
+    for by in (0.3, 0.62):
+        fob = mix(fob, rgb("#3a3a3e"), draw_mask(32 * S, 32 * S, lambda d, by=by: d.rounded_rectangle([8 * S, 32 * S * by - 4 * S, 24 * S, 32 * S * by + 4 * S], radius=2 * S, fill=255)))
+    fob = mix(fob, rgb("#c8c8c8"), text_mask(32 * S, 32 * S, "<>", 16 * S, 32 * S * 0.3, 5 * S))
+    fob = mix(fob, rgb("#c03030"), draw_mask(32 * S, 32 * S, lambda d: d.ellipse([14 * S, 32 * S * 0.62 - 2 * S, 18 * S, 32 * S * 0.62 + 2 * S], fill=255)))
+    c.put(32, 0, fob)
+    c.put(0, 32, metal(16 * S, 16 * S, "#a8a8a8", r))
+    c.put(16, 32, plastic(16 * S, 16 * S, "#18181a", r))
+    c.put(32, 32, fill(32 * S, 32 * S, rgb("#202020")))
+    return c.done()
+
+
+def gascan():
+    c = Canvas(64, 64, 19)
+    r = c.rng
+    h, w = 32 * S, 64 * S
+    s = plastic(h, w, "#b01a14", r, dirt=0.35)
+    u, v = uv_grid(h, w)
+    # molded X ribs
+    xr = (np.abs((u * 2 % 1) - v) < 0.04) | (np.abs((u * 2 % 1) - (1 - v)) < 0.04)
+    s = shade(s, 1 - 0.18 * xr)
+    lab = (u > 0.3) & (u < 0.7) & (v > 0.3) & (v < 0.7)
+    s = mix(s, rgb("#e0c020"), lab.astype(np.float32))
+    s = mix(s, rgb("#101010"), text_mask(h, w, "GASOLINE", w * 0.5, h * 0.45, int(h * 0.11), stroke=1, stretch_x=0.7) * lab)
+    s = mix(s, rgb("#101010"), text_mask(h, w, "DANGER", w * 0.5, h * 0.6, int(h * 0.07), stretch_x=0.7) * lab)
+    c.put(0, 0, grime(s, r, 0.3, (0.15, 0.08, 0.06)))
+    c.put(0, 32, plastic(32 * S, 32 * S, "#a81812", r, dirt=0.4))
+    c.put(32, 32, plastic(16 * S, 16 * S, "#a01610", r, dirt=0.3))
+    c.put(48, 32, plastic(16 * S, 16 * S, "#d8b818", r, dirt=0.3))
+    c.put(32, 48, plastic(16 * S, 16 * S, "#141414", r, dirt=0.2))
+    c.put(48, 48, fill(16 * S, 16 * S, rgb("#202020")))
+    return c.done()
+
+
+def carbattery():
+    c = Canvas(64, 64, 20)
+    r = c.rng
+    h, w = 32 * S, 64 * S
+    s = plastic(h, w, "#18181a", r, dirt=0.3)
+    u, v = uv_grid(h, w)
+    lab = (v > 0.35) & (v < 0.75) & (u > 0.08) & (u < 0.92)
+    s = mix(s, rgb("#d8d8d0"), lab.astype(np.float32))
+    s = mix(s, rgb("#1838a0"), (lab & (v > 0.62)).astype(np.float32))
+    s = mix(s, rgb("#101010"), text_mask(h, w, "12V HEAVY DUTY", w * 0.5, h * 0.5, int(h * 0.12), stroke=1, stretch_x=0.7) * lab)
+    c.put(0, 0, grime(s, r, 0.3, (0.3, 0.28, 0.25)))
+    c.put(0, 32, plastic(24 * S, 32 * S, "#141416", r, dirt=0.3))
+    t = plastic(32 * S, 32 * S, "#4a4c4e", r, dirt=0.4)
+    for i in range(6):
+        cx = (6 + i * 4) * S
+        t = mix(t, rgb("#202020"), draw_mask(32 * S, 32 * S, lambda d, cx=cx: d.ellipse([cx - 1.5 * S, 15 * S, cx + 1.5 * S, 18 * S], fill=255)))
+    t = mix(t, rgb("#d02020"), text_mask(32 * S, 32 * S, "+", 26 * S, 6 * S, 7 * S, stroke=1))
+    t = mix(t, rgb("#101010"), text_mask(32 * S, 32 * S, "-", 6 * S, 6 * S, 7 * S, stroke=1))
+    c.put(32, 32, t)
+    c.put(0, 56, metal(8 * S, 8 * S, "#c02018", r, brushed=False, scratches=0))
+    c.put(8, 56, metal(8 * S, 8 * S, "#1a1a1a", r, brushed=False, scratches=0))
+    c.put(16, 56, plastic(8 * S, 16 * S, "#101010", r))
+    c.put(32, 56, fill(8 * S, 32 * S, rgb("#202020")))
+    return c.done()
+
+
+def fuse():
+    c = Canvas(64, 32, 21)
+    r = c.rng
+    h, w = 32 * S, 48 * S
+    b = paper(h, w, "#d8d0b8", r, dirt=0.4)
+    b = shade(b, 1 + photo_detail("coins", h, w, r, zoom=2, sigma=2) * 0.04)
+    b = mix(b, rgb("#202020"), text_mask(h, w, "30A", w * 0.3, h * 0.5, int(h * 0.28), stroke=1))
+    b = mix(b, rgb("#702020"), text_mask(h, w, "250V", w * 0.75, h * 0.5, int(h * 0.18)))
+    c.put(0, 0, grime(b, r, 0.35, (0.3, 0.25, 0.18)))
+    c.put(48, 0, metal(16 * S, 16 * S, "#b08a40", r, scratches=0.4))
+    c.put(48, 16, metal(16 * S, 16 * S, "#a07a30", r, scratches=0.4))
+    return c.done()
+
+
+def cagekey():
+    c = Canvas(32, 32, 22)
+    r = c.rng
+    c.put(0, 0, metal(32 * S, 32 * S, "#3a3632", r, brushed=False, scratches=0.3, rust=0.6))
+    return c.done()
+
+
+def lockpick():
+    c = Canvas(64, 32, 23)
+    r = c.rng
+    h, w = 32 * S, 48 * S
+    l = fabric(h, w, rgb("#6a4026"), r, folds=0.2, grain=0.1, fold_src=("ihc", None))
+    u, v = uv_grid(h, w)
+    border = (np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v)) < 0.08)
+    stitch = border & (np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v)) > 0.05) & ((np.mgrid[0:h, 0:w][1] // (2 * S)) % 2 == 0)
+    l = mix(l, rgb("#c8a878"), stitch.astype(np.float32) * 0.8)
+    c.put(0, 0, grime(l, r, 0.3, (0.12, 0.08, 0.05)))
+    c.put(48, 0, metal(32 * S, 16 * S, "#b0b0b4", r, scratches=0.2))
+    return c.done()
+
+
+def crowbar():
+    c = Canvas(32, 64, 24)
+    r = c.rng
+    p = metal(64 * S, 16 * S, "#9a1810", r, brushed=False, scratches=0.0)
+    chips = smoothstep(0.62, 0.66, fbm(64 * S, 16 * S, 8, r, octaves=3))
+    p = mix(p, rgb("#4a4a4a"), chips)
+    p = mix(p, rgb("#5a3018"), smoothstep(0.7, 0.75, fbm(64 * S, 16 * S, 6, r, octaves=3)) * 0.7)
+    c.put(0, 0, grime(p, r, 0.3, (0.1, 0.08, 0.06)))
+    c.put(16, 0, metal(64 * S, 16 * S, "#4a4c50", r, scratches=0.5, rust=0.4))
+    return c.done()
+
+
+def bottle():
+    c = Canvas(64, 64, 25)
+    r = c.rng
+    h, w = 48 * S, 48 * S
+    g = fill(h, w, rgb("#1e4a22"))
+    u, v = uv_grid(h, w)
+    g = shade(g, 0.75 + 0.6 * np.exp(-((u - 0.62) / 0.05) ** 2) + 0.3 * np.exp(-((u - 0.12) / 0.04) ** 2))
+    g = shade(g, 1 + photo_detail("moon", h, w, r, zoom=2, sigma=3) * 0.05)
+    label = (v > 0.3) & (v < 0.72) & (u > 0.05) & (u < 0.62)
+    torn = smoothstep(0.45, 0.5, fbm(h, w, 10, r, octaves=3) + 0.2)
+    lab = paper(h, w, "#c8b890", r, dirt=0.5)
+    lab = mix(lab, rgb("#8a1a14"), text_mask(h, w, "OLD\nCROW", w * 0.33, h * 0.5, int(h * 0.09), stroke=1, spacing=2) * 0.9)
+    g = mix(g, lab, label * torn)
+    c.put(0, 0, grime(g, r, 0.25, (0.1, 0.1, 0.06)))
+    n = fill(48 * S, 16 * S, rgb("#1a4220"))
+    u, v = uv_grid(48 * S, 16 * S)
+    n = shade(n, 0.8 + 0.5 * np.exp(-((u - 0.6) / 0.1) ** 2))
+    c.put(48, 0, n)
+    c.put(0, 48, fill(16 * S, 16 * S, rgb("#143018")))
+    c.put(16, 48, fill(16 * S, 16 * S, rgb("#2a5a2e")))
+    c.put(32, 48, fill(16 * S, 32 * S, rgb("#202020")))
+    return c.done()
+
+
+def pills():
+    c = Canvas(64, 32, 26)
+    r = c.rng
+    h, w = 32 * S, 48 * S
+    b = fill(h, w, rgb("#d0701a"))
+    u, v = uv_grid(h, w)
+    b = shade(b, 0.8 + 0.4 * np.exp(-((u - 0.6) / 0.08) ** 2))
+    lab = (v > 0.18) & (v < 0.78) & (u > 0.12) & (u < 0.88)
+    b = mix(b, paper(h, w, "#ecece4", r, dirt=0.2), lab.astype(np.float32))
+    b = mix(b, rgb("#202020"), text_mask(h, w, "Rx", w * 0.24, h * 0.36, int(h * 0.18), stroke=1) * lab)
+    b = text_lines(h, w, r, w * 0.36, h * 0.3, w * 0.84, h * 0.7, 5, "#303030", b, 0.8)
+    c.put(0, 0, b)
+    cap = plastic(16 * S, 16 * S, "#e8e8e0", r, dirt=0.15)
+    u, v = uv_grid(16 * S, 16 * S)
+    d = np.sqrt((u - 0.5) ** 2 + (v - 0.5) ** 2)
+    cap = shade(cap, 1 - 0.2 * (np.abs(d - 0.3) < 0.03))
+    c.put(48, 0, cap)
+    cs = plastic(16 * S, 16 * S, "#e0e0d8", r)
+    yy, xx = np.mgrid[0:16 * S, 0:16 * S]
+    cs = shade(cs, 1 - 0.2 * ((xx // S) % 2 == 0))
+    c.put(48, 16, cs)
+    return c.done()
+
+
+def cleaver():
+    c = Canvas(64, 64, 27)
+    r = c.rng
+    h, w = 32 * S, 64 * S
+    b = metal(h, w, "#8a8c90", r, scratches=0.7, rust=0.25)
+    u, v = uv_grid(h, w)
+    # sharpened bevel along the edge (bottom)
+    b = mix(b, rgb("#c8c8cc"), (v < 0.1).astype(np.float32) * 0.8)
+    # hang hole near the spine at the tip end
+    hole = draw_mask(h, w, lambda d: d.ellipse([w * 0.82, h * 0.12, w * 0.9, h * 0.28], fill=255))
+    b = mix(b, rgb("#050505"), hole)
+    bm = blood(h, w, r, amount=0.5, scale=5, splatter=2.0)
+    b = mix(b, blood_color(r, h, w), bm * 0.9)
+    smear = smoothstep(0.4, 0.7, fbm(h, w, 3, r, octaves=3)) * (v < 0.6)
+    b = mix(b, rgb("#4a0606"), smear * 0.6)
+    c.put(0, 0, grime(b, r, 0.25, (0.15, 0.1, 0.08)))
+    wood = fabric(16 * S, 32 * S, rgb("#3a2414"), r, folds=0.0, grain=0.0)
+    wood = shade(wood, 1 + photo_detail("coffee", 16 * S, 32 * S, r, zoom=3, sigma=2, crop=(0.0, 0.0, 0.4, 0.4)) * 0.12)
+    yy, xx = np.mgrid[0:16 * S, 0:32 * S]
+    wood = shade(wood, 0.9 + 0.2 * np.sin(yy / (1.5 * S) + np.sin(xx / (6.0 * S)) * 2) * 0.5)
+    for rx in (0.2, 0.5, 0.8):
+        wood = mix(wood, rgb("#c0a050"), draw_mask(16 * S, 32 * S, lambda d, rx=rx: d.ellipse([32 * S * rx - 2 * S, 6 * S, 32 * S * rx + 2 * S, 10 * S], fill=255)))
+    wood = mix(wood, rgb("#3a0606"), blood(16 * S, 32 * S, r, amount=0.3, scale=4, splatter=1) * 0.7)
+    c.put(0, 32, wood)
+    c.put(32, 32, metal(8 * S, 32 * S, "#b0b0b4", r, scratches=0.4))
+    c.put(32, 40, metal(8 * S, 32 * S, "#7a5a28", r, scratches=0.2))
+    w2 = fabric(16 * S, 32 * S, rgb("#2e1c10"), r, folds=0.0, grain=0.1)
+    c.put(0, 48, w2)
+    c.put(32, 48, fill(16 * S, 32 * S, rgb("#202020")))
+    return c.done()
+
+
+def tripwire_stake():
+    c = Canvas(32, 32, 28)
+    r = c.rng
+    c.put(0, 0, metal(24 * S, 32 * S, "#4a4a4c", r, scratches=0.3, rust=0.5))
+    c.put(0, 24, metal(8 * S, 32 * S, "#9a9a9c", r, scratches=0.0))
+    return c.done()
+
+
+def beartrap():
+    c = Canvas(64, 64, 29)
+    r = c.rng
+    c.put(0, 0, metal(64 * S, 32 * S, "#33302c", r, brushed=False, scratches=0.4, rust=0.6))
+    t = metal(32 * S, 32 * S, "#5a5852", r, scratches=0.5, rust=0.3)
+    u, v = uv_grid(32 * S, 32 * S)
+    t = mix(t, rgb("#a8a8a0"), (v > 0.7).astype(np.float32) * 0.6)
+    t = mix(t, rgb("#4a0606"), blood(32 * S, 32 * S, r, amount=0.25, scale=4, splatter=1) * 0.7)
+    c.put(32, 0, t)
+    p = metal(32 * S, 32 * S, "#3a3632", r, brushed=False, scratches=0.2, rust=0.7)
+    yy, xx = np.mgrid[0:32 * S, 0:32 * S]
+    p = shade(p, 1 - 0.15 * (((xx + yy) // (3 * S)) % 2 == 0))
+    c.put(32, 32, p)
+    return c.done()
+
+
+ITEMS = {
+    "lighter": lighter,
+    "lighterfuel": lighterfuel,
+    "bandages": bandages,
+    "flashlight": flashlight,
+    "batteries": batteries,
+    "soundmeter": soundmeter,
+    "boltcutters": boltcutters,
+    "carkeys": carkeys,
+    "gascan": gascan,
+    "carbattery": carbattery,
+    "fuse": fuse,
+    "cagekey": cagekey,
+    "lockpick": lockpick,
+    "crowbar": crowbar,
+    "bottle": bottle,
+    "pills": pills,
+    "cleaver": cleaver,
+    "tripwire_stake": tripwire_stake,
+    "beartrap": beartrap,
+}

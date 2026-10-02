@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Offline preview harness for Scripts/Characters: compiles the real character code against a small managed
+    UnityEngine shim (Shim/) and dumps posed meshes as JSON for render.py. Not part of the Unity project.
+    Use run_preview.sh (builds into a temp dir, never inside the repo).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>CS0649;CS0169;CS0414;CS1591;CS0162;CS0219;CS0660;CS0661;CS8321</NoWarn>
+    <RootNamespace>PreviewHarness</RootNamespace>
+    <ProjectRoot>$(MSBuildThisFileDirectory)../../../../</ProjectRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Shim/*.cs" />
+    <Compile Include="Harness/*.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Characters/*.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/Enums.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/GameInfo.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/DeterministicRandom.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/MeshBuilder.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/GeoUtil.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/SurfaceTag.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Rendering/PsxMaterials.cs" />
+  </ItemGroup>
+</Project>
