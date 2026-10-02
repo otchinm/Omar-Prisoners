@@ -78,8 +78,11 @@ namespace PrisonersOfOmar.Rendering
             }
         }
 
+        static readonly Dictionary<PsxSurface, Shader> _shaders = new Dictionary<PsxSurface, Shader>();
+
         public static Shader ShaderFor(PsxSurface surface)
         {
+            if (_shaders.TryGetValue(surface, out var cached) && cached != null) return cached;
             string name;
             switch (surface)
             {
@@ -94,7 +97,12 @@ namespace PrisonersOfOmar.Rendering
                 default: name = ShaderLit; break;
             }
             var s = Shader.Find(name);
-            if (s == null) s = Shader.Find("Unlit/Texture");
+            if (s == null)
+            {
+                Debug.LogWarning("[PsxMaterials] missing shader: " + name);
+                s = Shader.Find("Unlit/Texture");
+            }
+            else _shaders[surface] = s;
             return s;
         }
 
@@ -119,7 +127,7 @@ namespace PrisonersOfOmar.Rendering
             m.name = (texturePath ?? "color") + "_" + surface;
             m.mainTexture = string.IsNullOrEmpty(texturePath) ? WhiteTexture : Texture(texturePath);
             m.color = tint ?? Color.white;
-            if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.5f);
+            if (m.HasProperty(PsxShaderIds.Cutoff)) m.SetFloat(PsxShaderIds.Cutoff, 0.5f);
             return m;
         }
     }
