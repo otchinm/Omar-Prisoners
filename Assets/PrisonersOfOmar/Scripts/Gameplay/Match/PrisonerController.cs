@@ -638,6 +638,11 @@ namespace PrisonersOfOmar.Gameplay
                 try { _arms.SetHeld(want); } catch (System.Exception e) { Debug.LogException(e); }
             }
             _arms.SetVisible(show);
+            if (want == ItemType.SoundMeter && _arms.HeldModel != null)
+            {
+                var needle = Avatar.FindDeep(_arms.HeldModel.transform, "Needle");
+                if (needle != null) needle.localRotation = Quaternion.Euler(0, 0, ItemMeshFactory.SoundMeterNeedleAngle(_noiseSmoothed));
+            }
             SetHandLights(_lighterOn && want == ItemType.Lighter && show, _flashOn && want == ItemType.Flashlight && show);
         }
 

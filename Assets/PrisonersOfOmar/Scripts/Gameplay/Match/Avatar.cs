@@ -71,14 +71,7 @@ namespace PrisonersOfOmar.Gameplay
                 a.Rig = HumanoidFactory.Build(info.Role == PlayerRole.Omar ? CharacterSkin.Omar : info.Skin, go.transform, isLocal ? Layers.LocalBody : layer);
                 a.Anim = a.Rig != null ? a.Rig.GetComponent<HumanoidAnimator>() : null;
                 if (a.Anim != null) a.Anim.Footstep += a.OnFootstep;
-                if (isLocal && a.Rig != null) a.Rig.SetLayer(Layers.LocalBody);
-                if (a.IsOmar && a.Rig != null && a.Rig.RightHandSocket != null)
-                {
-                    var cleaver = ItemMeshFactory.BuildCleaver();
-                    cleaver.transform.SetParent(a.Rig.RightHandSocket, false);
-                    GeoUtil.SetLayerRecursive(cleaver, isLocal ? Layers.LocalBody : layer);
-                    if (a.Anim != null) a.Anim.Hold = HoldPose.Cleaver;
-                }
+                if (isLocal && a.Rig != null) a.Rig.SetLayer(Layers.LocalBody); // Omar's rig already holds his cleaver
             }
             catch (System.Exception e) { Debug.LogException(e); }
 
@@ -193,7 +186,7 @@ namespace PrisonersOfOmar.Gameplay
                 Anim.Injured = st != null && st.Injured;
                 Anim.Pose = _statusPose;
                 if (IsOmar) Anim.Hold = HoldPose.Cleaver;
-                else Anim.Hold = State.Held == ItemType.None ? HoldPose.None : ItemDefs.Get(State.Held).Hold;
+                else Anim.Hold = State.Held == ItemType.None ? HoldPose.None : ItemMeshFactory.HoldPoseFor(State.Held);
             }
 
             if (!IsOmar) UpdateHeldItem();

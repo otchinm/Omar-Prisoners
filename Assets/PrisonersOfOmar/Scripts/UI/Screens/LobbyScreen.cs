@@ -62,14 +62,6 @@ namespace PrisonersOfOmar.UI
                 try
                 {
                     _preview = HumanoidFactory.Build(_choice == 4 ? CharacterSkin.Omar : (CharacterSkin)_choice, _previewRoot, Layers.Preview);
-                    if (_choice == 4 && _preview.RightHandSocket != null)
-                    {
-                        var cl = ItemMeshFactory.BuildCleaver();
-                        cl.transform.SetParent(_preview.RightHandSocket, false);
-                        GeoUtil.SetLayerRecursive(cl, Layers.Preview);
-                    }
-                    var anim = _preview.GetComponent<HumanoidAnimator>();
-                    if (anim != null && _choice == 4) anim.Hold = HoldPose.Cleaver;
                 }
                 catch (System.Exception e) { Debug.LogException(e); }
             }

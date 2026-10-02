@@ -415,8 +415,9 @@ namespace PrisonersOfOmar.Gameplay
             float target = State == TrapState.Armed ? 0f : 1f;
             if (Mathf.Approximately(_jaw, target)) return;
             _jaw = Mathf.MoveTowards(_jaw, target, dt * 12f);
-            if (_jawL != null) _jawL.localRotation = Quaternion.Euler(-80f * _jaw, 0, 0);
-            if (_jawR != null) _jawR.localRotation = Quaternion.Euler(80f * _jaw, 0, 0);
+            // ItemMeshFactory convention: Euler(a, 0, 0) on both jaws, 0 = open, 88 = closed
+            if (_jawL != null) _jawL.localRotation = Quaternion.Euler(88f * _jaw, 0, 0);
+            if (_jawR != null) _jawR.localRotation = Quaternion.Euler(88f * _jaw, 0, 0);
         }
 
         /// <summary>Did a foot moving from p0 to p1 (feet positions) set this trap off?</summary>

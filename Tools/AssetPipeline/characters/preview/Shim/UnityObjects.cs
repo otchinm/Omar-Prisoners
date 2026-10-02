@@ -340,6 +340,8 @@ namespace UnityEngine
     public class Shader : Object
     {
         public static Shader Find(string n) => new Shader { name = n };
+        public static int PropertyToID(string n) => n.GetHashCode();
+        public bool isSupported => true;
     }
 
     public class Texture : Object
@@ -374,6 +376,8 @@ namespace UnityEngine
         public Material(Shader s) { shader = s; }
         public Material(Material m) { shader = m.shader; mainTexture = m.mainTexture; color = m.color; name = m.name; }
         public bool HasProperty(string n) => true;
+        public bool HasProperty(int n) => true;
+        public void SetFloat(int n, float v) { }
         public void SetFloat(string n, float v) { }
         public void SetColor(string n, Color c) { }
         public void SetTexture(string n, Texture t) { }

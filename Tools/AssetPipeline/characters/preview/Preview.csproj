@@ -26,5 +26,6 @@
     <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/GeoUtil.cs" />
     <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Core/SurfaceTag.cs" />
     <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Rendering/PsxMaterials.cs" />
+    <Compile Include="$(ProjectRoot)Assets/PrisonersOfOmar/Scripts/Rendering/PsxShaderIds.cs" />
   </ItemGroup>
 </Project>
