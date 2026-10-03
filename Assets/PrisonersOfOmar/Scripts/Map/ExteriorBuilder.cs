@@ -835,6 +835,9 @@ namespace PrisonersOfOmar.Map
             ctx.BearTrap("OutsideGate", V(3.6f, 0, -49f));
             ctx.WallNote("OutsideGate", V(6.2f, 1.2f, -53.83f), Vector3.forward);
             // nav nodes outside the fence: gravel road, the road itself, the vehicle lane
+            // inside the main gate (the barrier-blocked grid nodes are dropped): auto edges link it to the yard and,
+            // through the gate line, to the node outside with EdgeMainGate
+            ctx.Nav.Add(V(0, 0, -43.8f), "Yard", true);
             ctx.Nav.Add(V(0, 0, -47.5f), "OutsideGate");
             ctx.Nav.Add(V(0, 0, -51.5f), "OutsideGate");
             ctx.Nav.Add(V(-56f, 0, -48f), "OutsideGate");

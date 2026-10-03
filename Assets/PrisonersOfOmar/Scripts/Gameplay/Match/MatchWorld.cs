@@ -178,6 +178,12 @@ namespace PrisonersOfOmar.Gameplay
             var spots = new List<int>();
             for (int i = 0; i < Map.NoteSpots.Count; i++) spots.Add(i);
             rng.Shuffle(spots);
+            // the 4 code digits never go behind the shelter door they open
+            var ordered = new List<int>(spots.Count);
+            var later = new List<int>();
+            foreach (int i in spots) (ordered.Count < 4 && Map.NoteSpots[i].Area != "Tunnel" ? ordered : later).Add(i);
+            ordered.AddRange(later);
+            spots = ordered;
             var lore = new List<string>(NoteTexts.Lore);
             rng.Shuffle(lore);
             Notes = new NoteEntity[Map.NoteSpots.Count];

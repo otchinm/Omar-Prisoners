@@ -74,7 +74,7 @@ namespace PrisonersOfOmar.Map
             Arch.FloorDecal(mb, Mat.Decal("water_stain"), V(0.4f, F, 2.5f), 2.0f, 1.6f, 0f);
             Arch.Decal(mb, Mat.Decal("writing_omar"), V(-1.61f, F + 1.0f, 2.8f), Vector3.right, 1.4f, 0.7f, 2f);
             ctx.Common(A, V(2.72f, F + Props.BookshelfLevel(2, 1.8f), 1.55f));
-            ctx.Key(A, V(-2.4f, F + 0.6f, -7.0f));
+            ctx.Key(A, V(-2.42f, F + 0.6f, -7.1f));
             ctx.Common(A, V(2.45f, F, -6.9f));
             ctx.WallNote(A, V(-2.92f, F + 1.5f, -4.0f), Vector3.right);
             Arch.Bulb(ctx, mb, Glow, V(0.3f, C, -5.4f), 0.35f, HouseBuilder.Warm, 1.05f, 6f, PsxFlicker.FaultyBulb, LightGroup.Power, "Corridor_Bulb_S", false, 0.4f);
@@ -216,6 +216,8 @@ namespace PrisonersOfOmar.Map
             int inSide = ctx.Nav.Add(V(-10.2f, F, -4.0f), A, true);
             int outSide = ctx.Nav.Add(V(-11.8f, F, -4.0f), "Tunnel", true);
             ctx.Nav.Link(inSide, outSide, NavGraph.EdgeShelter);
+            // every auto edge through the doorway is gated too (the leaf is on the Door layer, which the nav probes ignore)
+            ctx.Nav.GateLine(new Vector2(-11f, -4.55f), new Vector2(-11f, -3.45f), NavGraph.EdgeShelter);
             ctx.Tripwire("Basement.Corridor", V(-2.92f, F + 0.12f, -6.46f), V(-2.92f, F + 0.12f, -5.54f));
             // the tunnel itself
             Tunnel(ctx);
@@ -375,10 +377,10 @@ namespace PrisonersOfOmar.Map
             ctx.Data.Shelter.TunnelExitZone = MapMath.MinMax(V(-44f, F - 0.1f, 4.9f), V(-42.4f, TunnelCeil + 0.1f, 7.1f));
             ctx.Marker("TunnelExit", V(-43.5f, F + 1.6f, 6f), Quaternion.LookRotation(Vector3.left));
             // gameplay
-            ctx.Key(A, V(-24.0f, F + 0.55f, -4.76f));
+            ctx.Common(A, V(-24.0f, F + 0.55f, -4.76f));
             ctx.Common(A, V(-26.75f, F + Props.BarrelTop, 6.75f));
             ctx.Common(A, V(-41.0f, F, 8.1f));
-            ctx.WallNote(A, V(-26.9f, F + 1.5f, 3.6f), Vector3.right);
+            ctx.WallNote(A, V(-27.09f, F + 1.5f, 3.6f), Vector3.right);
             ctx.Tripwire(A, V(-18f, F + 0.12f, -5.08f), V(-18f, F + 0.12f, -2.92f));
             ctx.Tripwire(A, V(-34f, F + 0.12f, 4.92f), V(-34f, F + 0.12f, 7.08f));
             ctx.BearTrap(A, V(-26.1f, F, 3.0f));

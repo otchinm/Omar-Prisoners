@@ -17,17 +17,19 @@ namespace PrisonersOfOmar.Gameplay
             public float Charge;
         }
 
-        /// <summary>Areas where a key item must NOT spawn (too close to where it is used).</summary>
+        /// <summary>Areas where a key item must NOT spawn (too close to where it is used, or behind the door it is needed to open).
+        /// The tunnel only opens with the shelter code, which is already an escape route.</summary>
         static string Forbidden(ItemType t)
         {
             switch (t)
             {
-                case ItemType.BoltCutters: return "Yard|Porch";
-                case ItemType.CarKeys: return "ParkingLot|Restroom";
-                case ItemType.GasCan: return "ParkingLot";
-                case ItemType.CarBattery: return "ParkingLot";
-                case ItemType.Fuse: return "Basement.Generator|House.RadioRoom";
-                case ItemType.CageKey: return "House.CageRoom";
+                case ItemType.BoltCutters: return "Yard|Porch|Tunnel";
+                case ItemType.CarKeys: return "ParkingLot|Restroom|Tunnel";
+                case ItemType.GasCan: return "ParkingLot|Tunnel";
+                case ItemType.CarBattery: return "ParkingLot|Tunnel";
+                case ItemType.Fuse: return "Basement.Generator|House.RadioRoom|Tunnel";
+                case ItemType.CageKey: return "House.CageRoom|Tunnel";
+                case ItemType.Crowbar: return "House.Bathroom|Tunnel";   // the bathroom is boarded up
                 default: return null;
             }
         }

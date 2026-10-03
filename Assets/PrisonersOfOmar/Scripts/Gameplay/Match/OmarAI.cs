@@ -38,6 +38,8 @@ namespace PrisonersOfOmar.Gameplay
         readonly Dictionary<int, int> _sawHide = new Dictionary<int, int>();
         readonly List<int> _searchQueue = new List<int>();
         float _trapTimer = 75f;
+        int _pendingTrap = -1;
+        float _pendingTrapUntil;
         float _stuckTimer;
         Vector3 _stuckRef;
         float _smashTimer = -1f;
@@ -123,7 +125,14 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             _trapTimer -= dt;
-            if (_trapTimer <= 0f) { _trapTimer = Random.Range(70f, 130f); TryPlaceTrap(); }
+            if (_trapTimer <= 0f) { _trapTimer = Random.Range(70f, 130f); if (!TryPlaceTrap()) _trapTimer = Random.Range(10f, 18f); }
+            if (_pendingTrap >= 0 && (_mode != Mode.Patrol || W.Time > _pendingTrapUntil)) _pendingTrap = -1;
+            if (_pendingTrap >= 0 && Vector3.Distance(W.Map.TrapSpots[_pendingTrap].A, A.Position) < 4.5f)
+            {
+                int i = _pendingTrap;
+                _pendingTrap = -1;
+                PlaceTrapAt(i);
+            }
 
             float speed = FollowPath(dt);
             Publish(speed);
@@ -147,8 +156,23 @@ namespace PrisonersOfOmar.Gameplay
             {
                 _lastKnown = D.LastKnown.TryGetValue(id, out var p) ? p : A.Position;
                 _target = -1;
-                StartSearch(_lastKnown);
+                if (!Retarget()) StartSearch(_lastKnown);
             }
+        }
+
+        /// <summary>Switch the chase to another prisoner the detector still has spotted (free and not hidden).</summary>
+        bool Retarget()
+        {
+            foreach (var id in D.Spotted)
+            {
+                var s = W.StatusOf(id);
+                if (id == _target || s == null || s.Life != LifeState.Free || s.Hidden || W.AvatarOf(id) == null) continue;
+                _target = id;
+                _mode = Mode.Chase;
+                _repath = 0f;
+                return true;
+            }
+            return false;
         }
 
         // ------------------------------------------------------------------ modes
@@ -240,19 +264,23 @@ namespace PrisonersOfOmar.Gameplay
 
         void NextSearchStep(Vector3 around)
         {
-            if (_searchQueue.Count > 0)
+            while (_searchQueue.Count > 0)
             {
-                int s = _searchQueue[0];
-                var h = W.Hiding[s];
-                SetGoal(h.Info.ExitPose.position);
+                SetGoal(W.Hiding[_searchQueue[0]].Info.ExitPose.position);
+                if (_path.Count > 0) return;
+                _searchQueue.RemoveAt(0);   // can't reach that spot right now
             }
-            else
+            var nav = W.Map.Nav;
+            Vector3 p = around;
+            for (int tries = 0; tries < 6; tries++)
             {
-                Vector3 p = around + new Vector3(Random.Range(-6f, 6f), 0, Random.Range(-6f, 6f));
-                var nav = W.Map.Nav;
-                if (nav != null && nav.Nodes.Count > 0) p = nav.Nodes[nav.Nearest(p)];
-                SetGoal(p);
+                p = around + new Vector3(Random.Range(-6f, 6f), 0, Random.Range(-6f, 6f));
+                if (nav == null || nav.Nodes.Count == 0) break;
+                p = nav.Nodes[nav.Nearest(p)];
+                if (nav.FindPath(A.Position, p).Count > 0) break;   // skip points behind closed gates / the shelter door
+                p = A.Position;
             }
+            SetGoal(p);
         }
 
         void TickSearch(float dt)
@@ -280,6 +308,7 @@ namespace PrisonersOfOmar.Gameplay
                 }
             }
             if (_waitTimer > 0f) { _waitTimer -= dt; return; }
+            if (_modeTimer < -8f) { _searchQueue.Clear(); _mode = Mode.Patrol; PickPatrol(); return; }
             if (Arrived())
             {
                 if (_modeTimer <= 0f && _searchQueue.Count == 0) { _mode = Mode.Patrol; PickPatrol(); }
@@ -294,6 +323,7 @@ namespace PrisonersOfOmar.Gameplay
             if (target == null || st == null || st.Life != LifeState.Free)
             {
                 _target = -1;
+                if (Retarget()) return;
                 _mode = Mode.Patrol;
                 PickPatrol();
                 return;
@@ -302,8 +332,10 @@ namespace PrisonersOfOmar.Gameplay
             {
                 _sawHide[_target] = st.HidingSpot;
                 if (!_searchQueue.Contains(st.HidingSpot)) _searchQueue.Insert(0, st.HidingSpot);
+                int spot = st.HidingSpot;
                 _target = -1;
-                StartSearch(W.Hiding[st.HidingSpot].InteractPoint);
+                if (Retarget()) return;
+                StartSearch(W.Hiding[spot].InteractPoint);
                 return;
             }
             _running = true;
@@ -339,19 +371,33 @@ namespace PrisonersOfOmar.Gameplay
             if (H.DoScream(A.Id)) { }
         }
 
-        void TryPlaceTrap()
+        /// <summary>Picks the nearest free trap spot: places it right away when close, otherwise walks there (patrol) and places it on arrival.</summary>
+        bool TryPlaceTrap()
         {
             var spots = W.Map.TrapSpots;
-            if (spots.Count == 0) return;
-            int best = -1; float bestD = 18f;
+            if (spots.Count == 0) return false;
+            int best = -1; float bestD = 22f;
             for (int i = 0; i < spots.Count; i++)
             {
                 float d = Vector3.Distance(spots[i].A, A.Position);
                 if (d < bestD && !TrapExistsNear(spots[i].A)) { bestD = d; best = i; }
             }
-            if (best < 0) return;
-            var s = spots[best];
-            if (H.PlaceTrap(A.Id, s.Kind, s.A, s.Kind == TrapKind.Tripwire ? s.B : s.A)) H.BroadcastAction(A.Id, CharacterAction.PlaceTrap);
+            if (best < 0) return false;
+            if (bestD < 4.5f) return PlaceTrapAt(best);
+            if (_mode != Mode.Patrol) return false;
+            _pendingTrap = best;
+            _pendingTrapUntil = W.Time + 25f;
+            SetGoal(spots[best].A);
+            return _path.Count > 0;
+        }
+
+        bool PlaceTrapAt(int spot)
+        {
+            var s = W.Map.TrapSpots[spot];
+            if (TrapExistsNear(s.A) || !H.PlaceTrap(A.Id, s.Kind, s.A, s.Kind == TrapKind.Tripwire ? s.B : s.A)) return false;
+            FaceTowards(s.A);
+            H.BroadcastAction(A.Id, CharacterAction.PlaceTrap);
+            return true;
         }
 
         bool TrapExistsNear(Vector3 p)
@@ -372,9 +418,9 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var p = nav.FindPath(A.Position, goal);
                 if (p != null) _path = p;
-                if (_path.Count == 0 && _mode == Mode.Patrol)
+                if (_path.Count == 0 && _mode != Mode.Chase)
                 {
-                    // unreachable right now (behind a closed gate): patrol somewhere else
+                    // unreachable right now (behind a closed gate / the shelter door): stay put, the mode picks something else
                     _goal = A.Position;
                     _waitTimer = 0.5f;
                     return;
@@ -425,6 +471,12 @@ namespace PrisonersOfOmar.Gameplay
                 {
                     if (_pathIdx < _path.Count - 1) _pathIdx++;
                     else if (_mode == Mode.Patrol) PickPatrol();
+                    else if (_mode == Mode.Search)
+                    {
+                        if (_searchQueue.Count > 0) _searchQueue.RemoveAt(0);
+                        NextSearchStep(A.Position);
+                    }
+                    else if (_mode == Mode.Investigate) _modeTimer = 0f;
                     else SetGoal(_goal);
                 }
                 _stuckTimer = 0f;
