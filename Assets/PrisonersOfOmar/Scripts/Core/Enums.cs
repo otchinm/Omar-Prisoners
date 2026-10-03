@@ -8,6 +8,31 @@ namespace PrisonersOfOmar
         Prisoner3 = 2, // redhead with glasses: striped sweater, denim shorts
         Prisoner4 = 3, // lanky guy with round glasses: raglan tee (black sleeves), purple shorts
         Omar = 4,      // sack mask, rope noose, red plaid flannel, bloody apron, jeans, boots
+        // (iteration 2) more prisoners, from the "players from another view" reference
+        Prisoner5 = 5, // woman: short auburn bob, grey plaid long-sleeve mini dress, black mary-janes
+        Prisoner6 = 6, // boy: short brown hair, loud colourful patterned 90s shirt, dark jeans
+        Prisoner7 = 7, // man: dark side-parted hair, white dress shirt, dark slacks
+    }
+
+    /// <summary>(iteration 2) Match difficulty, chosen by the host in the lobby. Values are sent over the network.</summary>
+    public enum Difficulty : byte
+    {
+        Easy = 0,
+        Normal = 1,
+        Hard = 2,
+        Nightmare = 3, // as dark as the first version of the game
+    }
+
+    /// <summary>(iteration 2) VHS filter presets (graphics settings), like the filter switch in Stay Out Of The House.</summary>
+    public enum VhsPreset : byte
+    {
+        Default = 0,  // degraded tape, readable picture
+        Clean = 1,    // light noise + scanlines only
+        Worn = 2,     // old worn tape: tracking wobble, washed colours, dropouts
+        Camcorder = 3,// home video: sharper, warm, date stamp feel
+        BlackWhite = 4,
+        Sepia = 5,
+        Off = 6,      // no tape effect (PS1 look only)
     }
 
     public enum PlayerRole : byte
@@ -43,6 +68,7 @@ namespace PrisonersOfOmar
         Crowbar,      // pry boarded doors, break free from Omar's grab once
         Bottle,       // throw to make noise somewhere else
         Pills,        // painkillers: stamina + ignore limp for a while
+        Revolver,     // (iteration 2) 2 rounds: kills the grandmother, stuns Omar for a few seconds. Very loud.
     }
 
     public enum DoorKind : byte

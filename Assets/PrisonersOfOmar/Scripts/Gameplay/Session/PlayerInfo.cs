@@ -45,7 +45,7 @@ namespace PrisonersOfOmar.Gameplay
             p.IsBot = (f & 2) != 0;
             p.Connected = (f & 4) != 0;
             if (p.Role > PlayerRole.Spectator) p.Role = PlayerRole.Spectator;
-            if (p.Skin > CharacterSkin.Omar) p.Skin = CharacterSkin.Prisoner1;
+            if (p.Skin != CharacterSkin.Omar && !GameInfo.IsPrisonerSkin(p.Skin)) p.Skin = CharacterSkin.Prisoner1;
             return p;
         }
 
@@ -57,6 +57,8 @@ namespace PrisonersOfOmar.Gameplay
     {
         public int NightMinutes = 20;
         public bool AiOmar = true;
+        /// <summary>(iteration 2) Chosen by the host in the lobby.</summary>
+        public Difficulty Difficulty = Difficulty.Normal;
         public int Seed;
 
         public void Write(NetWriter w)
@@ -64,12 +66,15 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteByte((byte)NightMinutes);
             w.WriteBool(AiOmar);
             w.WriteInt(Seed);
+            w.WriteByte((byte)Difficulty);
         }
 
         public static MatchSettings Read(NetReader r)
         {
             var s = new MatchSettings { NightMinutes = r.ReadByte(), AiOmar = r.ReadBool(), Seed = r.ReadInt() };
+            s.Difficulty = (Difficulty)r.ReadByte();
             if (s.NightMinutes < 5 || s.NightMinutes > 60) s.NightMinutes = 20;
+            if (s.Difficulty > Difficulty.Nightmare) s.Difficulty = Difficulty.Normal;
             return s;
         }
     }

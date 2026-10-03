@@ -59,6 +59,20 @@ namespace PrisonersOfOmar.Map
         /// <summary>Order in which <see cref="AreaBounds"/> were registered (most specific first).</summary>
         public readonly List<string> AreaOrder = new List<string>();
 
+        // ---- iteration 2 (contract: Docs/ITERATION2.md) ---------------------------------------
+        /// <summary>Rooms where prisoners can start / be locked up again. Each lists the indices (into <see cref="Cages"/>)
+        /// of its cage slots. Every cage slot is BUILT but its Root starts INACTIVE: the gameplay activates only the cages
+        /// in use (one cage per prisoner, random rooms; solo = exactly one cage).</summary>
+        public readonly List<CellRoomInfo> CellRooms = new List<CellRoomInfo>();
+        /// <summary>The grandmother's room, wheelchair spot, TV and roaming nodes (null if the map has none).</summary>
+        public GrandmaInfo Grandma;
+        /// <summary>Omar's butcher table routine and the vent that overlooks it (null if the map has none).</summary>
+        public KitchenInfo Kitchen;
+        /// <summary>Candidate spots for the revolver (one is used per match).</summary>
+        public readonly List<ItemSpawnInfo> GunSpots = new List<ItemSpawnInfo>();
+        /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
+        public readonly List<Bounds> CrawlSpaces = new List<Bounds>();
+
         /// <summary>First registered area whose bounds contain <paramref name="p"/> (or "Exterior").</summary>
         public string AreaAt(Vector3 p)
         {
@@ -106,6 +120,16 @@ namespace PrisonersOfOmar.Map
         /// <summary>Optional animated doors (wardrobe doors / locker door). Each opens by rotating local Y by DoorOpenAngles[i].</summary>
         public Transform[] Doors = new Transform[0];
         public float[] DoorOpenAngles = new float[0];
+        // ---- iteration 2
+        /// <summary>UnderBed: the bed frame pivot Omar tips up when he finds someone (null for other kinds).
+        /// Lifting = rotate LiftPivot.localRotation around <see cref="LiftAxis"/> (local) by <see cref="LiftAngle"/> degrees.</summary>
+        public Transform LiftPivot;
+        public Vector3 LiftAxis = Vector3.forward;
+        public float LiftAngle = 65f;
+        /// <summary>UnderBed: where Omar stands (feet, facing the bed) to lift it.</summary>
+        public Pose LifterPose;
+        /// <summary>UnderBed: where a prisoner lies down beside the bed (feet, facing under the bed) before sliding under.</summary>
+        public Pose CrawlStart;
     }
 
     public enum ItemSpawnTier : byte
@@ -147,6 +171,51 @@ namespace PrisonersOfOmar.Map
         public Pose Inside;
         /// <summary>Where a released prisoner is placed (just outside the door).</summary>
         public Pose Outside;
+        /// <summary>(iteration 2) Index into <see cref="MapData.CellRooms"/> of the room this cage slot belongs to.</summary>
+        public int RoomIndex;
+    }
+
+    /// <summary>(iteration 2) A room with up to 4 cage slots.</summary>
+    public sealed class CellRoomInfo
+    {
+        public string Name;
+        /// <summary>Area name (same strings as ItemSpawnInfo.Area).</summary>
+        public string Area;
+        public Vector3 Center;
+        /// <summary>Indices into <see cref="MapData.Cages"/>.</summary>
+        public readonly List<int> CageIndices = new List<int>();
+    }
+
+    /// <summary>(iteration 2) The grandmother who watches TV in her wheelchair.</summary>
+    public sealed class GrandmaInfo
+    {
+        public string Area;
+        public Bounds Room;
+        /// <summary>Wheelchair spot in front of the TV (floor point, facing the TV).</summary>
+        public Pose ChairPose;
+        /// <summary>The TV screen (has the animated static material).</summary>
+        public Transform TvScreen;
+        public Vector3 TvSoundPosition;
+        /// <summary>Nav node indices (ground floor of the house, no stairs) she can roll between once she starts roaming.</summary>
+        public readonly List<int> RoamNodes = new List<int>();
+    }
+
+    /// <summary>(iteration 2) The butcher table where Omar chops meat, and the vent that overlooks it.</summary>
+    public sealed class KitchenInfo
+    {
+        public string Area;
+        /// <summary>Omar's feet position, facing the butcher table.</summary>
+        public Pose ChopPose;
+        /// <summary>Where the cleaver lands (blood / meat FX).</summary>
+        public Vector3 BlockTop;
+        /// <summary>The meat pile on the table.</summary>
+        public Transform Meat;
+        /// <summary>Trigger collider (Layers.Interactable) at the table: a human Omar can "CHOP MEAT" here.</summary>
+        public Collider ChopInteract;
+        /// <summary>The crawlspace / vent from which prisoners can watch the table through a grate.</summary>
+        public Bounds VentArea;
+        /// <summary>A good viewing pose at the grate (eye position + facing the table).</summary>
+        public Pose VentView;
     }
 
     public sealed class NoteSpotInfo

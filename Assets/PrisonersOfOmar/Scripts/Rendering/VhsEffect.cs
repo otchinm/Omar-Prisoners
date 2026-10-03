@@ -17,6 +17,8 @@ namespace PrisonersOfOmar.Rendering
     public static class VhsEffect
     {
         public static VhsMode Mode = VhsMode.Menu;
+        /// <summary>(iteration 2) Graphics setting: which VHS filter look to use (Settings applies it).</summary>
+        public static VhsPreset Preset = VhsPreset.Default;
 
         /// <summary>User setting multiplier for every distortion (accessibility). 0..1.5</summary>
         public static float UserIntensity = 1f;

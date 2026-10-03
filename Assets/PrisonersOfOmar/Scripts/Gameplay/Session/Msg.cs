@@ -70,5 +70,32 @@ namespace PrisonersOfOmar.Gameplay
         MatchEnd = 86,
         Message = 87,        // host -> all: HUD message
         CarDrive = 88,       // host -> all: car escape cinematic
+
+        // ================== iteration 2: each work package may ONLY add values inside its own range ==================
+        // ---- "player" package (doors, hiding, local player): 100..119
+        DoorGrabReq = 100,   // client -> host: grab / release a door leaf
+        DoorGrab = 101,      // host -> all: who holds which door
+        DoorDragReq = 102,   // grabber -> host (unreliable): door angle + angular velocity while dragging
+        DoorAngles = 103,    // host -> all (unreliable): angles of the doors that are moving
+        DoorFx = 104,        // host -> all: slam / latch / bump sounds + noise
+        BedLift = 105,       // host -> all: Omar tips a bed up (hiding spot index, up/down)
+        ChargeReq = 106,     // owner -> host: current fuel / battery of a held light (throttled)
+
+        // ---- "world" package (Omar behaviour, grandmother, kitchen, revolver): 120..139
+        GrandmaState = 120,  // host -> all: mode changes (watching / roaming / screaming / dead)
+        GrandmaSnap = 121,   // host -> all (unreliable): position + yaw while she moves
+        ShootReq = 122,      // client -> host: fired the revolver (origin, direction)
+        ShotFx = 123,        // host -> all: muzzle flash + bang at the shooter, impact / hit result
+        KitchenState = 124,  // host -> all: Omar starts / stops chopping meat
+        ChopReq = 125,       // human Omar -> host: chop at the butcher table
+        OmarHitReq = 126,    // prisoner -> host: hit the distracted Omar from behind (bottle / crowbar)
+
+        // ---- "session" package (spawns, cages, auto AI, difficulty, admin): 140..159
+        CageActive = 140,    // host -> all: activate / deactivate a cage slot
+        AdminAuthReq = 141,  // client -> host: admin proof
+        AdminAuthResult = 142, // host -> client: admin accepted / refused
+        AdminCmdReq = 143,   // admin client -> host: run a command
+        AdminLog = 144,      // host -> admin: command feedback text
+        AdminState = 145,    // host -> admin: debug state (positions, codes...)
     }
 }

@@ -24,6 +24,20 @@ namespace PrisonersOfOmar.Rendering
         static readonly PsxDecalFade[] _blood = new PsxDecalFade[MaxBloodDecals];
         static int _bloodNext;
 
+        /// <summary>(iteration 2) Hides every blood drop decal (called when a match is torn down).</summary>
+        public static void ClearBloodDecals()
+        {
+            for (int i = 0; i < _blood.Length; i++) if (_blood[i] != null) _blood[i].gameObject.SetActive(false);
+            _bloodNext = 0;
+        }
+
+        /// <summary>(iteration 2) Revolver muzzle flash at <paramref name="position"/> pointing along <paramref name="direction"/>.</summary>
+        public static void MuzzleFlash(Vector3 position, Vector3 direction)
+        {
+            LightFlash(position, new Color(1f, 0.85f, 0.6f), 3f, 7f, 0.07f);
+            Sparks(position, direction);
+        }
+
         // ------------------------------------------------------------------ persistent effects
 
         /// <summary>Animated lighter flame billboard (persistent; destroy or SetActive(false) to hide). ~3cm tall at scale 1.</summary>

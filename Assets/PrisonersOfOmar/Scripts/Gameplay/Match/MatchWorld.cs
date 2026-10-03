@@ -160,8 +160,7 @@ namespace PrisonersOfOmar.Gameplay
             for (int i = 0; i < Doors.Length; i++) Doors[i] = new DoorEntity(i, Map.Doors[i]);
             Hiding = new HidingEntity[Map.HidingSpots.Count];
             for (int i = 0; i < Hiding.Length; i++) Hiding[i] = new HidingEntity(i, Map.HidingSpots[i]);
-            Cages = new CageEntity[Map.Cages.Count];
-            for (int i = 0; i < Cages.Length; i++) Cages[i] = new CageEntity(i, Map.Cages[i]);
+            BuildCages();
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();
@@ -247,45 +246,6 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        void SpawnAvatars()
-        {
-            int prisonerIndex = 0;
-            foreach (var pl in Session.Players)
-            {
-                if (pl.Role == PlayerRole.Spectator) continue;
-                var st = new PlayerStatus { Id = pl.Id };
-                Pose pose;
-                if (pl.IsOmar) pose = Map.OmarSpawn;
-                else
-                {
-                    int cage = Mathf.Min(prisonerIndex, Map.PrisonerSpawns.Count - 1);
-                    pose = Map.PrisonerSpawns[cage];
-                    if (cage < Cages.Length) { st.Life = LifeState.Caged; st.Cage = cage; Cages[cage].Apply(false, pl.Id); }
-                    prisonerIndex++;
-                }
-                Statuses[pl.Id] = st;
-                bool local = pl.Id == LocalId;
-                bool simulated = local || (pl.IsBot && IsHost);
-                var av = Avatar.Spawn(pl, local, simulated, _dynamicRoot, pose);
-                Avatars[pl.Id] = av;
-                av.ApplyStatus(st);
-                if (local)
-                {
-                    LocalAvatar = av;
-                    if (pl.IsOmar) LocalOmar = OmarController.Attach(av, this);
-                    else LocalPrisoner = PrisonerController.Attach(av, this);
-                }
-                else if (pl.IsBot && IsHost)
-                {
-                    OmarAI.Attach(av, this);
-                }
-            }
-            if (LocalAvatar == null)
-            {
-                Spectator = SpectatorCamera.Create(this);
-            }
-        }
-
         void StartEmitters()
         {
             foreach (var e in Map.SoundEmitters)
@@ -345,8 +305,7 @@ namespace PrisonersOfOmar.Gameplay
             float dt = UnityEngine.Time.deltaTime;
             if (Running && Ending == null) _clock += dt;
 
-            for (int i = 0; i < Doors.Length; i++) Doors[i].Tick(dt);
-            for (int i = 0; i < Hiding.Length; i++) Hiding[i].Tick(dt);
+            TickPlayer(dt);
             for (int i = 0; i < Cages.Length; i++) Cages[i].Tick(dt);
             for (int i = 0; i < Traps.Count; i++) Traps[i].Tick(dt);
 
@@ -438,21 +397,6 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteShort((short)targetId);
             w.WriteShort((short)itemId);
             w.WriteUnit(charge);
-            Session.SendToHost(NetChannel.Reliable);
-        }
-
-        public void SendDoor(int door, bool open)
-        {
-            var w = Session.Begin(Msg.DoorReq);
-            w.WriteShort((short)door);
-            w.WriteBool(open);
-            Session.SendToHost(NetChannel.Reliable);
-        }
-
-        public void SendSearch(int spot)
-        {
-            var w = Session.Begin(Msg.SearchReq);
-            w.WriteByte((byte)spot);
             Session.SendToHost(NetChannel.Reliable);
         }
 

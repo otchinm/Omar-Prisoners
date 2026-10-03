@@ -6,7 +6,7 @@ namespace PrisonersOfOmar
         public const string Title = "THE PRISONERS OF OMAR";
         public const string Version = "0.1.0";
         /// <summary>Bump whenever the wire protocol changes; peers with a different value are rejected.</summary>
-        public const int ProtocolVersion = 1;
+        public const int ProtocolVersion = 2;
         public const int MaxPrisoners = 4;
         public const int MaxPlayers = MaxPrisoners + 1; // 4 prisoners + 1 Omar
         public const int DefaultPort = 27015;
@@ -14,6 +14,15 @@ namespace PrisonersOfOmar
         public const int InventorySlots = 3;
         /// <summary>Seconds of sound that keep playing after Omar loses sight of a prisoner.</summary>
         public const float ChaseSoundLinger = 4f;
+
+        /// <summary>(iteration 2) Every playable prisoner appearance, in lobby order.</summary>
+        public static readonly CharacterSkin[] PrisonerSkins =
+        {
+            CharacterSkin.Prisoner1, CharacterSkin.Prisoner2, CharacterSkin.Prisoner3, CharacterSkin.Prisoner4,
+            CharacterSkin.Prisoner5, CharacterSkin.Prisoner6, CharacterSkin.Prisoner7,
+        };
+
+        public static bool IsPrisonerSkin(CharacterSkin s) => System.Array.IndexOf(PrisonerSkins, s) >= 0;
     }
 
     /// <summary>Physics / rendering layers (must match ProjectSettings/TagManager.asset).</summary>

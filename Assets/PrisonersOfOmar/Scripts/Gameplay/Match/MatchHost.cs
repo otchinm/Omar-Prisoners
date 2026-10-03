@@ -13,7 +13,7 @@ namespace PrisonersOfOmar.Gameplay
     /// Never mutate MatchWorld state objects directly: edit a copy and broadcast it, so every peer
     /// (including the host's own presentation code) sees the same before/after transition.
     /// </summary>
-    public sealed class MatchHost
+    public sealed partial class MatchHost
     {
         readonly MatchWorld W;
         readonly NetSession S;
@@ -170,25 +170,6 @@ namespace PrisonersOfOmar.Gameplay
             S.SendToAll(NetChannel.Reliable);
         }
 
-        void BroadcastDoor(DoorEntity d, bool open, bool locked, bool boarded, bool slam)
-        {
-            var w = S.Begin(Msg.DoorState);
-            w.WriteShort((short)d.Index);
-            byte f = 0;
-            if (open) f |= 1; if (locked) f |= 2; if (boarded) f |= 4; if (slam) f |= 8;
-            w.WriteByte(f);
-            S.SendToAll(NetChannel.Reliable);
-        }
-
-        void BroadcastHide(int spot, int occupant, bool searched)
-        {
-            var w = S.Begin(Msg.HideState);
-            w.WriteByte((byte)spot);
-            w.WriteByte((byte)(occupant < 0 ? 255 : occupant));
-            w.WriteBool(searched);
-            S.SendToAll(NetChannel.Reliable);
-        }
-
         void BroadcastCage(int cage, bool open, int occupant)
         {
             var w = S.Begin(Msg.CageState);
@@ -244,6 +225,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (!W.Running || _ended) return;
             float t = W.Time;
+            TickPlayer(dt);
 
             _snapTimer -= dt;
             if (_snapTimer <= 0f) { _snapTimer = 0.05f; SendSnapshot(); }
@@ -322,6 +304,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             var p = Info(id);
             if (p == null) return;
+            OnPlayerLeftPlayer(id);
             if (p.IsPrisoner)
             {
                 Vector3 pos = PosOf(id);
@@ -454,47 +437,6 @@ namespace PrisonersOfOmar.Gameplay
             DeliverNoise(pos, 24f);
         }
 
-        // ================================================================== doors
-
-        public void OnDoorReq(int sender, NetReader r)
-        {
-            int id = r.ReadShort();
-            bool open = r.ReadBool();
-            RequestDoor(sender, id, open);
-        }
-
-        /// <summary>Open / close a door (also used by the AI).</summary>
-        public void RequestDoor(int sender, int id, bool open)
-        {
-            if (id < 0 || id >= W.Doors.Length) return;
-            var d = W.Doors[id];
-            if (d.Boarded) return;
-            if (!Near(sender, d.Info.Center, 3.6f)) return;
-            bool omar = IsOmar(sender);
-            if (d.Locked && !omar) return;
-            if (!omar)
-            {
-                var st = W.StatusOf(sender);
-                if (st == null || st.Life != LifeState.Free || st.Hidden) return;
-            }
-            bool slam = omar && (_latest.TryGetValue(sender, out var s) ? (s.Flags & AvatarFlags.Sprint) != 0 : W.AvatarOf(sender)?.Sprinting == true);
-            BroadcastDoor(d, open, omar ? false : d.Locked, d.Boarded, slam);
-            if (!omar)
-            {
-                bool sprinting = _latest.TryGetValue(sender, out var ps) && (ps.Flags & AvatarFlags.Sprint) != 0;
-                DeliverNoise(d.Info.Center, sprinting ? 10f : 4f);
-            }
-        }
-
-        /// <summary>Omar (or AI) smashes the boards of a door.</summary>
-        public void SmashBoards(int omarId, int door)
-        {
-            var d = W.Doors[door];
-            if (!d.Boarded) return;
-            BroadcastDoor(d, true, false, false, true);
-            DeliverNoise(d.Info.Center, 18f);
-        }
-
         // ================================================================== use
 
         public void OnUseReq(int sender, NetReader r)
@@ -568,26 +510,6 @@ namespace PrisonersOfOmar.Gameplay
                         Consume(p, itemId);
                         break;
                     }
-            }
-        }
-
-        void UseDoor(int p, int id, int itemId)
-        {
-            if (id < 0 || id >= W.Doors.Length) return;
-            var d = W.Doors[id];
-            if (!Near(p, d.Info.Center, 3.6f)) return;
-            if (d.Boarded)
-            {
-                if (!Holds(p, itemId, ItemType.Crowbar)) return;
-                BroadcastDoor(d, true, false, false, false);
-                DeliverNoise(d.Info.Center, 12f);
-            }
-            else if (d.Locked)
-            {
-                if (!Holds(p, itemId, ItemType.Lockpick)) return;
-                BroadcastDoor(d, true, false, false, false);
-                Consume(p, itemId);
-                Message("THE LOCKPICK SNAPPED, BUT THE DOOR IS OPEN", 3f, p);
             }
         }
 
@@ -780,24 +702,6 @@ namespace PrisonersOfOmar.Gameplay
                 return;
             }
             if (t.State == TrapState.Armed) BroadcastTrap(t, TrapState.Disarmed, -1, false);
-        }
-
-        void UseHiding(int p, PlayerStatus st, int spot)
-        {
-            if (spot < 0 || spot >= W.Hiding.Length) return;
-            var h = W.Hiding[spot];
-            if (st.HidingSpot == spot)
-            {
-                var e = Edit(p); e.HidingSpot = -1; e.TeleportSeq++; Commit(e);
-                BroadcastHide(spot, -1, false);
-                return;
-            }
-            if (st.Life != LifeState.Free || st.Hidden || st.Trapped || st.InCar || h.Occupant >= 0) return;
-            if (!Near(p, h.InteractPoint, 3.6f)) return;
-            var e2 = Edit(p); e2.HidingSpot = spot; Commit(e2);
-            BroadcastHide(spot, p, false);
-            // an AI that watched them go in remembers
-            foreach (var ai in _ais) if (ai != null) ai.OnSawHide(p, spot);
         }
 
         // ================================================================== struggle / traps
@@ -997,8 +901,7 @@ namespace PrisonersOfOmar.Gameplay
             }
             else
             {
-                int cage = -1;
-                for (int i = 0; i < W.Cages.Length; i++) if (W.Cages[i].Occupant < 0) { cage = i; break; }
+                int cage = PickCageFor(target, pos);
                 if (cage < 0) { st.Life = LifeState.Dead; }
                 else
                 {
@@ -1050,34 +953,6 @@ namespace PrisonersOfOmar.Gameplay
             int spot = r.ReadByte();
             if (!IsOmar(sender)) return;
             DoSearch(sender, spot);
-        }
-
-        /// <summary>Omar tears a hiding spot open. Returns the prisoner found (or -1).</summary>
-        public int DoSearch(int omarId, int spot)
-        {
-            if (spot < 0 || spot >= W.Hiding.Length || OmarStunned) return -1;
-            var h = W.Hiding[spot];
-            if (!Near(omarId, h.InteractPoint, 3.8f)) return -1;
-            int occ = h.Occupant;
-            BroadcastHide(spot, -1, true);
-            if (occ < 0) return -1;
-            var st = Edit(occ);
-            st.HidingSpot = -1;
-            st.TeleportSeq++;
-            if (st.Injured)
-            {
-                Commit(st);
-                BroadcastAttack(omarId, occ, 2);
-                Capture(occ);
-            }
-            else
-            {
-                st.Injured = true;
-                Commit(st);
-                BroadcastAttack(omarId, occ, 1);
-                SetChase(occ, true);
-            }
-            return occ;
         }
 
         // ================================================================== keypad / escapes

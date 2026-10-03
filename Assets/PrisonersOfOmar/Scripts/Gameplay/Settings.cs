@@ -20,6 +20,10 @@ namespace PrisonersOfOmar.Gameplay
         public static int Port = GameInfo.DefaultPort;
         public static int NightMinutes = 20;
         public static bool AiOmar = true;
+        /// <summary>(iteration 2) Graphics: VHS filter look.</summary>
+        public static VhsPreset VhsPreset = VhsPreset.Default;
+        /// <summary>(iteration 2) Host: last difficulty chosen in the lobby.</summary>
+        public static Difficulty Difficulty = Difficulty.Normal;
 
         public static readonly int[] InternalHeights = { 180, 240, 300, 360, 480 };
 
@@ -45,6 +49,8 @@ namespace PrisonersOfOmar.Gameplay
             Port = PlayerPrefs.GetInt(Prefix + "port", Port);
             NightMinutes = PlayerPrefs.GetInt(Prefix + "night", NightMinutes);
             AiOmar = PlayerPrefs.GetInt(Prefix + "aiOmar", 1) == 1;
+            VhsPreset = (VhsPreset)PlayerPrefs.GetInt(Prefix + "vhsPreset", (int)VhsPreset);
+            Difficulty = (Difficulty)PlayerPrefs.GetInt(Prefix + "difficulty", (int)Difficulty);
             if (string.IsNullOrWhiteSpace(PlayerName)) PlayerName = "PRISONER" + Random.Range(10, 99);
             Sanitize();
         }
@@ -67,6 +73,8 @@ namespace PrisonersOfOmar.Gameplay
             PlayerPrefs.SetInt(Prefix + "port", Port);
             PlayerPrefs.SetInt(Prefix + "night", NightMinutes);
             PlayerPrefs.SetInt(Prefix + "aiOmar", AiOmar ? 1 : 0);
+            PlayerPrefs.SetInt(Prefix + "vhsPreset", (int)VhsPreset);
+            PlayerPrefs.SetInt(Prefix + "difficulty", (int)Difficulty);
             PlayerPrefs.Save();
         }
 
@@ -81,6 +89,8 @@ namespace PrisonersOfOmar.Gameplay
             NightMinutes = Mathf.Clamp(NightMinutes, 10, 40);
             Port = Mathf.Clamp(Port, 1024, 65535);
             if (System.Array.IndexOf(InternalHeights, InternalHeight) < 0) InternalHeight = 240;
+            if (VhsPreset > VhsPreset.Off) VhsPreset = VhsPreset.Default;
+            if (Difficulty > Difficulty.Nightmare) Difficulty = Difficulty.Normal;
             PlayerName = CleanName(PlayerName);
         }
 
@@ -110,6 +120,7 @@ namespace PrisonersOfOmar.Gameplay
             var rig = Rendering.PsxCameraRig.Instance;
             if (rig != null) rig.InternalHeight = InternalHeight;
             Rendering.VhsEffect.UserIntensity = VhsIntensity;
+            Rendering.VhsEffect.Preset = VhsPreset;
         }
     }
 }

@@ -10,6 +10,7 @@ namespace PrisonersOfOmar.Characters
         TwoHanded,     // gas can, car battery, bolt cutters, crowbar: both hands
         Cleaver,       // Omar: cleaver in right hand, arm hanging
         Bottle,        // ready to throw
+        Pistol,        // (iteration 2) revolver held forward in the right hand
     }
 
     /// <summary>One-shot animations. Values are sent over the network.</summary>
@@ -32,6 +33,14 @@ namespace PrisonersOfOmar.Characters
         Cut,        // bolt cutters squeeze
         Heal,       // wrap bandage around arm
         Wave,       // lobby / idle flavor
+        // ---- iteration 2
+        BedLift,    // Omar: stand beside a bed, grab the frame with both hands and tip it up on one side (~1.6 s)
+        ChopMeat,   // Omar: one big overhead cleaver slam onto the butcher table (loopable, ~1.1 s)
+        CrawlUnder, // prisoner: drop down and slide under a bed (~0.9 s, ends lying flat)
+        CrawlOut,   // prisoner: slide out from under a bed and stand up (~0.9 s)
+        Shoot,      // prisoner: fire the revolver (recoil)
+        Cower,      // prisoner: flinch back raising both arms to protect the head
+        Push,       // shoulder / hand push (Omar shoving a door open while walking)
     }
 
     /// <summary>Persistent body states.</summary>

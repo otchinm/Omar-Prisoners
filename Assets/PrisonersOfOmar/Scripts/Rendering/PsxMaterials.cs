@@ -120,6 +120,10 @@ namespace PrisonersOfOmar.Rendering
         /// <summary>Shared untextured material of a flat color.</summary>
         public static Material GetColor(Color color, PsxSurface surface = PsxSurface.Lit) => Get(null, surface, color);
 
+        /// <summary>(iteration 2) Animated CRT screen showing static / interference (variant picks the look).
+        /// Used for the grandmother's TV and other TVs. Placeholder until the TV shader lands.</summary>
+        public static Material TvScreen(int variant = 0) => Get(null, PsxSurface.Emissive, new Color(0.55f, 0.57f, 0.6f));
+
         /// <summary>New (uncached) material instance, safe to modify (e.g. animated emission).</summary>
         public static Material Create(string texturePath, PsxSurface surface = PsxSurface.Lit, Color? tint = null)
         {

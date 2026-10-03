@@ -454,7 +454,7 @@ namespace PrisonersOfOmar.Gameplay
             }
             else if (role == PlayerRole.Prisoner)
             {
-                if (skin > CharacterSkin.Prisoner4) skin = CharacterSkin.Prisoner1;
+                if (!GameInfo.IsPrisonerSkin(skin)) skin = CharacterSkin.Prisoner1;
                 bool taken = Players.Exists(o => o.Id != p.Id && o.IsPrisoner && o.Skin == skin);
                 int prisoners = 0;
                 foreach (var o in Players) if (o.IsPrisoner && o.Id != p.Id) prisoners++;

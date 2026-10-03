@@ -1,5 +1,16 @@
 namespace PrisonersOfOmar.Audio
 {
+    /// <summary>(iteration 2) Per-character voice lines (degraded VHS voices, one set per prisoner skin).</summary>
+    public enum VoiceLine : byte
+    {
+        Hurt = 0,   // grunt when cut / falling           (_1.._3)
+        Scream,     // dragged away / terrified scream     (_1.._2)
+        Breath,     // exhausted panting after sprinting   (_1.._3)
+        Gasp,       // spotted by Omar / the grandmother   (_1.._2)
+        Struggle,   // straining against a lock / trap     (_1.._2)
+        Death,      // last capture                        (_1)
+    }
+
     /// <summary>Resource paths of every sound (see Docs/ASSETS.md).</summary>
     public static class Snd
     {
@@ -94,6 +105,54 @@ namespace PrisonersOfOmar.Audio
             VhsGlitch = "Audio/Stingers/vhs_glitch", // 3
             DroneHit = "Audio/Stingers/drone_hit", // 2
             HeartbeatFast = "Audio/Stingers/heartbeat_fast";
+
+        // ---- iteration 2 (see Docs/ITERATION2.md). Every path below MUST exist as a file under Resources/.
+        // physical doors
+        public const string DoorCreakLoop = "Audio/World/door_creak_loop", // _1.._2: wooden hinge creak loop, pitch follows the swing speed
+            MetalDoorCreakLoop = "Audio/World/metal_door_creak_loop",
+            DoorLatch = "Audio/World/door_latch", // _1.._2: latch clicks shut
+            DoorBump = "Audio/World/door_bump",   // _1.._2: leaf hits its stop / a wall
+            DoorUnlock = "Audio/World/door_unlock";
+        // hiding
+        public const string BedCrawlIn = "Audio/Player/bed_crawl_in", BedCrawlOut = "Audio/Player/bed_crawl_out",
+            BedLift = "Audio/Omar/bed_lift", WardrobeEnter = "Audio/World/wardrobe_enter", WardrobeExit = "Audio/World/wardrobe_exit";
+        // Omar
+        public const string OmarChop = "Audio/Omar/chop", // _1.._3: cleaver into the meat on the block
+            MeatSquelch = "Audio/Omar/meat_squelch",      // _1.._2
+            OmarWindup = "Audio/Omar/windup",             // _1.._2: heavy grunt before the big swing
+            OmarStunned = "Audio/Omar/stunned",
+            OmarDoorPush = "Audio/Omar/door_push";
+        // the grandmother
+        public const string GrandmaScream = "Audio/Grandma/scream", // _1.._3
+            GrandmaSpot = "Audio/Grandma/spot",                       // shriek when she first sees someone
+            GrandmaMutter = "Audio/Grandma/mutter",                   // _1.._3
+            GrandmaDeath = "Audio/Grandma/death",
+            WheelchairLoop = "Audio/Grandma/wheelchair_loop",
+            GrandmaTvLoop = "Audio/Grandma/tv_loop";
+        // revolver
+        public const string GunShot = "Audio/Items/gun_shot", GunEmpty = "Audio/Items/gun_empty", GunCock = "Audio/Items/gun_cock";
+        // character voices: Audio/Voices/<prisonerN>/<line>_<n>
+        public const string VoicesBase = "Audio/Voices/";
+
+        public static int VoiceVariants(VoiceLine l)
+        {
+            switch (l)
+            {
+                case VoiceLine.Hurt: return 3;
+                case VoiceLine.Breath: return 3;
+                case VoiceLine.Scream: return 2;
+                case VoiceLine.Gasp: return 2;
+                case VoiceLine.Struggle: return 2;
+                default: return 1;
+            }
+        }
+
+        /// <summary>Folder name of a skin's voice set ("prisoner1".."prisoner7").</summary>
+        public static string VoiceFolder(CharacterSkin skin) => skin.ToString().ToLowerInvariant();
+
+        /// <summary>Random variant of one of a character's voice lines.</summary>
+        public static string Voice(CharacterSkin skin, VoiceLine line)
+            => AudioManager.Variant(VoicesBase + VoiceFolder(skin) + "/" + line.ToString().ToLowerInvariant(), VoiceVariants(line));
 
         public static string Step(SurfaceType s)
         {

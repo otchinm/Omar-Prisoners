@@ -363,6 +363,10 @@ namespace PrisonersOfOmar.Rendering
         /// <summary>Affine texture warping: 0 = perspective correct, 1 = full PS1 affine. Default 0.7.</summary>
         public static float AffineAmount = 0.7f;
 
+        /// <summary>(iteration 2) Overall scene brightness multiplier set per difficulty by the gameplay
+        /// (Nightmare = 1, the original very dark look; Easy brightest). Scales ambient and light contribution.</summary>
+        public static float Brightness = 1f;
+
         /// <summary>Set ambient + fog; applied to shaders on the next frame.</summary>
         public static void Set(Color ambient, Color fogColor, float fogStart, float fogEnd)
         {

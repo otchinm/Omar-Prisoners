@@ -274,6 +274,13 @@ namespace PrisonersOfOmar.Gameplay
 
         public Vector3 InteractPoint => Info.Outside.position + Vector3.up;
 
+        /// <summary>(iteration 2) Cage slots start inactive (hidden + no collision); the spawn logic activates the ones in use.</summary>
+        public bool Active => Info.Root == null || Info.Root.gameObject.activeSelf;
+        public void SetActive(bool active)
+        {
+            if (Info.Root != null && Info.Root.gameObject.activeSelf != active) Info.Root.gameObject.SetActive(active);
+        }
+
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
             p = default;

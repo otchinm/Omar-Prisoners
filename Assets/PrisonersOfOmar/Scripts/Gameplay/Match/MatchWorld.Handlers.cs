@@ -12,11 +12,11 @@ namespace PrisonersOfOmar.Gameplay
         static readonly Msg[] HandledMessages =
         {
             Msg.Snapshot, Msg.AvatarStateReq, Msg.Action, Msg.ActionReq, Msg.PlayerStatus, Msg.ItemPicked, Msg.ItemDropped,
-            Msg.ItemConsumed, Msg.ItemCharge, Msg.BottleShatter, Msg.DoorState, Msg.HideState, Msg.CageState, Msg.TrapState,
+            Msg.ItemConsumed, Msg.ItemCharge, Msg.BottleShatter, Msg.CageState, Msg.TrapState,
             Msg.TrapSpawned, Msg.AttackFx, Msg.ChaseState, Msg.Scream, Msg.OmarStun, Msg.Noise, Msg.ObjectiveState,
             Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges,
             // requests (host)
-            Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.DoorReq, Msg.StruggleReq,
+            Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.StruggleReq,
             Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.KeypadReq, Msg.EscapeReq,
         };
 
@@ -31,8 +31,6 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.ItemConsumed, OnItemConsumed);
             s.On(Msg.ItemCharge, OnItemCharge);
             s.On(Msg.BottleShatter, OnBottleShatter);
-            s.On(Msg.DoorState, OnDoorState);
-            s.On(Msg.HideState, OnHideState);
             s.On(Msg.CageState, OnCageState);
             s.On(Msg.TrapState, OnTrapState);
             s.On(Msg.TrapSpawned, OnTrapSpawned);
@@ -59,7 +57,6 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.UseReq, (id, r) => Host?.OnUseReq(id, r));
             s.On(Msg.ThrowReq, (id, r) => Host?.OnThrowReq(id, r));
             s.On(Msg.BottleImpact, (id, r) => Host?.OnBottleImpact(id, r));
-            s.On(Msg.DoorReq, (id, r) => Host?.OnDoorReq(id, r));
             s.On(Msg.StruggleReq, (id, r) => Host?.OnStruggleReq(id, r));
             s.On(Msg.TrapTriggerReq, (id, r) => Host?.OnTrapTriggerReq(id, r));
             s.On(Msg.TrapPlaceReq, (id, r) => Host?.OnTrapPlaceReq(id, r));
@@ -69,11 +66,13 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.SearchReq, (id, r) => Host?.OnSearchReq(id, r));
             s.On(Msg.KeypadReq, (id, r) => Host?.OnKeypadReq(id, r));
             s.On(Msg.EscapeReq, (id, r) => Host?.OnEscapeReq(id, r));
+            RegisterPlayerHandlers(s);
         }
 
         void UnregisterHandlers()
         {
             foreach (var m in HandledMessages) Session.Off(m);
+            UnregisterPlayerHandlers(Session);
         }
 
         // ------------------------------------------------------------------ avatars
@@ -214,23 +213,6 @@ namespace PrisonersOfOmar.Gameplay
         }
 
         // ------------------------------------------------------------------ world objects
-
-        void OnDoorState(int sender, NetReader r)
-        {
-            int id = r.ReadShort();
-            byte f = r.ReadByte();
-            if (id < 0 || id >= Doors.Length) return;
-            Doors[id].Apply((f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0);
-        }
-
-        void OnHideState(int sender, NetReader r)
-        {
-            int spot = r.ReadByte();
-            int occ = r.ReadByte(); if (occ == 255) occ = -1;
-            bool searched = r.ReadBool();
-            if (spot < 0 || spot >= Hiding.Length) return;
-            Hiding[spot].Apply(occ, searched);
-        }
 
         void OnCageState(int sender, NetReader r)
         {
