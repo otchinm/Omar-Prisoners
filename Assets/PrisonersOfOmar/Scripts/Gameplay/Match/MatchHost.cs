@@ -26,6 +26,7 @@ namespace PrisonersOfOmar.Gameplay
         readonly DeterministicRandom _rng;
         float _snapTimer, _endCheckTimer, _nextEventAt = 70f, _powerRestoreAt = -1f;
         bool _cagesOpened, _omarAwake, _ended;
+        float _allCagedAt = -1f;
         int _wires = Tuning.TripwireCharges, _bears = Tuning.BearTrapCharges;
         float _trapRecharge;
         float _omarStunUntil;
@@ -236,6 +237,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             _nextEventAt = _rng.Range(55f, 90f);
             CommitObj(EditObj()); // initial objective state (car battery etc.)
+            SendTrapCharges();
         }
 
         public void Tick(float dt)
@@ -286,8 +288,8 @@ namespace PrisonersOfOmar.Gameplay
             if (_trapRecharge >= Tuning.TrapRecharge)
             {
                 _trapRecharge = 0f;
-                if (_wires < Tuning.TripwireCharges) _wires++;
-                else if (_bears < Tuning.BearTrapCharges) _bears++;
+                if (_wires < Tuning.TripwireCharges) { _wires++; SendTrapCharges(); }
+                else if (_bears < Tuning.BearTrapCharges) { _bears++; SendTrapCharges(); }
             }
 
             _endCheckTimer -= dt;
@@ -328,6 +330,8 @@ namespace PrisonersOfOmar.Gameplay
                 var st = Edit(id);
                 if (st.HidingSpot >= 0) BroadcastHide(st.HidingSpot, -1, false);
                 if (st.Cage >= 0) BroadcastCage(st.Cage, W.Cages[st.Cage].Open, -1);
+                if (st.TrappedBy >= 0 && st.TrappedBy < W.Traps.Count) BroadcastTrap(W.Traps[st.TrappedBy], TrapState.Disarmed, -1, false);
+                if (W.Objectives.CarDriver == id) { var o = EditObj(); o.CarDriver = -1; CommitObj(o); }
                 st.Life = LifeState.Gone; st.HidingSpot = -1; st.Cage = -1; st.TrappedBy = -1; st.CarSeat = -1;
                 Commit(st);
                 SetChase(id, false);
@@ -335,6 +339,8 @@ namespace PrisonersOfOmar.Gameplay
             }
             else if (p.IsOmar)
             {
+                // nobody can report 'lost' for the chases his detector was tracking any more
+                foreach (var t in new List<int>(W.ChaseTargets)) SetChase(t, false);
                 // the AI takes over Omar's body
                 var av = W.AvatarOf(id);
                 if (av != null)
@@ -801,15 +807,16 @@ namespace PrisonersOfOmar.Gameplay
             byte kind = r.ReadByte();
             var st = W.StatusOf(sender);
             if (st == null) return;
-            int n = (_struggle.TryGetValue(sender, out var c) ? c : 0) + 1;
-            _struggle[sender] = n;
+            int key = sender * 2 + (kind == 0 ? 0 : 1);
+            int n = (_struggle.TryGetValue(key, out var c) ? c : 0) + 1;
+            _struggle[key] = n;
             if (kind == 0 && st.Life == LifeState.Caged && st.Cage >= 0 && st.Cage < W.Cages.Length && !W.Cages[st.Cage].Open)
             {
                 var cage = W.Cages[st.Cage];
                 if (n % 10 == 0) DeliverNoise(cage.Info.Inside.position, 9f);
                 if (n > 8 && _rng.Chance(0.013f))
                 {
-                    _struggle[sender] = 0;
+                    _struggle[key] = 0;
                     ReleaseCage(st.Cage);
                     DeliverNoise(cage.Info.Inside.position, 15f);
                     Message("THE RUSTY LOCK GAVE WAY!", 3f, sender);
@@ -820,7 +827,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (n % 6 == 0) DeliverNoise(PosOf(sender), 7f);
                 if (n >= 16)
                 {
-                    _struggle[sender] = 0;
+                    _struggle[key] = 0;
                     int trap = st.TrappedBy;
                     var e = Edit(sender); e.TrappedBy = -1; Commit(e);
                     if (trap >= 0 && trap < W.Traps.Count) BroadcastTrap(W.Traps[trap], TrapState.Disarmed, -1, false);
@@ -852,6 +859,7 @@ namespace PrisonersOfOmar.Gameplay
             else
             {
                 BroadcastTrap(t, TrapState.Triggered, victim, true);
+                _struggle[victim * 2 + 1] = 0;
                 var st = Edit(victim);
                 st.TrappedBy = t.Index;
                 st.Injured = true;
@@ -873,12 +881,25 @@ namespace PrisonersOfOmar.Gameplay
             var kind = (TrapKind)r.ReadByte();
             Vector3 a = r.ReadVector3(), b = r.ReadVector3();
             if (!IsOmar(sender)) return;
-            PlaceTrap(sender, kind, a, b);
+            if (!PlaceTrap(sender, kind, a, b)) Message(kind == TrapKind.Tripwire ? "THE WIRE WON'T HOLD THERE" : "THE TRAP WON'T SET THERE", 2f, sender);
+            SendTrapCharges();
+        }
+
+        /// <summary>Tell Omar's player the real trap counts (their HUD and local checks follow the host).</summary>
+        void SendTrapCharges()
+        {
+            var omar = S.FindOmar();
+            if (omar == null || omar.IsBot || !omar.Connected) return;
+            var w = S.Begin(Msg.TrapCharges);
+            w.WriteByte((byte)_wires);
+            w.WriteByte((byte)_bears);
+            S.SendTo(omar.Id, NetChannel.Reliable);
         }
 
         /// <summary>Spawn a new trap for Omar (human or AI). Returns false when out of charges / invalid.</summary>
         public bool PlaceTrap(int omarId, TrapKind kind, Vector3 a, Vector3 b)
         {
+            if (_ended || !W.Running) return false;
             if (!Near(omarId, a, 6f) || (b - a).magnitude > 4.5f) return false;
             if (kind == TrapKind.Tripwire) { if (_wires <= 0) return false; _wires--; }
             else { if (_bears <= 0) return false; _bears--; }
@@ -904,7 +925,7 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Resolve a cleaver hit (human Omar request or AI). target 255 / invalid = swing only.</summary>
         public void DoAttack(int omarId, int target)
         {
-            if (OmarStunned) return;
+            if (OmarStunned || _ended || !W.Running) return;
             float last = _lastAttack.TryGetValue(omarId, out var l) ? l : -99f;
             if (W.Time - last < Tuning.AttackCooldown * 0.7f) return;
             _lastAttack[omarId] = W.Time;
@@ -966,6 +987,7 @@ namespace PrisonersOfOmar.Gameplay
             st.HidingSpot = -1; st.TrappedBy = -1; st.CarSeat = -1;
             st.Captures++;
             st.Injured = false;
+            _struggle[target * 2] = 0;
             st.TeleportSeq++;
             SetChase(target, false);
             if (st.Captures >= Tuning.MaxCaptures)
@@ -1000,7 +1022,7 @@ namespace PrisonersOfOmar.Gameplay
         public void DoDetect(int target, bool spotted)
         {
             var st = W.StatusOf(target);
-            if (spotted && (st == null || st.Life != LifeState.Free)) return;
+            if (spotted && (_ended || !W.Running || st == null || st.Life != LifeState.Free)) return;
             SetChase(target, spotted);
         }
 
@@ -1012,6 +1034,7 @@ namespace PrisonersOfOmar.Gameplay
 
         public bool DoScream(int omarId)
         {
+            if (_ended || !W.Running) return false;
             float last = _lastScream.TryGetValue(omarId, out var l) ? l : -99f;
             if (W.Time - last < Tuning.ScreamCooldown - 2f) return false;
             _lastScream[omarId] = W.Time;
@@ -1084,7 +1107,7 @@ namespace PrisonersOfOmar.Gameplay
             bool ok = false;
             switch (route)
             {
-                case EscapeRoute.Road: ok = o.GateCut && m.MainGate != null && Expand(m.MainGate.ExitZone).Contains(p); break;
+                case EscapeRoute.Road: ok = (o.GateCut || o.CarGone) && m.MainGate != null && Expand(m.MainGate.ExitZone).Contains(p); break;
                 case EscapeRoute.Shelter: ok = o.ShelterOpen && m.Shelter != null && Expand(m.Shelter.TunnelExitZone).Contains(p); break;
                 case EscapeRoute.Radio: ok = o.RescuePresent && m.Radio != null && Expand(m.Radio.LandingZone).Contains(p); break;
                 case EscapeRoute.Fire: ok = o.Exploded && m.FuelDepot != null && Expand(m.FuelDepot.BreachExitZone).Contains(p); break;
@@ -1143,7 +1166,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (_ended || !W.Running) return;
             if (!_cagesOpened) return; // everyone starts caged
-            int free = 0, escaped = 0, prisoners = 0;
+            int free = 0, caged = 0, prisoners = 0;
             foreach (var p in S.Players)
             {
                 if (!p.IsPrisoner) continue;
@@ -1151,9 +1174,20 @@ namespace PrisonersOfOmar.Gameplay
                 var st = W.StatusOf(p.Id);
                 if (st == null) continue;
                 if (st.Life == LifeState.Free) free++;
-                else if (st.Life == LifeState.Escaped) escaped++;
+                else if (st.Life == LifeState.Caged) caged++;
             }
             bool timeUp = W.Time >= W.NightLength;
+            // everyone left is in the pens: the caged still get a last chance to break the rusty lock
+            if (free == 0 && caged > 0 && !timeUp && prisoners > 0)
+            {
+                if (_allCagedAt < 0f)
+                {
+                    _allCagedAt = W.Time;
+                    Message("EVERYONE IS CAGED. BREAK THE LOCK (MASH E)!", 6f);
+                }
+                if (W.Time - _allCagedAt < Tuning.AllCagedGrace) return;
+            }
+            else _allCagedAt = -1f;
             if (prisoners == 0 || free == 0 || timeUp) EndMatch(timeUp);
         }
 

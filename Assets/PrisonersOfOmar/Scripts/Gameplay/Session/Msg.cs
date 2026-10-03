@@ -58,6 +58,7 @@ namespace PrisonersOfOmar.Gameplay
         SearchReq = 66,      // Omar searches a hiding spot
         OmarStun = 67,
         SenseReq = 68,
+        TrapCharges = 69,    // host -> Omar's owner: authoritative tripwire / bear trap counts
 
         // ---- objectives / events / endings
         ObjectiveState = 80, // host -> all: full objective struct

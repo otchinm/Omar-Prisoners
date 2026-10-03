@@ -551,7 +551,7 @@ namespace PrisonersOfOmar.Gameplay
             if (_escapeCooldown > 0) return;
             Vector3 p = LocalAvatar.Position + Vector3.up * 0.5f;
             EscapeRoute route = EscapeRoute.None;
-            if (Objectives.GateCut && Map.MainGate != null && Map.MainGate.ExitZone.Contains(p)) route = EscapeRoute.Road;
+            if ((Objectives.GateCut || Objectives.CarGone) && Map.MainGate != null && Map.MainGate.ExitZone.Contains(p)) route = EscapeRoute.Road;
             else if (Objectives.ShelterOpen && Map.Shelter != null && Map.Shelter.TunnelExitZone.Contains(p)) route = EscapeRoute.Shelter;
             else if (Objectives.RescuePresent && Map.Radio != null && Map.Radio.LandingZone.Contains(p)) route = EscapeRoute.Radio;
             else if (Objectives.Exploded && Map.FuelDepot != null && Map.FuelDepot.BreachExitZone.Contains(p)) route = EscapeRoute.Fire;

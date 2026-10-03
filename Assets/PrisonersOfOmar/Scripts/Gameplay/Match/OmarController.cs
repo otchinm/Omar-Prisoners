@@ -36,7 +36,6 @@ namespace PrisonersOfOmar.Gameplay
 
         public int TripwireCharges = Tuning.TripwireCharges;
         public int BearTrapCharges = Tuning.BearTrapCharges;
-        float _rechargeTimer;
 
         public float Stamina => _stamina;
         public float ScreamCooldown01 => Mathf.Clamp01((_screamReadyAt - _w.Time) / Tuning.ScreamCooldown);
@@ -48,6 +47,13 @@ namespace PrisonersOfOmar.Gameplay
         public float WakeRemaining => Mathf.Max(0f, Tuning.OmarIntroSeconds - _w.Time);
         public bool Stunned => _w.Time < _stunUntil;
         public DetectionSystem Detection => _detect;
+
+        /// <summary>Authoritative trap counts from the host (Msg.TrapCharges).</summary>
+        public void SetTrapCharges(int wires, int bears)
+        {
+            TripwireCharges = wires;
+            BearTrapCharges = bears;
+        }
 
         public static OmarController Attach(Avatar avatar, MatchWorld w)
         {
@@ -115,7 +121,7 @@ namespace PrisonersOfOmar.Gameplay
             var rig = PsxCameraRig.Instance;
             Vector3 eye = _avatar.EyePosition;
             Vector3 fwd = Quaternion.Euler(_pitch, _yaw, 0) * Vector3.forward;
-            _detect.Tick(dt, eye, fwd, Waking, (id, spotted) => _w.SendDetect(id, spotted));
+            if (_w.Running && _w.Ending == null) _detect.Tick(dt, eye, fwd, Waking, (id, spotted) => _w.SendDetect(id, spotted));
 
             if (!frozen)
             {
@@ -124,15 +130,6 @@ namespace PrisonersOfOmar.Gameplay
                 HandleInteraction(dt);
             }
             else { _hasPrompt = false; _hold = 0; }
-
-            // trap recharge (local mirror; the host enforces the real counts)
-            _rechargeTimer += dt;
-            if (_rechargeTimer >= Tuning.TrapRecharge)
-            {
-                _rechargeTimer = 0f;
-                if (TripwireCharges < Tuning.TripwireCharges) TripwireCharges++;
-                else if (BearTrapCharges < Tuning.BearTrapCharges) BearTrapCharges++;
-            }
 
             Publish();
         }

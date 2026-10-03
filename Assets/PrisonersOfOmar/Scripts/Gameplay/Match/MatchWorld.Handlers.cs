@@ -14,7 +14,7 @@ namespace PrisonersOfOmar.Gameplay
             Msg.Snapshot, Msg.AvatarStateReq, Msg.Action, Msg.ActionReq, Msg.PlayerStatus, Msg.ItemPicked, Msg.ItemDropped,
             Msg.ItemConsumed, Msg.ItemCharge, Msg.BottleShatter, Msg.DoorState, Msg.HideState, Msg.CageState, Msg.TrapState,
             Msg.TrapSpawned, Msg.AttackFx, Msg.ChaseState, Msg.Scream, Msg.OmarStun, Msg.Noise, Msg.ObjectiveState,
-            Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive,
+            Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges,
             // requests (host)
             Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.DoorReq, Msg.StruggleReq,
             Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.KeypadReq, Msg.EscapeReq,
@@ -48,6 +48,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.MatchEnd, OnMatchEnd);
             s.On(Msg.Message, OnMessage);
             s.On(Msg.CarDrive, OnCarDrive);
+            s.On(Msg.TrapCharges, (id, r) => { int wires = r.ReadByte(), bears = r.ReadByte(); LocalOmar?.SetTrapCharges(wires, bears); });
 
             // host side requests are forwarded to MatchHost (ignored on clients)
             s.On(Msg.AvatarStateReq, (id, r) => Host?.OnAvatarState(id, r));
@@ -320,6 +321,9 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var av = AvatarOf(target);
                 if (av != null) Pings.Add(new OmarPing { Position = av.Position, Expire = UnityEngine.Time.time + 2f, Kind = 4 });
+                // chases the host starts itself (pulled out of a hiding spot) must also end 4 s after losing sight
+                if (LocalOmar != null && LocalOmar.Detection != null && Ending == null)
+                    LocalOmar.Detection.ForceSpot(target, av != null ? av.Position : Vector3.zero, (id, spotted) => SendDetect(id, spotted));
             }
         }
 

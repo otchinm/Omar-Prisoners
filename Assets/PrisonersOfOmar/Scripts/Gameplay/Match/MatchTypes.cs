@@ -251,6 +251,8 @@ namespace PrisonersOfOmar.Gameplay
         public const float OmarIntroSeconds = 22f, CagesOpenAt = 6f;
         // detection
         public const float SightConeHalfAngle = 62f, SightMinRange = 4.5f, SightMaxRange = 32f;
+        /// <summary>When no prisoner is free but some are caged, the night ends this many seconds later unless one breaks out.</summary>
+        public const float AllCagedGrace = 30f;
         // capture
         public const int MaxCaptures = 3;
         // proximity interference
