@@ -372,6 +372,13 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var p = nav.FindPath(A.Position, goal);
                 if (p != null) _path = p;
+                if (_path.Count == 0 && _mode == Mode.Patrol)
+                {
+                    // unreachable right now (behind a closed gate): patrol somewhere else
+                    _goal = A.Position;
+                    _waitTimer = 0.5f;
+                    return;
+                }
             }
             if (_path.Count == 0) _path.Add(goal);
         }

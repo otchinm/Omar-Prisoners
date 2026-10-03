@@ -51,6 +51,10 @@ namespace PrisonersOfOmar.Map
             return ((long)lo << 32) | (uint)hi;
         }
 
+        /// <summary>(integration) Optional: return true for a door index / Edge* code that cannot be crossed right now
+        /// (closed gates, the shelter before it opens...). FindNodePath skips such edges.</summary>
+        public System.Func<int, bool> IsDoorBlocked;
+
         /// <summary>(addition) Door index (MapData.Doors) or Edge* code crossed by the edge a-b, EdgeNone if none.</summary>
         public int DoorOnEdge(int a, int b) => EdgeDoors.TryGetValue(EdgeKey(a, b), out int d) ? d : EdgeNone;
 
@@ -153,6 +157,7 @@ namespace PrisonersOfOmar.Map
                 {
                     int nb = edges[e];
                     if (closed[nb]) continue;
+                    if (IsDoorBlocked != null && EdgeDoors.Count > 0 && EdgeDoors.TryGetValue(EdgeKey(cur, nb), out int dc) && IsDoorBlocked(dc)) continue;
                     float tg = gScore[cur] + Vector3.Distance(Nodes[cur], Nodes[nb]);
                     if (tg < gScore[nb])
                     {

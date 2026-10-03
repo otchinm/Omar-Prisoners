@@ -115,6 +115,12 @@ namespace PrisonersOfOmar.Gameplay
             while (Map.PrisonerSpawns.Count < 4) Map.PrisonerSpawns.Add(new Pose(new Vector3(Map.PrisonerSpawns.Count * 1.5f, 1f, 0), Quaternion.identity));
 
             foreach (var z in Map.AnomalyZones) AnomalySystem.RegisterZone(z.Center, z.Radius, z.Strength);
+            if (Map.Nav != null)
+                Map.Nav.IsDoorBlocked = code =>
+                    code == NavGraph.EdgeMainGate ? !Objectives.GateCut :
+                    code == NavGraph.EdgeVehicleGate ? !Objectives.CarGone :
+                    code == NavGraph.EdgeShelter ? !Objectives.ShelterOpen :
+                    code == NavGraph.EdgeBreach ? !Objectives.Exploded : false;
             AnomalySystem.SetBaseline(0.06f);
 
             BuildEntities();
@@ -571,6 +577,8 @@ namespace PrisonersOfOmar.Gameplay
                 if (Map.Car.VehicleGateRight != null && Vector3.Distance(pos, Map.Car.VehicleGateRight.position) < 7f)
                     Map.Car.VehicleGateRight.localRotation = Quaternion.Slerp(Map.Car.VehicleGateRight.localRotation, Quaternion.Euler(0, 110, 0), dt * 6f);
                 if (Map.Car.VehicleGateChain != null && t > 2f) Map.Car.VehicleGateChain.SetActive(false);
+                if (t > 1.5f && Map.Car.VehicleGateBlockers != null)
+                    foreach (var c in Map.Car.VehicleGateBlockers) if (c != null) c.enabled = false;
             }
             if (_carIdle != null && Map.Car != null && Map.Car.Root != null) _carIdle.transform.position = Map.Car.Root.position;
         }
