@@ -38,6 +38,8 @@ namespace PrisonersOfOmar.Gameplay
             if (a.FlashlightOn) range = Mathf.Max(range, 40f);
             if (a.Crouching) range *= 0.62f;
             if (a.Sprinting) range *= 1.15f;
+            // the tall corn hides you unless your own light gives you away
+            if (PrisonersOfOmar.Map.FarmBuilder.InDenseCorn(a.Position)) range = Mathf.Min(range, a.LighterOn || a.FlashlightOn ? 14f : a.Crouching ? 3f : 6f);
             return range;
         }
 

@@ -105,6 +105,30 @@ low-fi static.
 * **Bear traps** hold and injure you until you pull free, or until a friend pries the trap open.
 * Some traps are placed randomly at the start of each match, and Omar can set more. Crouch to disarm them.
 
+### The map: the Base of the Second Class
+
+One large map, built by code from every reference image in `SourceAssets/map`. A chain-link and barbed-wire
+fence (about 125 × 130 m) surrounds it, with forest beyond.
+
+* **The farmhouse.** Three floors joined by a central hall and two staircases.
+  * *Upstairs:* the **cage room** where the prisoners wake up, a storage room, Omar's locked **radio room**,
+    a study and a supply closet.
+  * *Ground floor:* the dining room, the kitchen / butchery, the living room with the TV, a boarded-up bathroom,
+    the bedroom with the grandfather clock, and Omar's portrait in the hall.
+  * *Basement:* the **furnace room** where Omar wakes up, the generator room with the fuse box, the exhibit of
+    burnt mannequins, and the antechamber with the **fallout shelter** keypad. Behind the shelter door, a tunnel
+    leads under the yard to a ladder past the west fence.
+* **The yard.** Gravel driveway, plastic flamingos, a dead tree, a floodlight, a pickup wreck, the **main gate**
+  (padlocked) and the road beyond it.
+* **West side.** The **parking lot** with **the car** and three wrecks, the chained vehicle gate, and an outdoor restroom.
+* **North side.** The **corn field** with its clearing (the helicopter landing zone), the **barn**, the
+  **fuel drums** against the north fence, the silo, the windmill and the water tower.
+* **East side.** A tool shed.
+
+You can hide in wardrobes, lockers and under beds, and the tall corn hides you from a distance. Items,
+notes, the shelter code, some traps and the car's dead battery change every match. The map and item layout come
+from a seed that the host shares, so every player builds the same map.
+
 ### Escape routes and endings
 
 | Route | How | Ending |

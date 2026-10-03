@@ -31,6 +31,10 @@ namespace PrisonersOfOmar.Map
 
         // ================================================================== corn field
 
+        /// <summary>(gameplay) True inside the tall corn (the field minus its lanes and the clearing): partial cover from Omar's sight.</summary>
+        public static bool InDenseCorn(Vector3 p)
+            => p.y > -0.5f && p.y < 2.5f && p.x > FieldX0 && p.x < FieldX1 && p.z > FieldZ0 && p.z < FieldZ1 && !InLaneOrClearing(p.x, p.z, -0.3f);
+
         static bool InLaneOrClearing(float x, float z, float margin)
         {
             if (x > Clearing.xMin - margin && x < Clearing.xMax + margin && z > Clearing.yMin - margin && z < Clearing.yMax + margin) return true;
