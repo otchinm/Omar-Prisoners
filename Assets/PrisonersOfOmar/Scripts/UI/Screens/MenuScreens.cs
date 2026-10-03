@@ -197,9 +197,10 @@ namespace PrisonersOfOmar.UI
             }
             if (back)
             {
-                if (connecting) s.Leave();
                 AudioManager.Play2D(Snd.UiBack, 0.7f, 1f, AudioCategory.Ui);
-                UIManager.Instance.Pop();
+                // leaving while connecting ends the session, which already rebuilds the stack as [main menu]
+                if (connecting) s.Leave();
+                if (UIManager.Instance.Top == this) UIManager.Instance.Pop();
             }
         }
     }
