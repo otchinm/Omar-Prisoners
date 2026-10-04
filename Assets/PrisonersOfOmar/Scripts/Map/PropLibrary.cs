@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PrisonersOfOmar.Rendering;
 using UnityEngine;
 
@@ -119,6 +120,114 @@ namespace PrisonersOfOmar.Map
             Col(ctx, pos, yaw, new Vector3(0, 0.23f, 0), new Vector3(0.8f, 0.46f, 1.9f), SurfaceType.Metal, "Cot");
         }
 
+        // ------------------------------------------------------------------ drawers
+        // dresser_front.png (128 px): four painted drawers, x 8..120 px, rows (top..bottom px) 12-37, 40-65, 68-94, 97-122
+        static readonly float[] DrawerRowTop = { 12f, 40f, 68f, 97f }, DrawerRowBottom = { 37f, 65f, 94f, 122f };
+        const float DrawerColL = 8f, DrawerColR = 120f;
+
+        /// <summary>
+        /// Box (centre <paramref name="c"/>, size <paramref name="s"/>, prop local space) whose painted drawers really slide
+        /// out: the frame around them stays in <paramref name="mb"/>, each drawer becomes its own moving object
+        /// (MapData.Drawers) with a small-item spot inside. Without a context (menu scene) it is the plain painted front.
+        /// </summary>
+        static void DrawerFront(MapContext ctx, MeshBuilder mb, Vector3 pos, float yaw, Material front, Material wood, Vector3 c, Vector3 s, Rect frontRect)
+        {
+            mb.Material = wood;
+            mb.AddBox(c, s, BoxUV.Local, 0.5f, 0f, BoxFaces.All & ~BoxFaces.NegZ & ~BoxFaces.NegY);
+            if (ctx == null)
+            {
+                mb.Material = front;
+                mb.AddBox(c, s, BoxUVRects.All(frontRect), BoxFaces.NegZ);
+                return;
+            }
+            float x0 = c.x - s.x * 0.5f, x1 = c.x + s.x * 0.5f, y0 = c.y - s.y * 0.5f, y1 = c.y + s.y * 0.5f, zf = c.z - s.z * 0.5f;
+            float X(float u) => x0 + (u - frontRect.xMin) / frontRect.width * (x1 - x0);
+            float Y(float v) => y0 + (v - frontRect.yMin) / frontRect.height * (y1 - y0);
+            float U(float x) => frontRect.xMin + (x - x0) / (x1 - x0) * frontRect.width;
+            float V(float y) => frontRect.yMin + (y - y0) / (y1 - y0) * frontRect.height;
+            var ops = new List<Rect>();   // the drawer openings (local x / y)
+            for (int t = Mathf.FloorToInt(frontRect.xMin + 0.001f); t < Mathf.CeilToInt(frontRect.xMax - 0.001f); t++)
+                for (int r = 0; r < DrawerRowTop.Length; r++)
+                {
+                    float u0 = t + DrawerColL / 128f, u1 = t + DrawerColR / 128f;
+                    float v0 = 1f - DrawerRowBottom[r] / 128f, v1 = 1f - DrawerRowTop[r] / 128f;
+                    if (u0 < frontRect.xMin - 0.001f || u1 > frontRect.xMax + 0.001f || v0 < frontRect.yMin - 0.02f || v1 > frontRect.yMax + 0.02f) continue;
+                    v0 = Mathf.Max(v0, frontRect.yMin + 0.004f); v1 = Mathf.Min(v1, frontRect.yMax - 0.004f);
+                    ops.Add(Rect.MinMaxRect(X(u0), Y(v0), X(u1), Y(v1)));
+                }
+            // the frame: horizontal strips between the opening edges, minus the openings crossing each strip
+            var ys = new List<float> { y0, y1 };
+            foreach (var o in ops) { ys.Add(o.yMin); ys.Add(o.yMax); }
+            ys.Sort();
+            mb.Material = front;
+            for (int i = 0; i + 1 < ys.Count; i++)
+            {
+                float ya = ys[i], yb = ys[i + 1];
+                if (yb - ya < 0.0005f) continue;
+                var cross = ops.FindAll(o => o.yMin <= ya + 0.0005f && o.yMax >= yb - 0.0005f);
+                cross.Sort((a, b) => a.xMin.CompareTo(b.xMin));
+                float cur = x0;
+                for (int k = 0; k <= cross.Count; k++)
+                {
+                    float end = k < cross.Count ? cross[k].xMin : x1;
+                    if (end - cur > 0.0005f)
+                        mb.AddQuad(new Vector3(cur, ya, zf), new Vector3(cur, yb, zf), new Vector3(end, yb, zf), new Vector3(end, ya, zf), Rect.MinMaxRect(U(cur), V(ya), U(end), V(yb)));
+                    if (k < cross.Count) cur = Mathf.Max(cur, cross[k].xMax);
+                }
+            }
+            // dark cavities behind the openings, then the drawers
+            var dark = Mat.Flat(0.035f, 0.028f, 0.022f);
+            var rot = MapMath.Yaw(yaw);
+            float depth = s.z - 0.04f, zb = zf + depth;
+            var uv = new Rect(0, 0, 1, 1);
+            foreach (var o in ops)
+            {
+                mb.Material = dark;
+                mb.AddQuad(new Vector3(o.xMin, o.yMin, zb), new Vector3(o.xMin, o.yMax, zb), new Vector3(o.xMax, o.yMax, zb), new Vector3(o.xMax, o.yMin, zb), uv);
+                mb.AddQuad(new Vector3(o.xMin, o.yMin, zf), new Vector3(o.xMin, o.yMax, zf), new Vector3(o.xMin, o.yMax, zb), new Vector3(o.xMin, o.yMin, zb), uv);
+                mb.AddQuad(new Vector3(o.xMax, o.yMin, zb), new Vector3(o.xMax, o.yMax, zb), new Vector3(o.xMax, o.yMax, zf), new Vector3(o.xMax, o.yMin, zf), uv);
+                mb.AddQuad(new Vector3(o.xMax, o.yMax, zf), new Vector3(o.xMax, o.yMax, zb), new Vector3(o.xMin, o.yMax, zb), new Vector3(o.xMin, o.yMax, zf), uv);
+                mb.AddQuad(new Vector3(o.xMin, o.yMin, zf), new Vector3(o.xMin, o.yMin, zb), new Vector3(o.xMax, o.yMin, zb), new Vector3(o.xMax, o.yMin, zf), uv);
+                BuildDrawer(ctx, pos, rot, front, wood, o, zf, depth, Rect.MinMaxRect(U(o.xMin), V(o.yMin), U(o.xMax), V(o.yMax)));
+            }
+        }
+
+        static void BuildDrawer(MapContext ctx, Vector3 pos, Quaternion rot, Material front, Material wood, Rect o, float zf, float depth, Rect uv)
+        {
+            int index = ctx.Data.Drawers.Count;
+            var root = GeoUtil.CreateChild(ctx.Dynamic, "Drawer_" + index, pos, rot, Layers.World);
+            var dmb = new MeshBuilder();
+            const float g = 0.004f;
+            float w = o.width - 2f * g, h = o.height - 2f * g;
+            var fc = new Vector3(o.center.x, o.center.y, zf + 0.008f);
+            // the painted face (a hair proud of the frame), then the box: bottom, two sides, back (open top)
+            dmb.Color = Shade.Gray(0.85f);
+            dmb.Material = front;
+            dmb.AddBox(fc, new Vector3(w, h, 0.02f), BoxUVRects.All(uv), BoxFaces.NegZ);
+            dmb.Material = wood;
+            dmb.AddBox(fc, new Vector3(w, h, 0.02f), BoxUV.Local, 0.4f, 0f, BoxFaces.All & ~BoxFaces.NegZ);
+            float bd = depth - 0.05f, bh = Mathf.Max(0.04f, h - 0.035f), bw = w - 0.03f;
+            float zc = zf + 0.018f + bd * 0.5f, yb = o.yMin + g + 0.006f;
+            dmb.Color = Shade.Gray(0.5f);
+            dmb.AddBox(new Vector3(o.center.x, yb, zc), new Vector3(bw, 0.012f, bd), BoxUV.Local, 0.4f);
+            dmb.AddBox(new Vector3(o.center.x - bw * 0.5f + 0.006f, yb + bh * 0.5f, zc), new Vector3(0.012f, bh, bd), BoxUV.Local, 0.4f);
+            dmb.AddBox(new Vector3(o.center.x + bw * 0.5f - 0.006f, yb + bh * 0.5f, zc), new Vector3(0.012f, bh, bd), BoxUV.Local, 0.4f);
+            dmb.AddBox(new Vector3(o.center.x, yb + bh * 0.5f, zc + bd * 0.5f - 0.006f), new Vector3(bw, bh, 0.012f), BoxUV.Local, 0.4f);
+            dmb.Build("Mesh", root, Layers.World);
+            ctx.CountRenderer(dmb);
+            var interact = GeoUtil.AddBox(root, fc, new Vector3(w, h, 0.06f), Quaternion.identity, Layers.Interactable, SurfaceType.Default, true, "DrawerInteract");
+            var info = new DrawerInfo
+            {
+                Drawer = root,
+                OpenOffset = rot * new Vector3(0f, 0f, -Mathf.Min(0.62f * depth, depth - 0.08f)),
+                Interact = interact,
+                InsideLocal = new Bounds(new Vector3(o.center.x, yb + bh * 0.5f + 0.01f, zc), new Vector3(bw, bh + 0.04f, bd)),
+                ItemPoint = pos + rot * new Vector3(o.center.x, yb + 0.006f, zf + 0.13f),
+            };
+            ctx.Data.Drawers.Add(info);
+            if (bh >= 0.07f) ctx.Item(ctx.Data.AreaAt(info.ItemPoint), info.ItemPoint, ItemSpawnTier.Common, float.NaN, true);
+        }
+
         // ------------------------------------------------------------------ storage furniture
 
         public static void Dresser(MapContext ctx, MeshBuilder mb, Vector3 pos, float yaw, float w = 1.0f)
@@ -126,7 +235,7 @@ namespace PrisonersOfOmar.Map
             Begin(mb, pos, yaw);
             Gray(mb, 0.85f);
             var wood = Mat.Lit(Tex.WoodFurniture);
-            FrontBox(mb, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.48f, 0), new Vector3(w, 0.86f, 0.48f));
+            DrawerFront(ctx, mb, pos, yaw, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.48f, 0), new Vector3(w, 0.86f, 0.48f), Full);
             Box(mb, wood, new Vector3(0, 0.93f, -0.01f), new Vector3(w + 0.05f, 0.04f, 0.52f));
             Leg(mb, wood, -w * 0.45f, -0.2f, 0.05f, 0.06f); Leg(mb, wood, w * 0.45f, -0.2f, 0.05f, 0.06f);
             Gray(mb, 1f);
@@ -139,7 +248,7 @@ namespace PrisonersOfOmar.Map
             Begin(mb, pos, yaw);
             Gray(mb, 0.8f);
             var wood = Mat.Lit(Tex.WoodFurniture);
-            FrontBox(mb, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.32f, 0), new Vector3(0.45f, 0.56f, 0.4f), 0.5f, new Rect(0, 0.5f, 1, 0.5f));
+            DrawerFront(ctx, mb, pos, yaw, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.32f, 0), new Vector3(0.45f, 0.56f, 0.4f), new Rect(0, 0.5f, 1, 0.5f));
             Box(mb, wood, new Vector3(0, 0.58f, 0), new Vector3(0.48f, 0.04f, 0.43f));
             Gray(mb, 1f);
             End(mb);
@@ -295,7 +404,7 @@ namespace PrisonersOfOmar.Map
             Begin(mb, pos, yaw);
             var wood = Mat.Lit(Tex.WoodFurniture);
             Gray(mb, 0.78f);
-            FrontBox(mb, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.45f, 0), new Vector3(w, 0.82f, 0.48f), 0.5f, new Rect(0, 0, 2f, 0.5f));
+            DrawerFront(ctx, mb, pos, yaw, Mat.Lit(Tex.DresserFront), wood, new Vector3(0, 0.45f, 0), new Vector3(w, 0.82f, 0.48f), new Rect(0, 0, 2f, 0.5f));
             Box(mb, wood, new Vector3(0, 0.88f, 0), new Vector3(w + 0.04f, 0.04f, 0.52f));
             Gray(mb, 1f);
             End(mb);
@@ -347,7 +456,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(new Vector3(0, DeskTop - 0.02f, 0), new Vector3(w, 0.04f, d), BoxUV.PerFace, 1f, 0.8f, BoxFaces.PosY);
             Box(mb, wood, new Vector3(0, DeskTop - 0.02f, 0), new Vector3(w, 0.04f, d), 0.5f, BoxFaces.Sides | BoxFaces.NegY);
             Gray(mb, 0.72f);
-            FrontBox(mb, Mat.Lit(Tex.DresserFront), wood, new Vector3(w * 0.5f - 0.24f, (DeskTop - 0.04f) * 0.5f, 0), new Vector3(0.44f, DeskTop - 0.04f, d - 0.04f));
+            DrawerFront(ctx, mb, pos, yaw, Mat.Lit(Tex.DresserFront), wood, new Vector3(w * 0.5f - 0.24f, (DeskTop - 0.04f) * 0.5f, 0), new Vector3(0.44f, DeskTop - 0.04f, d - 0.04f), Full);
             Box(mb, wood, new Vector3(-w * 0.5f + 0.03f, (DeskTop - 0.04f) * 0.5f, 0), new Vector3(0.04f, DeskTop - 0.04f, d - 0.04f));
             Box(mb, wood, new Vector3(-0.1f, 0.45f, d * 0.5f - 0.03f), new Vector3(w - 0.5f, 0.5f, 0.02f));
             Gray(mb, 1f);

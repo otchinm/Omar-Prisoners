@@ -231,10 +231,10 @@ namespace PrisonersOfOmar.Map
 
         // ------------------------------------------------------------------ gameplay registration
 
-        public void Item(string area, Vector3 surfacePoint, ItemSpawnTier tier, float yaw = float.NaN)
+        public void Item(string area, Vector3 surfacePoint, ItemSpawnTier tier, float yaw = float.NaN, bool small = false)
         {
             if (float.IsNaN(yaw)) yaw = Mathf.Floor(Shade.Hash(surfacePoint, 11) * 8f) * 45f;
-            Data.ItemSpawns.Add(new ItemSpawnInfo { Position = surfacePoint, Yaw = yaw, Area = area, Tier = tier });
+            Data.ItemSpawns.Add(new ItemSpawnInfo { Position = surfacePoint, Yaw = yaw, Area = area, Tier = tier, Small = small });
         }
 
         public void Key(string area, Vector3 p) => Item(area, p, ItemSpawnTier.Key);

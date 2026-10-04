@@ -18,6 +18,8 @@ namespace PrisonersOfOmar.Rendering
         public float Radius = 0.25f;
         /// <summary>The player is aiming at this item: stronger glow.</summary>
         public bool Highlighted;
+        /// <summary>No halo at all (the item lies in a shut drawer).</summary>
+        public bool Suppressed;
 
         Transform _halo, _spark;
         MeshRenderer _haloR, _sparkR;
@@ -83,7 +85,7 @@ namespace PrisonersOfOmar.Rendering
             var cam = PsxRenderDriver.WorldCamera();
             float dt = Time.deltaTime;
             _hl = Mathf.MoveTowards(_hl, Highlighted ? 1f : 0f, dt * 5f);
-            if (cam == null || GlobalStrength <= 0f) { _haloR.enabled = false; _sparkR.enabled = false; return; }
+            if (cam == null || GlobalStrength <= 0f || Suppressed) { _haloR.enabled = false; _sparkR.enabled = false; return; }
             Vector3 c = transform.TransformPoint(_centerLocal);
             Vector3 camPos = cam.transform.position;
             float d = Vector3.Distance(camPos, c);

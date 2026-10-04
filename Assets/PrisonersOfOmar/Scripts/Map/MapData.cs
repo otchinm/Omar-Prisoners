@@ -70,6 +70,8 @@ namespace PrisonersOfOmar.Map
         public KitchenInfo Kitchen;
         /// <summary>The crawl duct from the cage room down through the kitchen ceiling (null if not built).</summary>
         public CeilingVentInfo CeilingVent;
+        /// <summary>Drawers of dressers / nightstands / sideboards / desks that slide open (items can lie inside).</summary>
+        public readonly List<DrawerInfo> Drawers = new List<DrawerInfo>();
         /// <summary>Candidate spots for the revolver (one is used per match).</summary>
         public readonly List<ItemSpawnInfo> GunSpots = new List<ItemSpawnInfo>();
         /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
@@ -149,6 +151,8 @@ namespace PrisonersOfOmar.Map
         /// <summary>Area name: "House.Kitchen", "House.Basement.Generator", "Shed", "Barn", "Restroom", "Yard", ...</summary>
         public string Area;
         public ItemSpawnTier Tier = ItemSpawnTier.Any;
+        /// <summary>Inside a drawer: only small items fit (no bolt cutters, cans, bottles...).</summary>
+        public bool Small;
     }
 
     public sealed class TrapSpotInfo
@@ -200,6 +204,21 @@ namespace PrisonersOfOmar.Map
         public Vector3 TvSoundPosition;
         /// <summary>Nav node indices (ground floor of the house, no stairs) she can roll between once she starts roaming.</summary>
         public readonly List<int> RoamNodes = new List<int>();
+    }
+
+    /// <summary>A drawer of a piece of furniture: it slides out along <see cref="OpenOffset"/>; items lying in it ride along.</summary>
+    public sealed class DrawerInfo
+    {
+        /// <summary>The moving drawer (its local space = the furniture's local space while shut).</summary>
+        public Transform Drawer;
+        /// <summary>World displacement when fully pulled out.</summary>
+        public Vector3 OpenOffset;
+        /// <summary>Trigger (Layers.Interactable) on the drawer front, child of <see cref="Drawer"/>.</summary>
+        public Collider Interact;
+        /// <summary>Inside of the drawer box in the drawer's local space.</summary>
+        public Bounds InsideLocal;
+        /// <summary>Point on the drawer bottom (while shut) where an item may lie.</summary>
+        public Vector3 ItemPoint;
     }
 
     /// <summary>

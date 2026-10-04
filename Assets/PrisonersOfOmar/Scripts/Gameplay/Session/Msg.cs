@@ -80,6 +80,8 @@ namespace PrisonersOfOmar.Gameplay
         DoorFx = 104,        // host -> all: slam / latch / bump sounds + noise
         BedLift = 105,       // host -> all: Omar tips a bed up (hiding spot index, up/down)
         ChargeReq = 106,     // owner -> host: current fuel / battery of a held light (throttled)
+        DrawerReq = 107,     // client -> host: open / close a drawer
+        DrawerState = 108,   // host -> all: a drawer slides open / shut
 
         // ---- "world" package (Omar behaviour, grandmother, kitchen, revolver): 120..139
         GrandmaState = 120,  // host -> all: mode changes (watching / roaming / screaming / dead)

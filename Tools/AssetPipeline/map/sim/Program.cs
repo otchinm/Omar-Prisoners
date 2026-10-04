@@ -56,6 +56,9 @@ static class Program
                 Console.WriteLine("floor " + p.ToString("F2") + ": " + (g ? gh.collider.name + " y=" + gh.point.y.ToString("F3") : "NONE"));
             }
         }
+        if (args.Contains("--open-drawers"))   // preview: every drawer pulled out
+            foreach (var dr in data.Drawers) if (dr.Drawer != null) dr.Drawer.position += dr.OpenOffset;
+        Console.WriteLine("drawers: " + data.Drawers.Count + ", drawer item spots: " + data.ItemSpawns.Count(s => s.Small));
         var world = UnityEngine.Object.AllGameObjects.ToList();
         var colliders = Physics.AllColliders.ToList();
 
@@ -148,6 +151,7 @@ static class Program
         yield return ("int_cageroom", V(-3.6f, 6.1f, 1.6f), V(-9.8f, 4.6f, -3), false);
         yield return ("int_cageroom_lit", V(-3.6f, 6.1f, 1.6f), V(-9.8f, 4.6f, -3), true);
         yield return ("int_vent_cover", V(-8.2f, 5.0f, -0.6f), V(-5.2f, 4.2f, 1.45f), false);
+        yield return ("int_dresser", V(7.0f, 1.9f, 5.6f), V(7.0f, 1.0f, 3.3f), false);
         yield return ("int_kitchen_vent", V(-6.2f, 1.7f, 4.0f), V(-3.5f, 3.4f, 1.45f), false);
         yield return ("int_storage", V(-3.6f, 5.6f, 7.5f), V(-10, 4.0f, 3), false);
         yield return ("int_radio", V(3.6f, 5.6f, -1.6f), V(10.5f, 4.4f, -5), false);

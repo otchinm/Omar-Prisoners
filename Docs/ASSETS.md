@@ -199,7 +199,7 @@ Generated (Tools/AssetPipeline/audio):
   `shelter_door_open`, `fuse_insert`, `power_on`, `power_off`, `radio_tune`, `radio_sos`, `radio_voice`, `car_door`, `car_crank_fail`,
   `car_start`, `car_drive_away`, `gas_pour`, `hood_open`, `explosion`, `fire_whoosh`, `helicopter_flyby`, `fence_breach`, `tv_on`,
   `door_creak_loop_1`, `door_creak_loop_2`, `metal_door_creak_loop` (pitch follows the door speed), `door_latch_1`, `door_latch_2`,
-  `door_bump_1`, `door_bump_2`, `door_unlock`, `wardrobe_enter`, `wardrobe_exit`.
+  `door_bump_1`, `door_bump_2`, `door_unlock`, `wardrobe_enter`, `wardrobe_exit`, `drawer_open`, `drawer_close`.
 * Omar: `Audio/Omar/cleaver_swing_1`, `cleaver_swing_2`, `cleaver_hit_1`, `cleaver_hit_2`, `cleaver_hit_wall`, `growl_1`, `growl_2`,
   `trap_place`, `trap_snap`, `tripwire_snap`, `hiding_rip`, `grab`, `chop_1`…`3` (cleaver into meat on the butcher block),
   `meat_squelch_1`, `meat_squelch_2`, `windup_1`, `windup_2` (attack wind-up grunt), `stunned`, `door_push`, `bed_lift`.

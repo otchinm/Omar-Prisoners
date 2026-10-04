@@ -766,3 +766,35 @@ def fence_breach(rng):
     dsp.place(y, sfx.clank(N(0.8), rng, 190, (0.1, 0.5)), N(0.55), 0.8)
     dsp.place(y, mesh_rattle(rng, N(0.6), 9, 300), N(1.1), 0.5)
     return fin(dsp.sat(dsp.norm(y), 1.6), rng, 0.9, 0.18)
+
+
+# --------------------------------------------------------------------------------------------- drawers
+def _drawer(rng, opening):
+    n = N(0.9)
+    y = np.zeros(n)
+    d = rng.uniform(0.28, 0.36)
+    m = N(d)
+    # dry wooden runners: a gritty scrape through the cabinet's hollow body + a little stick-slip squeak
+    e = dsp.env([(0, 0), (0.03, 1), (d * 0.7, 0.8), (d, 0)], m) if opening else dsp.env([(0, 0), (0.02, 0.8), (d * 0.8, 1), (d, 0)], m)
+    slide = sfx.scrape(m, rng, e, 250, 3500, 500, res=[(310, 6, 1.0), (620, 8, 0.6), (1150, 10, 0.35)])
+    dsp.place(y, slide, 0, 0.7)
+    sq = sfx.creak(m, rng, np.linspace(30, 55, m), kind="wood", base=rng.uniform(700, 900), amp_env=e, jitter=0.4)
+    dsp.place(y, sq, 0, 0.18)
+    # whatever lies inside shifts and taps the drawer
+    for t in np.sort(rng.uniform(0.04, d, 3)):
+        k = sfx.strike(N(0.12), rng, sfx.wood_modes(rng, rng.uniform(350, 700), 6, 0.02), 0.8, noise_mix=0.3)
+        dsp.place(y, k, N(t), rng.uniform(0.15, 0.3))
+    # end: pulled against the stop / pushed home into the frame
+    knock = sfx.strike(N(0.4), rng, sfx.wood_modes(rng, 150 if opening else 120, 8, 0.05), 0.6, noise_mix=0.3)
+    dsp.place(y, dsp.norm(knock) + 0.5 * sfx.thud(N(0.4), rng, 95, 0.04, 0.3), N(d), 0.55 if opening else 0.8)
+    return fin(dsp.lp(y, 5000), rng, 0.45, 0.12)
+
+
+@sound("World/drawer_open", desc="wooden drawer slides out on dry runners, contents shift, soft stop", **ONE)
+def drawer_open(rng):
+    return _drawer(rng, True)
+
+
+@sound("World/drawer_close", desc="wooden drawer pushed shut, knocks home into the frame", **ONE)
+def drawer_close(rng):
+    return _drawer(rng, False)

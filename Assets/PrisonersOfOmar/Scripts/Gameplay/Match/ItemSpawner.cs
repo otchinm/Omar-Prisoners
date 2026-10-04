@@ -46,6 +46,17 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        /// <summary>Fits into a drawer (spots marked Small).</summary>
+        static bool FitsDrawer(ItemType t)
+        {
+            switch (t)
+            {
+                case ItemType.BoltCutters: case ItemType.GasCan: case ItemType.CarBattery: case ItemType.Crowbar:
+                case ItemType.Bottle: case ItemType.LighterFuel: return false;
+                default: return true;
+            }
+        }
+
         public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f)
         {
             var rng = DeterministicRandom.For(seed, "items");
@@ -87,6 +98,7 @@ namespace PrisonersOfOmar.Gameplay
                     foreach (var s in spots)
                     {
                         if (used.Contains(s)) continue;
+                        if (s.Small && !FitsDrawer(t)) continue;
                         if (pass == 0 && s.Tier == ItemSpawnTier.Common) continue;
                         if (pass < 2 && usedAreasForKeys.Contains(s.Area)) continue;
                         if (forb != null && pass < 2 && s.Area != null && MatchesAny(s.Area, forb)) continue;
@@ -107,10 +119,11 @@ namespace PrisonersOfOmar.Gameplay
                     foreach (var s in spots)
                     {
                         if (used.Contains(s)) continue;
+                        if (s.Small && !FitsDrawer(t)) continue;
                         if (pass == 0 && s.Tier == ItemSpawnTier.Key) continue;
                         pick = s; break;
                     }
-                if (pick == null) break;
+                if (pick == null) continue; // (a big item finds no free spot that is not a drawer)
                 used.Add(pick);
                 float charge = t == ItemType.Flashlight ? rng.Range(0.35f, 0.9f) : 1f;
                 result.Add(new Placement { Type = t, Position = pick.Position, Yaw = pick.Yaw + rng.Range(-30f, 30f), Charge = charge });

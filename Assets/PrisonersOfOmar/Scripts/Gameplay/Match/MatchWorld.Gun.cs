@@ -18,6 +18,8 @@ namespace PrisonersOfOmar.Gameplay
             RegisterGrandmaHandlers(s);
             RegisterKitchenHandlers(s);
             s.On(Msg.CageRattle, OnCageRattle);
+            s.On(Msg.DrawerReq, (id, r) => Host?.OnDrawerReq(id, r));
+            s.On(Msg.DrawerState, OnDrawerState);
         }
 
         void UnregisterWorldHandlers(NetSession s)
@@ -27,6 +29,8 @@ namespace PrisonersOfOmar.Gameplay
             UnregisterGrandmaHandlers(s);
             UnregisterKitchenHandlers(s);
             s.Off(Msg.CageRattle);
+            s.Off(Msg.DrawerReq);
+            s.Off(Msg.DrawerState);
         }
 
         partial void RegisterGrandmaHandlers(NetSession s);
@@ -41,6 +45,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             TickGrandma(dt);
             TickKitchen(dt);
+            TickDrawers(dt);
         }
 
         /// <summary>The local prisoner fired the revolver they hold (the host resolves the hit).</summary>

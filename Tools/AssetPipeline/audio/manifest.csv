@@ -305,6 +305,8 @@ World/door_open_1.ogg,generated,2.27,1,44100,-1.0,-13.0,1897,,,29,door handle + 
 World/door_open_2.ogg,generated,1.80,1,44100,-0.8,-18.5,1209,,,24,door handle + low short groan
 World/door_slam.ogg,generated,1.32,1,44100,-1.1,-18.0,290,,,15,door slammed hard
 World/door_unlock.ogg,generated,0.84,1,44100,-1.2,-18.8,2648,,,12,"lock bolt shot back, handle rattles"
+World/drawer_close.ogg,generated,0.82,1,44100,-0.6,-13.8,743,,,10,"wooden drawer pushed shut, knocks home into the frame"
+World/drawer_open.ogg,generated,0.79,1,44100,-1.0,-15.0,723,,,10,"wooden drawer slides out on dry runners, contents shift, soft stop"
 World/explosion.ogg,generated,7.49,1,44100,-0.1,-14.7,294,,,63,"car / gas explosion: crack, sub boom, rumble, debris"
 World/fence_breach.ogg,generated,2.19,1,44100,-0.7,-12.1,1603,,,27,"chain-link fence torn open: wire snap, mesh crash, post clank"
 World/fire_whoosh.ogg,generated,3.15,1,44100,-1.0,-17.9,401,,,30,fuel ignites: FWOOMP + roar + crackle
