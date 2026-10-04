@@ -51,10 +51,127 @@ HAIRLINES = {
              (110, 0.34), (140, 0.16), (180, 0.12)],
     "long": [(0, 0.80), (20, 0.78), (40, 0.70), (52, 0.55), (58, 0.20), (64, -0.2), (70, -0.6), (180, -0.6)],
     "bangs": [(0, 0.62), (30, 0.62), (44, 0.60), (52, 0.50), (57, 0.20), (63, -0.2), (70, -0.6), (180, -0.6)],
+    # (iteration 2) jaw-length bob: fringe (swept to one side by bob_sweep()), sides over the ears to the jaw,
+    # the nape shows under the cut
+    "bob": [(0, 0.62), (30, 0.62), (44, 0.60), (52, 0.50), (57, 0.22), (63, 0.02), (75, -0.06), (110, -0.12),
+            (150, -0.2), (180, -0.22)],
+    # boy's short cut with a fringe over the forehead
+    "kid": [(0, 0.70), (25, 0.70), (45, 0.67), (60, 0.62), (72, 0.55), (80, 0.44), (86, 0.58), (102, 0.58),
+            (110, 0.28), (140, 0.10), (180, 0.06)],
 }
 
 
+def bob_sweep(th, amount):
+    """Side part at theta ~ +22 (character's right): the fringe line rises there and sweeps down across the
+    forehead to the other temple. MUST match BodyMeshGenerator.FringeSweep()."""
+    return amount * (0.17 * np.exp(-((th - 22.0) / 15.0) ** 2) - 0.04 * np.exp(-((th + 34.0) / 16.0) ** 2))
+
+
+def almond(X, Y, cx, cy, rx, ry_up, ry_lo, tilt=0.0, soft=1.0):
+    """Eye shaped mask: rounder upper arc, flatter lower arc, outer corner raised by `tilt` (mm per mm, cx sign = side)."""
+    dx = X - cx
+    side = 1.0 if cx >= 0 else -1.0
+    yy = Y - cy - tilt * dx * side
+    ry = np.where(yy > 0, ry_up, ry_lo)
+    d = np.sqrt((dx / rx) ** 2 + (yy / ry) ** 2)
+    return np.clip((1.0 - d) * min(rx, ry_lo) / soft + 0.5, 0, 1).astype(np.float32)
+
+
+def paint_feminine_face(spec, rng, th, y, X, Y):
+    """(iteration 2) Pretty young woman's face: soft shading, almond eyes with liner + lashes, arched brows, full lips."""
+    h, w = th.shape
+    ath = np.abs(th)
+    tone = rgb(spec["skin"])
+    img = skin(h, w, tone, rng, mottle=spec.get("mottle", 0.05), pores=0.022, redness=spec.get("redness", 0.15))
+    lum = np.ones((h, w), np.float32)
+    lum *= 1 - 0.14 * smoothstep(45, 120, ath)
+    lum *= np.where(Y < 0, 0.92, 1.0)
+    lum *= 1 - 0.34 * smoothstep(-35, -2, Y) * (1 - smoothstep(-1, 4, Y)) * (1 - smoothstep(40, 80, ath))
+    # soft eye sockets, small straight nose, gentle nostrils
+    lum *= 1 - 0.12 * sym_ell(X, Y, 31, 106, 20, 11, 8)
+    lum *= 1 + 0.10 * ell(X, Y, 0, 90, 4.5, 20, 4)           # bridge highlight
+    lum *= 1 + 0.07 * ell(X, Y, 0, 74, 6, 5, 3)              # tip
+    lum *= 1 - 0.20 * ell(X, Y, 0, 67.5, 10, 3.6, 2.5)       # under the tip
+    lum *= 1 - 0.07 * sym_ell(X, Y, 8.5, 82, 3.5, 13, 4)     # nose sides
+    lum *= 1 - 0.30 * sym_ell(X, Y, 5.2, 69.0, 2.4, 1.5, 0.9)  # nostrils
+    # high cheekbones: highlight above, soft hollow below; small soft chin; philtrum
+    lum *= 1 + 0.09 * sym_ell(X, Y, 40, 84, 17, 9, 7)
+    lum *= 1 - 0.07 * sym_ell(X, Y, 50, 62, 12, 14, 9)
+    lum *= 1 - 0.10 * smoothstep(52, 78, ath) * (1 - smoothstep(30, 60, Y)) * (Y > -5)
+    lum *= 1 + 0.06 * ell(X, Y, 0, 14, 14, 9, 6)
+    lum *= 1 - 0.10 * ell(X, Y, 0, 27, 11, 3.0, 2.5)
+    lum *= 1 - 0.06 * ell(X, Y, 0, 52, 3.2, 6, 2.5)
+    img = shade(img, lum)
+    if spec.get("blush"):
+        img = mix(img, tone * np.array([1.12, 0.74, 0.74]), sym_ell(X, Y, 40, 72, 15, 11, 8) * spec["blush"])
+    if spec.get("freckles"):
+        k = 220
+        fm = np.zeros((h, w), np.float32)
+        xs = rng.uniform(-50, 50, k)
+        ys = rng.uniform(64, 98, k)
+        for fx, fy in zip(xs, ys):
+            fm = np.maximum(fm, ell(X, Y, fx, fy, 1.5, 1.5, 0.6))
+        img = mix(img, tone * np.array([0.8, 0.58, 0.44]), fm * 0.45)
+    # lips: cupid's bow upper lip, full lower lip with a highlight, corners turned up a little
+    lip = rgb(spec["lips"])
+    la = spec.get("lip_alpha", 0.8)
+    smile = 0.7 * (np.abs(X) / 21.0) ** 2
+    Yl = Y - smile
+    upper = np.maximum(ell(X, Yl, -7.5, 42.2, 15.5, 3.0, 1.0), ell(X, Yl, 7.5, 42.2, 15.5, 3.0, 1.0))
+    upper = np.maximum(upper, ell(X, Yl, 0, 41.0, 25.0, 2.2, 1.0)) * (1 - 0.7 * ell(X, Yl, 0, 45.0, 2.4, 1.2, 0.6))
+    lower = ell(X, Yl, 0, 36.2, 21.0, 4.2, 1.1)
+    img = mix(img, lip * 0.84, upper * la)
+    img = mix(img, lip, lower * la)
+    img = mix(img, np.clip(lip * 1.35 + 0.1, 0, 1), ell(X, Yl, 1.5, 37.0, 9, 1.3, 0.9) * 0.45 * la)
+    img = mix(img, rgb("#3a1614"), ell(X, Yl, 0, 39.4, 24.5, 0.75, 0.6) * 0.6)
+    img = mix(img, tone * 0.72, sym_ell(X, Yl, 25.0, 40.3, 1.6, 1.3, 0.6) * 0.45)  # mouth corners
+    # eyes: big almond shape, dark upper lash line with a little wing, lashes, iris half under the lid
+    sclera = rgb(spec.get("sclera", "#d4ccc0"))
+    iris = rgb(spec["eyes"])
+    erx, eup, elo = spec.get("eye_rx", 12.6), spec.get("eye_up", 4.6), spec.get("eye_lo", 3.3)
+    liner = spec.get("liner", 1.0)
+    for sx in (-1, 1):
+        cx, cy = 31.5 * sx, 104.5
+        if spec.get("shadow"):
+            sh = almond(X, Y, cx, cy + 3.2, erx + 2.5, eup + 4.5, 2.0, 0.08, 2.5)
+            img = mix(img, rgb(spec["shadow"]), sh * 0.42)
+        white = almond(X, Y, cx, cy, erx, eup, elo, 0.10, 0.9)
+        img = mix(img, sclera, white)
+        img = mix(img, sclera * 0.72, ell(X, Y, cx + 9.5 * sx, cy, 4, 4, 1.2) * white * 0.55)  # corner shade
+        ix, iy = cx - 0.8 * sx, cy + 0.2
+        img = mix(img, iris, ell(X, Y, ix, iy, 5.4, 5.6, 0.8) * white)
+        img = mix(img, iris * 0.55, ell(X, Y, ix, iy, 5.4, 5.6, 0.8) * (1 - ell(X, Y, ix, iy, 4.3, 4.5, 0.8)) * white * 0.8)
+        img = mix(img, rgb("#060404"), ell(X, Y, ix, iy, 2.0, 2.1, 0.6) * white)
+        img = mix(img, rgb("#f4f4f4"), ell(X, Y, ix - 1.6 * sx, iy + 1.8, 1.0, 1.0, 0.4) * white * 0.95)
+        # upper lid: the lid crease shadow and the lash line (thicker towards the outer corner, flicked up)
+        crease = almond(X, Y, cx, cy + 1.0, erx + 1.0, eup + 3.2, 0.5, 0.08, 1.2) * (1 - almond(X, Y, cx, cy + 0.8, erx + 0.6, eup + 2.0, 0.5, 0.08, 1.0))
+        img = mix(img, tone * 0.62, crease * (Y > cy) * 0.5)
+        outer = np.clip((X * sx - (31.5 - 4.0)) / 12.0, 0, 1)
+        lash = almond(X, Y, cx, cy + 0.2, erx + 0.9, eup + 1.0 + 1.2 * liner * outer, elo, 0.10, 0.7) * (1 - white)
+        lash *= (Y > cy - 0.6 + 2.2 * outer)
+        img = mix(img, rgb("#120806"), lash * 0.95)
+        wing = np.clip(1 - np.abs((Y - (cy + 2.2)) - 0.55 * (X * sx - (31.5 + erx - 1.0))) / 1.1, 0, 1)
+        wing *= np.clip((X * sx - (31.5 + erx - 2.0)) / 1.0, 0, 1) * np.clip(1 - (X * sx - (31.5 + erx + 3.4)) / 1.0, 0, 1)
+        img = mix(img, rgb("#120806"), wing * 0.9 * min(1.0, liner))
+        lower_lid = almond(X, Y, cx, cy - 0.2, erx + 0.4, 1.0, elo + 0.9, 0.10, 0.7) * (1 - white) * (Y < cy)
+        img = mix(img, rgb("#4a2a22"), lower_lid * 0.45)
+        # brows: thin, arched, tapered tail
+        rel = (X * sx - 13.0) / 30.0
+        by = 116.5 + 4.2 * np.sin(np.clip(rel, 0, 1) * np.pi * 0.8) * spec.get("brow_arch", 1.0) - 2.0 * np.clip(rel - 0.75, 0, 1)
+        thick = spec.get("brow_thick", 2.4) * (1.0 - 0.6 * np.clip(rel, 0, 1))
+        brow = np.clip(1 - np.abs(Y - by) / thick, 0, 1) * smoothstep(-0.05, 0.08, rel) * (1 - smoothstep(0.92, 1.08, rel))
+        img = mix(img, rgb(spec["brows"]), brow * 0.92)
+    # ears
+    ear = np.clip(1 - np.abs(ath - 94) / 10, 0, 1) * np.clip(1 - np.abs(Y - 100) / 28, 0, 1)
+    img = mix(img, tone * np.array([0.94, 0.8, 0.74]), smoothstep(0.0, 0.3, ear) * 0.55)
+    inner = np.clip(1 - np.abs(ath - 95) / 4, 0, 1) * np.clip(1 - np.abs(Y - 100) / 16, 0, 1)
+    img = mix(img, tone * 0.55, smoothstep(0.1, 0.6, inner) * 0.5)
+    return img
+
+
 def paint_face(spec, rng, th, y, X, Y):
+    if spec.get("feminine"):
+        return paint_feminine_face(spec, rng, th, y, X, Y)
     h, w = th.shape
     ath = np.abs(th)
     tone = rgb(spec["skin"])
@@ -158,6 +275,8 @@ def paint_hair_on_head(img, spec, rng, th, y, X, Y):
     hl = interp_curve(ath, HAIRLINES[style])
     if style == "short" and spec.get("part"):
         hl = hl - 0.04 * np.exp(-((th - 18) / 14) ** 2)
+    if spec.get("fringe_sweep"):
+        hl = hl + bob_sweep(th, spec["fringe_sweep"])
     soft = 0.025
     m = smoothstep(hl - soft, hl + soft, y)
     # irregular edge
@@ -173,6 +292,12 @@ def paint_hair_on_head(img, spec, rng, th, y, X, Y):
         side = 1 - smoothstep(0.80, 0.9, y)
         hair = mix(hair, rgb(spec["hair_root"]), side * 0.55)
         m = m * (1 - side * 0.25)
+    if spec.get("part_line") is not None:
+        # side parting: a thin line of scalp from the hairline back over the top, hair combed away from it
+        pth = spec["part_line"]
+        pl = np.clip(1 - np.abs(th - pth) / 2.2, 0, 1) * smoothstep(hl.max() * 0 + 0.74, 0.8, y) * (1 - smoothstep(0.93, 0.99, y))
+        hair = shade(hair, 1 + 0.12 * np.clip(1 - np.abs(th - pth - 6) / 6, 0, 1) * (y > 0.76))
+        hair = mix(hair, rgb(spec["skin"]) * 0.8, pl * 0.75)
     # hairline shadow on the skin
     edge = smoothstep(hl - 0.08, hl, y) * (1 - m)
     img = shade(img, 1 - 0.25 * edge)
@@ -277,14 +402,14 @@ def ang_band(th, a, b, soft=1.5):
     return smoothstep(a - soft, a + soft, ath) * (1 - smoothstep(b - soft, b + soft, ath))
 
 
-def torso_ao(h, w, th, t, female=False):
+def torso_ao(h, w, th, t, female=False, under_bust=0.585):
     ath = np.abs(th)
     lum = np.ones((h, w), np.float32)
     lum *= 1 - 0.10 * smoothstep(60, 95, ath) * (1 - smoothstep(95, 130, ath))  # sides
     lum *= 1 - 0.25 * np.exp(-((t - 0.80) / 0.05) ** 2) * np.exp(-((ath - 90) / 18) ** 2)  # armpits
     lum *= 1 - 0.12 * np.exp(-(t / 0.05) ** 2)  # crotch
     if female:
-        lum *= 1 - 0.18 * np.exp(-((t - 0.585) / 0.03) ** 2) * (1 - smoothstep(25, 55, ath))  # under bust
+        lum *= 1 - 0.18 * np.exp(-((t - under_bust) / 0.03) ** 2) * (1 - smoothstep(25, 55, ath))  # under bust
     return lum
 
 
@@ -309,7 +434,7 @@ def paint_torso(spec, rng):
     ath = np.abs(th)
     fn = spec["torso"]
     img = fn(spec, rng, h, w, th, t)
-    img = shade(img, torso_ao(h, w, th, t, spec.get("female", False)))
+    img = shade(img, torso_ao(h, w, th, t, spec.get("female", False), 0.615 if spec.get("feminine") else 0.585))
     return img
 
 
@@ -570,17 +695,27 @@ def paint_hand(spec, rng):
     h, w = canvas(A.HAND)
     u, v = uv_grid(h, w)
     tone = rgb(spec.get("hand_skin", spec["skin"]))
-    img = skin(h, w, tone, rng, mottle=0.08, pores=0.05)
-    # fingers in the lower half (v < 0.5): 4 finger separations, knuckles, nails at the bottom
+    img = skin(h, w, tone, rng, mottle=0.08, pores=0.04)
+    # fingers in the lower half (v < 0.5): 4 rounded finger columns (the first person hand wraps one column around
+    # each finger tube, dorsal side = column centre), knuckle creases, nails at the tips
     fing = (v < 0.52)
-    sep = np.clip(1 - np.abs(((u * 4) % 1.0) - 0.0) / 0.08, 0, 1) + np.clip(1 - np.abs(((u * 4) % 1.0) - 1.0) / 0.08, 0, 1)
-    img = shade(img, 1 - 0.35 * sep * fing * (u > 0.05) * (u < 0.95))
-    img = shade(img, 1 - 0.18 * (np.abs(v - 0.52) < 0.03))
-    for kv in (0.36, 0.18):
-        img = shade(img, 1 - 0.12 * (np.abs(v - kv) < 0.015))
-    nail = (v < 0.08) * (np.abs(((u * 4) % 1.0) - 0.5) < 0.28)
+    cu = (u * 4) % 1.0
+    roundness = 1 - 0.30 * ((cu - 0.5) * 2) ** 2
+    img = shade(img, np.where(fing, roundness, 1.0))
+    sep = np.clip(1 - np.abs(cu - 0.0) / 0.06, 0, 1) + np.clip(1 - np.abs(cu - 1.0) / 0.06, 0, 1)
+    img = shade(img, 1 - 0.22 * sep * fing * (u > 0.03) * (u < 0.97))
+    img = shade(img, 1 - 0.14 * (np.abs(v - 0.52) < 0.025))
+    for kv, kw in ((0.33, 0.012), (0.17, 0.010)):
+        img = shade(img, 1 - 0.14 * (np.abs(v - kv) < kw) * (np.abs(cu - 0.5) < 0.3))
+    # back of the hand: knuckle bumps and faint tendons running to the wrist
+    knuck = np.exp(-((v - 0.56) / 0.04) ** 2) * np.exp(-((cu - 0.5) / 0.2) ** 2)
+    img = shade(img, 1 + 0.10 * knuck * (v > 0.5))
+    tend = np.exp(-((cu - 0.5) / 0.08) ** 2) * smoothstep(0.58, 0.7, v) * (1 - smoothstep(0.85, 1.0, v))
+    img = shade(img, 1 + 0.05 * tend)
     nail_col = rgb(spec.get("nails", "#d8b0a0"))
-    img = mix(img, nail_col, nail * 0.8)
+    nail = ell(cu * 40, v * 160, 20, 7.0, 11.5, 8.5, 1.5) * (v < 0.16)
+    img = mix(img, nail_col, nail * 0.85)
+    img = mix(img, np.clip(nail_col * 1.25 + 0.08, 0, 1), ell(cu * 40, v * 160, 20, 2.5, 8, 2.2, 1.0) * nail * 0.6)
     img = shade(img, 1 - 0.15 * smoothstep(0.6, 1.0, v))  # wrist
     if spec.get("hand_blood"):
         img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=spec["hand_blood"], scale=5, splatter=1) * 0.85)
@@ -970,6 +1105,252 @@ def leg_granny(spec, rng, h, w, th, t):
     return img
 
 
+# --------------------------------------------------------------------------------------------- iteration 2 prisoners
+def check(h, w, rng, px, py, ground="#8e8e8c", band="#6c6c6e", cross="#3e3e42", fine="#2a2a2e", light="#b8b8b2",
+          folds=0.16, phase=(0.0, 0.0)):
+    """Grey glen / windowpane check (the camerawoman's dress): px / py = period in pixels (4x canvas)."""
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    jit = fbm(h, w, 6, rng, octaves=2) * 1.5
+    fx = ((xx + jit) / px + phase[0]) % 1.0
+    fy = ((yy + jit) / py + phase[1]) % 1.0
+    bx = (fx > 0.10) & (fx < 0.42)
+    by = (fy > 0.10) & (fy < 0.42)
+    out = np.zeros((h, w, 3), np.float32)
+    out[:] = rgb(ground)
+    out[bx ^ by] = rgb(band)
+    out[bx & by] = rgb(cross)
+    thin = (np.abs(fx - 0.72) < 0.035) | (np.abs(fy - 0.72) < 0.035)
+    out[thin & ~(bx | by)] = rgb(fine)
+    hl = (np.abs(fx - 0.86) < 0.02) | (np.abs(fy - 0.86) < 0.02)
+    out[hl & ~(bx | by)] = out[hl & ~(bx | by)] * 0.5 + rgb(light) * 0.5
+    out = blur(out, 0.8)
+    f = fold_layer(h, w, rng, 1.1)
+    return shade(out, 1 + np.tanh(f * 0.8) * folds + (rng.rand(h, w).astype(np.float32) - 0.5) * 0.10)
+
+
+def torso_p5(spec, rng, h, w, th, t):
+    """Grey plaid long-sleeve mini dress: fitted bodice, crew neck, waist seam; the bottom of the strip (t < 0.40)
+    is the flared skirt mesh (waist at v 0.40, hem at v 0), so its checks are painted squashed to stay square."""
+    ath = np.abs(th)
+    P = 7.5 * S
+    bodice = check(h, w, rng, P, P)
+    skirt = check(h, w, rng, P * 1.15, P * 0.62, phase=(0.3, 0.0), folds=0.12)
+    # soft flare folds running down the skirt, wider at the hem
+    fl = np.sin(np.deg2rad(th) * 9 + fbm(h, w, 3, rng, octaves=2) * 3) * (1 - t / 0.4)
+    skirt = shade(skirt, 1 + 0.10 * fl)
+    skirt = shade(skirt, 1 - 0.18 * band(t, 0.0, 0.035, 0.006))   # hem
+    img = mix(bodice, skirt, 1 - smoothstep(0.393, 0.403, t))
+    img = shade(img, 1 - 0.28 * band(t, 0.395, 0.41, 0.003))       # waist seam
+    # bust darts / shaping, side seams
+    img = shade(img, 1 + 0.10 * np.exp(-((t - 0.69) / 0.05) ** 2) * np.exp(-((ath - 24) / 14) ** 2))
+    img = shade(img, 1 - 0.16 * np.clip(1 - np.abs(ath - 90) / 2.0, 0, 1) * (t > 0.4))
+    # crew neck with a narrow binding
+    sk = skin_layer(spec, rng, h, w)
+    neck = 0.968 - 0.03 * np.exp(-(th / 30) ** 2)
+    img = shade(img, 1 - 0.25 * band(t, neck - 0.012, neck, 0.003))
+    img = mix(img, sk, smoothstep(neck - 0.002, neck + 0.004, t))
+    return grime(img, rng, amount=0.12, color=(0.3, 0.28, 0.26))
+
+
+def arm_p5(spec, rng, h, w, th, t):
+    sk = skin_layer(spec, rng, h, w)
+    cl = check(h, w, rng, 7.5 * S, 7.5 * S, folds=0.2)
+    cl = shade(cl, 1 + 0.10 * np.sin(t * 60 + np.deg2rad(th) * 2) * np.exp(-((t - 0.45) / 0.12) ** 2))
+    img = mix(sk, cl, smoothstep(0.045, 0.055, t))
+    img = shade(img, 1 - 0.22 * band(t, 0.05, 0.075, 0.004))   # cuff hem
+    return img
+
+
+def leg_bare(spec, rng, h, w, th, t):
+    """Smooth bare legs: soft calf / knee shaping."""
+    sk = skin(h, w, rgb(spec["skin"]), rng, mottle=0.05, pores=0.02, redness=0.12)
+    sk = shade(sk, 1 + 0.07 * np.exp(-((t - 0.28) / 0.1) ** 2) * np.cos(np.deg2rad(th + 180)))  # calf
+    sk = shade(sk, 1 + 0.06 * np.exp(-((t - 0.5) / 0.035) ** 2) * smoothstep(70, 0, np.abs(th)))  # knee
+    sk = shade(sk, 1 + 0.05 * np.exp(-((t - 0.78) / 0.12) ** 2) * smoothstep(80, 0, np.abs(th)))  # thigh front
+    return sk
+
+
+def maryjane(color="#0e0c10", strap="#141216"):
+    """Flat black patent mary-janes: low cut (the instep shows), one strap across, glossy toe."""
+    def fn(spec, rng, h, w, view):
+        u, v = uv_grid(h, w)
+        foot = skin(h, w, rgb(spec["skin"]), rng, mottle=0.05, pores=0.02)
+        leather = fabric(h, w, rgb(color), rng, folds=0.08, grain=0.05)
+        if view == "side":
+            # shoe line: higher at the heel, low over the instep, the toe box closed
+            line = np.interp(u, [0.0, 0.25, 0.36, 0.62, 0.72, 1.0], [0.66, 0.6, 0.42, 0.42, 1.2, 1.2])
+            cover = (v < line) | (np.abs(u - 0.47) < 0.045)
+            img = mix(foot, leather, cover.astype(np.float32))
+            img = shade(img, 1 - 0.25 * (v < 0.14))
+            img = mix(img, rgb("#4a4a52"), np.exp(-((v - 0.32) / 0.04) ** 2) * (u > 0.55) * 0.5)  # patent gloss
+            img = shade(img, 1 - 0.35 * (np.abs(v - line) < 0.03) * (u < 0.66))
+            img = mix(img, rgb("#a8a8b0"), (np.abs(u - 0.47) < 0.02) * (np.abs(v - 0.82) < 0.05) * 0.8)  # buckle
+        else:
+            cover = (v < 0.42) | ((v > 0.57) & (v < 0.66))
+            img = mix(foot, leather, cover.astype(np.float32))
+            img = mix(img, rgb("#4a4a52"), np.exp(-((u - 0.5) / 0.12) ** 2) * np.exp(-((v - 0.2) / 0.1) ** 2) * 0.45)
+            img = shade(img, 1 - 0.3 * (np.abs(v - 0.42) < 0.025))
+            # toes / instep tendons faintly under the skin
+            img = shade(img, 1 - 0.08 * (np.sin(u * 30) > 0.6) * (v > 0.66))
+        return grime(img, rng, amount=0.18, color=(0.3, 0.27, 0.22), scale=3)
+    return fn
+
+
+P6_COLORS = ["#d0306a", "#18b0a8", "#e8c02c", "#8a3ab0", "#f0f0e8", "#e86a2a", "#30c050"]
+
+
+def pattern_90s(h, w, rng, ground="#2a3aa0", scale=1.0):
+    """Loud early-90s shirt print: triangles, squiggles, zigzags, dots and confetti on a royal blue ground."""
+    from PIL import Image, ImageDraw
+    im = Image.new("RGB", (w, h), tuple(int(c * 255) for c in rgb(ground)))
+    d = ImageDraw.Draw(im)
+    n = int(h * w / (190.0 * S * S) / (scale * scale)) + 8
+    col = lambda: tuple(int(c * 255) for c in rgb(P6_COLORS[rng.randint(len(P6_COLORS))]))
+    for _ in range(n):
+        kind = rng.randint(5)
+        cx, cy = rng.uniform(0, w), rng.uniform(0, h)
+        r = rng.uniform(3.0, 6.5) * S * scale
+        c = col()
+        if kind == 0:   # triangle
+            a = rng.uniform(0, 6.28)
+            pts = [(cx + r * np.cos(a + k * 2.094), cy + r * np.sin(a + k * 2.094)) for k in range(3)]
+            d.polygon(pts, fill=c)
+        elif kind == 1:  # squiggle
+            pts = [(cx + (k - 3) * r * 0.45, cy + np.sin(k * 1.6) * r * 0.45) for k in range(7)]
+            d.line(pts, fill=c, width=int(S * 1.6 * scale))
+        elif kind == 2:  # zigzag
+            a = rng.uniform(-0.6, 0.6)
+            pts = [(cx + (k - 2.5) * r * 0.5 * np.cos(a) - (k % 2) * r * 0.5 * np.sin(a),
+                    cy + (k - 2.5) * r * 0.5 * np.sin(a) + (k % 2) * r * 0.5 * np.cos(a)) for k in range(6)]
+            d.line(pts, fill=c, width=int(S * 1.4 * scale))
+        elif kind == 3:  # dot / ring
+            rr = r * 0.45
+            if rng.rand() < 0.5:
+                d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=c)
+            else:
+                d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=c, width=int(S * 1.3 * scale))
+        else:           # confetti bar
+            a = rng.uniform(0, 3.14)
+            dx, dy = np.cos(a) * r * 0.5, np.sin(a) * r * 0.5
+            d.line([(cx - dx, cy - dy), (cx + dx, cy + dy)], fill=c, width=int(S * 1.8 * scale))
+    out = np.asarray(im, np.float32) / 255.0
+    return blur(out, 0.7)
+
+
+def torso_p6(spec, rng, h, w, th, t):
+    ath = np.abs(th)
+    shirt = pattern_90s(h, w, rng)
+    shirt = shade(shirt, 1 + np.tanh(fold_layer(h, w, rng, 1.2) * 0.8) * 0.2)
+    # blousing over the belt, collar band
+    shirt = shade(shirt, 1 + 0.12 * np.sin(np.deg2rad(th) * 14) * band(t, 0.30, 0.38))
+    shirt = shade(shirt, 1 - 0.3 * band(t, 0.955, 0.968, 0.003))
+    sk = skin_layer(spec, rng, h, w)
+    img = mix(shirt, sk, smoothstep(0.978, 0.988, t))
+    jeans = denim(h, w, rgb("#262e4c"), rng, fade=0.28)
+    jm = 1 - smoothstep(0.296, 0.306, t)
+    img = mix(img, jeans, jm)
+    belt = band(t, 0.262, 0.298)
+    img = mix(img, rgb("#3a2618"), belt)
+    img = mix(img, rgb("#a89878"), belt * (ath < 4.5) * 0.9)
+    img = mix(img, rgb("#c09040"), (np.abs(th - 3) < 0.8) * band(t, 0.06, 0.25) * 0.5)  # fly stitch
+    return grime(img, rng, amount=0.15, color=(0.2, 0.18, 0.16))
+
+
+def arm_p6(spec, rng, h, w, th, t):
+    sk = skin_layer(spec, rng, h, w)
+    cl = pattern_90s(h, w, rng, scale=0.85)
+    cl = shade(cl, 1 + np.tanh(fold_layer(h, w, rng, 1.3) * 0.8) * 0.22)
+    cl = shade(cl, 1 + 0.12 * np.sin(t * 60 + np.deg2rad(th) * 2) * np.exp(-((t - 0.45) / 0.12) ** 2))
+    img = mix(sk, cl, smoothstep(0.045, 0.055, t))
+    img = mix(img, rgb("#22307a"), band(t, 0.05, 0.10) * 0.75)  # cuff
+    return img
+
+
+def leg_jeans(color, fade=0.3, stack=True):
+    def fn(spec, rng, h, w, th, t):
+        jeans = denim(h, w, rgb(color), rng, fade=fade)
+        if stack:
+            jeans = shade(jeans, 1 + 0.14 * np.sin(t * 70 + np.deg2rad(th) * 1.5) * (1 - smoothstep(0.03, 0.2, t)))
+        jeans = shade(jeans, 1 - 0.2 * np.clip(1 - np.abs(np.abs(th) - 90) / 2.0, 0, 1))  # side seam
+        jeans = shade(jeans, 1 - 0.15 * band(t, 0.0, 0.04))
+        return grime(jeans, rng, amount=0.2, color=(0.16, 0.14, 0.12))
+    return fn
+
+
+def torso_p7(spec, rng, h, w, th, t):
+    ath = np.abs(th)
+    shirt = fabric(h, w, rgb("#e2e0da"), rng, folds=0.2, grain=0.05, fold_scale=1.1, sweat=0.35, stains=0.15,
+                   stain_color=rgb("#c8c0b0"))
+    # placket + buttons down the front
+    shirt = shade(shirt, 1 - 0.18 * np.clip(1 - np.abs(ath - 4.2) / 0.9, 0, 1) * (t > 0.3))
+    for bt in np.arange(0.38, 0.93, 0.1):
+        shirt = mix(shirt, rgb("#f4f2ee"), np.exp(-((t - bt) / 0.008) ** 2) * np.exp(-(th / 1.7) ** 2))
+        shirt = shade(shirt, 1 - 0.25 * np.exp(-((t - bt + 0.008) / 0.005) ** 2) * np.exp(-(th / 1.9) ** 2))
+    # breast pocket on the left chest
+    pk = band(t, 0.66, 0.75, 0.003) * ang_band(np.clip(-th, 0, None), 14, 34, 0.8)
+    edge = np.clip(np.abs(ndimage.sobel(pk, 0)) + np.abs(ndimage.sobel(pk, 1)), 0, 1)
+    shirt = shade(shirt, 1 - 0.22 * smoothstep(0.1, 0.4, edge))
+    # collar: band round the neck + two points at the front
+    collar_pts = (t > 0.90 - 0.0 * ath) * (t < 0.97) * np.clip(1 - np.abs(ath - (6 + (t - 0.9) * 260)) / 7.0, 0, 1)
+    shirt = shade(shirt, 1 - 0.3 * band(t, 0.952, 0.962, 0.003))
+    shirt = shade(shirt, 1 - 0.25 * np.clip(1 - np.abs(ath - (4 + (0.965 - t) * 300)) / 1.2, 0, 1) * band(t, 0.89, 0.965))
+    shirt = shade(shirt, 1 + 0.06 * collar_pts)
+    sk = skin_layer(spec, rng, h, w)
+    vneck = 0.975 - 0.05 * np.exp(-(th / 9) ** 2)  # open top button
+    img = mix(shirt, sk, smoothstep(vneck - 0.003, vneck + 0.004, t))
+    # blousing over the belt
+    img = shade(img, 1 + 0.12 * np.sin(np.deg2rad(th) * 16 + 0.5) * band(t, 0.30, 0.37))
+    slacks = fabric(h, w, rgb("#24262c"), rng, folds=0.22, grain=0.06, fold_scale=1.1)
+    sm = 1 - smoothstep(0.296, 0.306, t)
+    img = mix(img, slacks, sm)
+    belt = band(t, 0.262, 0.298)
+    img = mix(img, rgb("#121012"), belt)
+    img = mix(img, rgb("#a8a8a4"), belt * (ath < 5) * 0.9)
+    img = shade(img, 1 - 0.3 * (np.abs(th - 2.5) < 0.6) * band(t, 0.08, 0.26))  # fly
+    return grime(img, rng, amount=0.12, color=(0.3, 0.27, 0.22))
+
+
+def arm_p7(spec, rng, h, w, th, t):
+    sk = skin_layer(spec, rng, h, w)
+    cl = fabric(h, w, rgb("#e2e0da"), rng, folds=0.26, grain=0.05, fold_scale=1.3)
+    cl = shade(cl, 1 + 0.12 * np.sin(t * 60 + np.deg2rad(th) * 2) * np.exp(-((t - 0.45) / 0.12) ** 2))
+    img = mix(sk, cl, smoothstep(0.055, 0.065, t))
+    cuff = band(t, 0.06, 0.13)
+    img = mix(img, rgb("#ecebe6"), cuff * 0.6)
+    img = shade(img, 1 - 0.2 * band(t, 0.128, 0.138, 0.003))
+    img = mix(img, rgb("#f6f4f0"), np.exp(-((t - 0.095) / 0.012) ** 2) * np.exp(-((np.abs(th) - 150) / 6) ** 2))  # button
+    return img
+
+
+def leg_slacks(spec, rng, h, w, th, t):
+    sl = fabric(h, w, rgb("#24262c"), rng, folds=0.24, grain=0.06, fold_scale=1.3)
+    sl = shade(sl, 1 + 0.18 * np.clip(1 - np.abs(th) / 2.0, 0, 1) * (t < 0.9))      # front crease
+    sl = shade(sl, 1 + 0.12 * np.clip(1 - np.abs(np.abs(th) - 180) / 2.0, 0, 1) * (t < 0.45))
+    sl = shade(sl, 1 + 0.12 * np.sin(t * 60 + np.deg2rad(th) * 1.5) * (1 - smoothstep(0.02, 0.14, t)))  # break
+    sl = shade(sl, 1 - 0.18 * np.clip(1 - np.abs(np.abs(th) - 90) / 2.0, 0, 1))
+    return grime(sl, rng, amount=0.15, color=(0.2, 0.18, 0.16))
+
+
+def oxford(color="#141214", sole="#0a0808"):
+    """Black leather dress shoes: laced, a welt line, a shine on the toe."""
+    def fn(spec, rng, h, w, view):
+        u, v = uv_grid(h, w)
+        img = fabric(h, w, rgb(color), rng, folds=0.1, grain=0.06)
+        if view == "side":
+            img = mix(img, rgb(sole), (v < 0.16).astype(np.float32))
+            img = shade(img, 1 + 0.4 * (np.abs(v - 0.19) < 0.02))        # welt
+            img = mix(img, rgb("#5a5a62"), np.exp(-((v - 0.42) / 0.07) ** 2) * smoothstep(0.6, 0.9, u) * 0.5)
+            img = shade(img, 1 - 0.3 * (np.abs(u - 0.55) < 0.015) * (v > 0.2))  # vamp seam
+        else:
+            lace = (np.abs(u - 0.5) < 0.16) * (v > 0.45) * (v < 0.85)
+            img = shade(img, 1 - 0.2 * lace)
+            for lv in np.arange(0.5, 0.84, 0.08):
+                img = mix(img, rgb("#2a2420"), (np.abs(v - lv) < 0.018) * (np.abs(u - 0.5) < 0.14))
+            img = mix(img, rgb("#5a5a62"), np.exp(-((u - 0.5) / 0.14) ** 2) * np.exp(-((v - 0.16) / 0.09) ** 2) * 0.5)
+        return grime(img, rng, amount=0.15, color=(0.25, 0.22, 0.18), scale=3)
+    return fn
+
+
 CHARACTERS = {
     "prisoner1": dict(
         seed=101, skin="#c99472", redness=0.3, eyes="#4a6070", brows="#7a6a3a", lips="#a86a5a", lip_alpha=0.5,
@@ -977,21 +1358,39 @@ CHARACTERS = {
         stubble_color="#5a5226", torso=torso_p1, arm=arm_skin, leg=leg_p1, shoe=sneaker("#d8d8d4", "#b01e24"),
         extra="hair", misc="hair"),
     "prisoner2": dict(
-        seed=202, female=True, skin="#b0805e", redness=0.15, eyes="#3a2618", brows="#2a1a12", lips="#b01820",
-        lip_alpha=0.95, blush=0.2, liner=2.0, shadow="#5a3a4a", brow_thick=3.0, brow_arch=1.4,
-        hair_style="long", hair="#6a4a32", hair_hi="#a07a52", torso=torso_p2, arm=sleeve("#9e1a22", 0.05),
+        seed=202, female=True, feminine=True, skin="#b8876a", redness=0.12, eyes="#3a2416", brows="#2a1a12",
+        lips="#b0141e", lip_alpha=0.95, blush=0.22, liner=1.6, shadow="#6a3a48", brow_thick=2.3, brow_arch=1.25,
+        hair_style="long", hair="#6a4a32", hair_hi="#a87e54", torso=torso_p2, arm=sleeve("#9e1a22", 0.05),
         leg=leg_p2, shoe=sneaker("#d8d4cc", "#c0c0c0", dirty=0.4), nails="#a01820", extra="hair", wavy=1.0,
         misc="hair"),
     "prisoner3": dict(
-        seed=303, female=True, skin="#d8b49c", redness=0.3, eyes="#3a5a3a", brows="#8a3a1e", lips="#b06a62",
-        lip_alpha=0.7, blush=0.12, freckles=True, brow_thick=2.6, hair_style="bangs", hair="#9a2c1a",
-        hair_hi="#c8502a", torso=torso_p3, arm=arm_p3, leg=leg_p3, shoe=boot("#3a2a20", "#1a1210"),
-        glasses="rect", glasses_color="#181418", extra="hair", straight_cut=True, misc="hair"),
+        seed=303, female=True, feminine=True, skin="#dcb8a0", redness=0.22, eyes="#3a6a3e", brows="#8a3a1e",
+        lips="#bc666a", lip_alpha=0.75, blush=0.16, freckles=True, liner=0.8, shadow="#7a5048", brow_thick=2.0,
+        brow_arch=1.1, hair_style="bangs", hair="#9a2c1a", hair_hi="#c8502a", torso=torso_p3, arm=arm_p3,
+        leg=leg_p3, shoe=boot("#3a2a20", "#1a1210"), nails="#d0a090", glasses="rect", glasses_color="#181418",
+        extra="hair", straight_cut=True, misc="hair"),
     "prisoner4": dict(
         seed=404, skin="#d6ae94", redness=0.25, eyes="#4a3a2a", brows="#2a1e16", lips="#a8706a", lip_alpha=0.5,
         hair_style="short", part=True, hair="#3a2a1e", hair_hi="#5a4430", torso=torso_p4,
         arm=sleeve("#1c1a1e", 0.045, folds=0.32), leg=leg_p4, shoe=sneaker("#2a2a30", "#e0e0e0", sole="#e0e0d8"),
         glasses="round", glasses_color="#0e0c0e", extra="hair", misc="hair", stubble=0.08, stubble_color="#4a3a30"),
+    # (iteration 2) SourceAssets/players/more/EyAqyzjWQAUE23f.webp
+    "prisoner5": dict(
+        seed=1505, female=True, feminine=True, skin="#dcb89e", redness=0.14, eyes="#4a3624", brows="#5a2618",
+        lips="#a8404e", lip_alpha=0.85, blush=0.18, liner=1.2, shadow="#5a4048", brow_thick=2.2, brow_arch=1.2,
+        hair_style="bob", fringe_sweep=1.0, hair="#7a2c1a", hair_hi="#a84a2a", hair_contrast=0.36,
+        torso=torso_p5, arm=arm_p5, leg=leg_bare, shoe=maryjane(), nails="#c88a8a", extra="hair",
+        straight_cut=True, misc="hair"),
+    "prisoner6": dict(
+        seed=1606, skin="#e2b498", redness=0.32, blush=0.14, eyes="#4a3424", brows="#4a2c1a", brow_thick=2.8,
+        brow_arch=0.8, lips="#b47468", lip_alpha=0.45, hair_style="kid", hair="#5a3220", hair_hi="#7e4c2c",
+        torso=torso_p6, arm=arm_p6, leg=leg_jeans("#262e4c", 0.28), shoe=sneaker("#6a4a32", "#c8b490", sole="#cfc4b0", dirty=0.45),
+        nails="#d0a48c", extra="hair", misc="hair"),
+    "prisoner7": dict(
+        seed=1707, skin="#c79878", redness=0.3, eyes="#3a2a20", brows="#1a1210", brow_thick=3.6, lips="#9c6a5e",
+        lip_alpha=0.45, hair_style="short", part=True, part_line=18.0, hair="#1a1410", hair_hi="#3a2e26",
+        stubble=0.3, stubble_color="#2a221c", torso=torso_p7, arm=arm_p7, leg=leg_slacks, shoe=oxford(),
+        nails="#c09078", extra="hair", misc="hair"),
     "omar": dict(
         seed=505, head="mask", skin="#4a403c", hand_skin="#3a3432", nails="#2a2422", hand_blood=0.55, hand_grime=0.6,
         hair_style="none", torso=torso_omar, arm=arm_omar, leg=leg_omar, shoe=boot(), extra="apron", misc="skirt",

@@ -236,7 +236,8 @@ namespace PrisonersOfOmar.Characters
 
         /// <summary>Skins whose body + texture atlas exist (the lobby only offers these).</summary>
         public static bool HasSkin(CharacterSkin skin)
-            => skin == CharacterSkin.Omar || (skin >= CharacterSkin.Prisoner1 && skin <= CharacterSkin.Prisoner4);
+            => skin == CharacterSkin.Omar || (skin >= CharacterSkin.Prisoner1 && skin <= CharacterSkin.Prisoner4)
+               || (skin >= CharacterSkin.Prisoner5 && skin <= CharacterSkin.Prisoner7);
 
         public static string DisplayName(CharacterSkin skin)
         {
@@ -246,6 +247,9 @@ namespace PrisonersOfOmar.Characters
                 case CharacterSkin.Prisoner2: return "THE GIRL IN RED";
                 case CharacterSkin.Prisoner3: return "THE REDHEAD";
                 case CharacterSkin.Prisoner4: return "THE NERD";
+                case CharacterSkin.Prisoner5: return "THE CAMERAWOMAN";
+                case CharacterSkin.Prisoner6: return "THE KID";
+                case CharacterSkin.Prisoner7: return "THE FATHER";
                 default: return "OMAR";
             }
         }

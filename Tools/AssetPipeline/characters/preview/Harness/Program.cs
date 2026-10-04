@@ -50,7 +50,8 @@ namespace PreviewHarness
         }
 
         public static readonly CharacterSkin[] Skins =
-            { CharacterSkin.Prisoner1, CharacterSkin.Prisoner2, CharacterSkin.Prisoner3, CharacterSkin.Prisoner4, CharacterSkin.Omar };
+            { CharacterSkin.Prisoner1, CharacterSkin.Prisoner2, CharacterSkin.Prisoner3, CharacterSkin.Prisoner4,
+              CharacterSkin.Prisoner5, CharacterSkin.Prisoner6, CharacterSkin.Prisoner7, CharacterSkin.Omar };
 
         static void Lineup(bool animate)
         {
@@ -60,7 +61,7 @@ namespace PreviewHarness
             {
                 var holder = new GameObject("Slot" + i);
                 holder.transform.SetParent(root.transform, false);
-                holder.transform.localPosition = new Vector3((i - 2) * 0.75f, 0, 0);
+                holder.transform.localPosition = new Vector3((i - (Skins.Length - 1) * 0.5f) * 0.72f, 0, 0);
                 var rig = HumanoidFactory.Build(Skins[i], holder.transform);
                 rigs.Add(rig);
                 if (!animate) rig.GetComponent<HumanoidAnimator>().enabled = false;

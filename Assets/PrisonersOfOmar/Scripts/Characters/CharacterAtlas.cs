@@ -89,6 +89,9 @@ namespace PrisonersOfOmar.Characters
                 case CharacterSkin.Prisoner2: return "Textures/Characters/prisoner2";
                 case CharacterSkin.Prisoner3: return "Textures/Characters/prisoner3";
                 case CharacterSkin.Prisoner4: return "Textures/Characters/prisoner4";
+                case CharacterSkin.Prisoner5: return "Textures/Characters/prisoner5";
+                case CharacterSkin.Prisoner6: return "Textures/Characters/prisoner6";
+                case CharacterSkin.Prisoner7: return "Textures/Characters/prisoner7";
                 default: return "Textures/Characters/omar";
             }
         }

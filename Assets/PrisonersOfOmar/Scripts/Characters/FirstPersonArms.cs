@@ -31,6 +31,12 @@ namespace PrisonersOfOmar.Characters
 
         Transform _rHand, _lHand, _rArm, _lArm, _lSocket;
         GameObject _cleaver;
+        // (iteration 2) hand meshes are rebuilt when the pose changes (fist / relaxed / pistol grip)
+        Material _mat;
+        float _hs;
+        GameObject _rHandMesh, _lHandMesh;
+        FpHandPose _rPose = (FpHandPose)(-1), _lPose = (FpHandPose)(-1);
+        Vector3 _rWrist = new Vector3(0.026f, -0.03f, -0.05f), _lWrist = new Vector3(-0.026f, -0.03f, -0.05f);
         float _time, _bobPhase, _bobAmp, _raise = 1f, _raiseTarget = 1f, _actTime, _sprintW, _crouchW, _leftW;
         Vector2 _sway, _swayVel;
         Vector3 _lastDp;
@@ -61,18 +67,20 @@ namespace PrisonersOfOmar.Characters
             var spec = BodySpec.For(Skin);
             float hs = Mathf.Clamp(spec.HandScale, 0.85f, 1.25f);
             float armR = Mathf.Clamp(spec.ArmR[1] * 1.05f, 0.026f, 0.05f);
+            _mat = mat;
+            _hs = hs;
 
             _rHand = GeoUtil.CreateChild(transform, "RightHand", RestPos, Quaternion.Euler(RestEuler), Layers.ViewModel);
-            BuildFist(_rHand, mat, hs, 1f);
+            SetHandPose(true, omar ? FpHandPose.Fist : FpHandPose.Relaxed);
             HandSocket = GeoUtil.CreateChild(_rHand, "HandSocket", Vector3.zero, Quaternion.identity, Layers.ViewModel);
             _rArm = GeoUtil.CreateChild(transform, "RightForearm", Vector3.zero, Quaternion.identity, Layers.ViewModel);
-            BuildForearm(_rArm, mat, armR, 1f, omar);
+            BuildForearm(_rArm, mat, armR, 1f, spec.SleeveT);
 
             _lHand = GeoUtil.CreateChild(transform, "LeftHand", new Vector3(-RestPos.x, RestPos.y, RestPos.z), Quaternion.identity, Layers.ViewModel);
-            BuildFist(_lHand, mat, hs, -1f);
+            SetHandPose(false, FpHandPose.Fist);
             _lSocket = GeoUtil.CreateChild(_lHand, "LeftHandSocket", Vector3.zero, Quaternion.identity, Layers.ViewModel);
             _lArm = GeoUtil.CreateChild(transform, "LeftForearm", Vector3.zero, Quaternion.identity, Layers.ViewModel);
-            BuildForearm(_lArm, mat, armR, -1f, omar);
+            BuildForearm(_lArm, mat, armR, -1f, spec.SleeveT);
             SetLeftVisible(false);
 
             // empty-handed prisoners start with the hand lowered out of view
@@ -87,37 +95,43 @@ namespace PrisonersOfOmar.Characters
             UpdatePose(0f);
         }
 
-        /// <summary>Fist around the grip axis (camera / item +Z) with the socket at the origin; side = +1 right, -1 left.</summary>
-        static void BuildFist(Transform hand, Material mat, float hs, float side)
+        /// <summary>(Re)builds the right or left hand mesh for a pose (the hand transform and its sockets stay).</summary>
+        void SetHandPose(bool right, FpHandPose pose)
         {
+            if ((right ? _rPose : _lPose) == pose && (right ? _rHandMesh : _lHandMesh) != null) return;
+            Transform hand = right ? _rHand : _lHand;
+            float side = right ? 1f : -1f;
+            var old = right ? _rHandMesh : _lHandMesh;
+            if (old != null)
+            {
+                var mf = old.GetComponent<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null) Destroy(mf.sharedMesh);
+                old.SetActive(false);
+                Destroy(old);
+            }
             var mb = new MeshBuilder();
-            mb.SetMaterial(mat);
-            var reg = CharacterAtlas.Hand;
-            var sk = CharacterAtlas.SwatchSkin;
-            Rect back = RectOf(reg, 0f, 0.5f, 1f, 1f), fingers = RectOf(reg, 0f, 0f, 1f, 0.5f), skin = RectOf(sk, 0.2f, 0.2f, 0.8f, 0.8f);
-            float s = hs;
-            // back of the hand / palm block: knuckles face up-right, wraps the grip on the right side
-            mb.Push(new Vector3(side * 0.021f * s, -0.004f * s, -0.004f * s), Quaternion.Euler(0, 0, side * -18f));
-            mb.AddBox(Vector3.zero, new Vector3(0.034f, 0.064f, 0.084f) * s,
-                new BoxUVRects { PosX = side > 0 ? back : skin, NegX = side > 0 ? skin : back, PosY = skin, NegY = skin, PosZ = skin, NegZ = skin });
-            mb.Pop();
-            // curled fingers over the top of the grip and down the far side
-            mb.Push(new Vector3(side * -0.004f * s, 0.022f * s, 0f), Quaternion.Euler(0, 0, side * 25f));
-            mb.AddBox(Vector3.zero, new Vector3(0.042f, 0.022f, 0.080f) * s,
-                new BoxUVRects { PosY = fingers, NegY = skin, PosX = skin, NegX = skin, PosZ = fingers, NegZ = skin });
-            mb.Pop();
-            mb.Push(new Vector3(side * -0.021f * s, 0.002f * s, 0.002f * s), Quaternion.Euler(0, 0, side * 70f));
-            mb.AddBox(Vector3.zero, new Vector3(0.036f, 0.018f, 0.076f) * s, BoxUVRects.All(fingers));
-            mb.Pop();
-            // thumb along the left side pointing forward
-            mb.Push(new Vector3(side * -0.012f * s, -0.016f * s, 0.03f * s), Quaternion.Euler(-10f, side * -12f, 0));
-            mb.AddBox(Vector3.zero, new Vector3(0.02f, 0.02f, 0.05f) * s, BoxUVRects.All(skin));
-            mb.Pop();
-            mb.Build("Fist", hand, Layers.ViewModel);
+            mb.SetMaterial(_mat);
+            FirstPersonHand.Build(mb, _hs, side, pose);
+            var go = mb.Build("Hand", hand, Layers.ViewModel);
+            Vector3 wrist = FirstPersonHand.WristPoint(pose, _hs, side);
+            bool visible = _visible && (right || _leftVisible);
+            if (go != null) foreach (var r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = visible;
+            if (right) { _rHandMesh = go; _rPose = pose; _rWrist = wrist; }
+            else { _lHandMesh = go; _lPose = pose; _lWrist = wrist; _leftRenderers = null; }
         }
 
-        /// <summary>Forearm tube along +Z (wrist at 0, elbow at 0.34) using the atlas arm strip (wrist .. elbow).</summary>
-        static void BuildForearm(Transform arm, Material mat, float r, float side, bool omar)
+        static FpHandPose HandPoseFor(ItemType item, CharacterSkin skin)
+        {
+            if (skin == CharacterSkin.Omar) return FpHandPose.Fist; // the cleaver is always in his hand
+            if (item == ItemType.None) return FpHandPose.Relaxed;
+            return ItemMeshFactory.HoldPoseFor(item) == HoldPose.Pistol ? FpHandPose.Pistol : FpHandPose.Fist;
+        }
+
+        /// <summary>
+        /// Forearm tube along +Z (wrist at 0, elbow at 0.34) using the atlas arm strip (wrist .. elbow).
+        /// sleeveT &gt; 0: the sleeve (texture edge at arm strip v = sleeveT) gets a cuff lip standing off the wrist.
+        /// </summary>
+        static void BuildForearm(Transform arm, Material mat, float r, float side, float sleeveT)
         {
             var mb = new MeshBuilder();
             mb.SetMaterial(mat);
@@ -126,6 +140,14 @@ namespace PrisonersOfOmar.Characters
             float[] zs = { 0f, 0.06f, 0.2f, 0.34f };
             float[] rs = { r * 0.82f, r * 0.95f, r * 1.12f, r * 1.25f };
             float[] vs = { 0.0f, 0.12f, 0.32f, 0.5f };
+            if (sleeveT > 0.005f && sleeveT < 0.11f)
+            {
+                // the cuff: skin up to the sleeve edge, then the sleeve opening stands off the wrist
+                float zc = sleeveT / 0.12f * 0.06f;
+                zs = new[] { 0f, zc, zc + 0.0015f, 0.06f, 0.2f, 0.34f };
+                rs = new[] { r * 0.80f, r * 0.84f, r * 1.04f, r * 1.02f, r * 1.12f, r * 1.25f };
+                vs = new[] { 0.0f, sleeveT - 0.006f, sleeveT + 0.008f, 0.12f, 0.32f, 0.5f };
+            }
             int first = mb.VertexCount;
             for (int k = 0; k < zs.Length; k++)
             {
@@ -151,12 +173,6 @@ namespace PrisonersOfOmar.Characters
             mb.Build("Forearm", arm, Layers.ViewModel);
         }
 
-        static Rect RectOf(AtlasRect r, float u0, float v0, float u1, float v1)
-        {
-            Vector2 a = r.UV(u0, v0), b = r.UV(u1, v1);
-            return new Rect(a.x, a.y, b.x - a.x, b.y - a.y);
-        }
-
         // ================================================================================================ API
         /// <summary>Show this item in hand (builds the model via ItemMeshFactory). None = empty hand / lowered arms.</summary>
         public void SetHeld(ItemType item)
@@ -166,6 +182,7 @@ namespace PrisonersOfOmar.Characters
             if (HeldModel != null) Destroy(HeldModel);
             HeldModel = null;
             _gripL = null;
+            SetHandPose(true, HandPoseFor(item, Skin));
             HandSocket.localPosition = SocketOffset(item);
             HandSocket.localRotation = SocketRotation(item);
             if (item != ItemType.None)
@@ -189,6 +206,10 @@ namespace PrisonersOfOmar.Characters
         {
             CurrentAction = action;
             _actTime = 0f;
+            // the free left hand opens to grab / fend off / press, otherwise it is a fist (bolt cutters, two handed items)
+            bool open = action == CharacterAction.Grab || action == CharacterAction.Stunned || action == CharacterAction.Struggle
+                        || action == CharacterAction.PlaceTrap || action == CharacterAction.Heal;
+            if (_lHand != null) SetHandPose(false, open ? FpHandPose.Relaxed : FpHandPose.Fist);
         }
 
         bool _visible = true;
@@ -341,7 +362,7 @@ namespace PrisonersOfOmar.Characters
 
             _rHand.localPosition = pos + dp;
             _rHand.localRotation = Quaternion.Euler(eul + de);
-            AimForearm(_rArm, _rHand, new Vector3(0.026f, -0.03f, -0.05f), ElbowR + (dp + pos - RestPos) * 0.5f);
+            AimForearm(_rArm, _rHand, _rWrist, ElbowR + (dp + pos - RestPos) * 0.5f);
 
             bool showLeft = _leftW > 0.02f;
             if (showLeft)
@@ -361,7 +382,7 @@ namespace PrisonersOfOmar.Characters
                 Vector3 hidden = new Vector3(-0.2f, -0.55f, 0.1f);
                 _lHand.localPosition = Vector3.Lerp(hidden, lpos, Smooth(_leftW));
                 _lHand.localRotation = lrot;
-                AimForearm(_lArm, _lHand, new Vector3(-0.026f, -0.03f, -0.05f), ElbowL + (_lHand.localPosition - new Vector3(-RestPos.x, RestPos.y, RestPos.z)) * 0.5f);
+                AimForearm(_lArm, _lHand, _lWrist, ElbowL + (_lHand.localPosition - new Vector3(-RestPos.x, RestPos.y, RestPos.z)) * 0.5f);
             }
             if (_leftVisible != showLeft)
             {

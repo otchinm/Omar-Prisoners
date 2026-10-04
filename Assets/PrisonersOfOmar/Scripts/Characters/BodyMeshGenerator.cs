@@ -122,54 +122,167 @@ namespace PrisonersOfOmar.Characters
                 case HairStyle.LongBangs: LongHair(b, sk, mb, false); break;
             }
             if (b.Glasses != GlassesStyle.None) Glasses(b, sk, mb);
+            if (b.SkirtLen > 0f) MiniSkirt(b, sk, mb);
             if (b.Skirt) SackSkirt(b, sk, mb);
             if (b.Noose) Noose(b, sk, mb);
             if (b.Apron) Apron(b, sk, mb);
         }
 
         // ------------------------------------------------------------------------------------------ torso
+        /// <summary>Under-bust ring (women): inserted between torso rings 4 and 5 so the bust gets a real underside.</summary>
+        const float UnderBustT = 0.615f;
+
         static void Torso(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
         {
-            const int N = CharacterAtlas.TorsoSides;
+            int N = Mathf.Max(8, b.TorsoSides);
             var T = CharacterAtlas.TorsoT;
             var reg = CharacterAtlas.Torso;
+            bool underBust = b.Bust > 0f && b.TorsoSides > CharacterAtlas.TorsoSides;
+            int rings = T.Length + (underBust ? 1 : 0);
             mb.BeginPart();
             int first = mb.V.Count;
-            for (int k = 0; k < T.Length; k++)
+            for (int kk = 0; kk < rings; kk++)
             {
-                float y = Mathf.Lerp(b.CrotchY, b.NeckY, T[k]);
+                // k = source ring index; the extra ring (k = 4, lerp towards 5) sits at UnderBustT
+                bool extra = underBust && kk == 5;
+                int k = underBust && kk >= 5 ? kk - 1 : kk;
+                float t = extra ? UnderBustT : T[k];
+                float y = Mathf.Lerp(b.CrotchY, b.NeckY, t);
                 Ring r = b.Torso[k];
+                if (extra)
+                {
+                    float f = Mathf.InverseLerp(T[4], T[5], t);
+                    Ring c5 = b.Torso[5];
+                    r = new Ring(Mathf.Lerp(r.W, c5.W, f), Mathf.Lerp(r.F, c5.F, f), Mathf.Lerp(r.B, c5.B, f), Mathf.Lerp(r.C, c5.C, f));
+                }
                 if (k == 7) r.W *= 0.95f;
                 if (k == 0) { r.W *= 0.86f; r.F *= 0.9f; }
                 for (int i = 0; i <= N; i++)
                 {
                     float th = Theta(i, N);
-                    Vector2 q = RingPoint(r, th, k == 7 ? b.TorsoSquare + 0.2f : b.TorsoSquare);
+                    float sq = k == 7 ? b.TorsoSquare + 0.2f : k == 0 && b.CrotchSquare > 0f ? b.CrotchSquare : b.TorsoSquare;
+                    Vector2 q = RingPoint(r, th, sq);
                     float z = q.y;
                     float ath = Mathf.Abs(th);
                     // bust / belly / buttocks
-                    if (k == 5 && b.Bust > 0) z += b.Bust * Bump(ath, 30f, 22f);
-                    if (k == 4 && b.Bust > 0) z += b.Bust * 0.35f * Bump(ath, 30f, 22f);
-                    if (k == 6 && b.Bust > 0) z += b.Bust * 0.25f * Bump(ath, 30f, 22f);
+                    if (b.Bust > 0)
+                    {
+                        float lobe = Bump(ath, b.BustAngle, b.BustWidth);
+                        if (extra) z += b.Bust * 0.42f * lobe;
+                        else if (k == 5) z += b.Bust * lobe;
+                        else if (k == 4) z += b.Bust * (underBust ? 0.04f : 0.35f) * lobe;
+                        else if (k == 6) z += b.Bust * (underBust ? 0.32f : 0.25f) * lobe;
+                    }
                     if ((k == 2 || k == 3) && b.Belly > 0) z += b.Belly * Bump(ath, 0f, 45f);
                     if (k == 1) z -= 0.012f * b.Scale * Bump(ath, 150f, 25f);
+                    if (b.Butt > 0f)
+                    {
+                        // two rounded cheeks (|theta| ~ 152) on the hip ring, softer below / above
+                        float cheek = Bump(ath, 152f, 20f);
+                        if (k == 1) z -= b.Butt * cheek;
+                        else if (k == 0) z -= b.Butt * 0.15f * cheek;
+                        else if (k == 2) z -= b.Butt * 0.65f * cheek;
+                    }
                     float vy = y;
                     if (k == 7) vy -= b.ShoulderSlope * b.Scale * Mathf.Pow(Mathf.Abs(Mathf.Sin(th * Mathf.Deg2Rad)), 4f); // sloping shoulders
                     Vector3 p = new Vector3(q.x, vy, z);
-                    mb.Add(p, reg.UV((float)i / N, T[k]), TorsoWeight(k, th));
+                    SkinWeight w = extra ? SkinWeight.Lerp(TorsoWeight(4, th), TorsoWeight(5, th), 0.5f) : TorsoWeight(k, th);
+                    mb.Add(p, reg.UV((float)i / N, t), w);
                 }
             }
             int row = N + 1;
-            for (int k = 0; k < T.Length - 1; k++)
+            for (int k = 0; k < rings - 1; k++)
                 for (int i = 0; i < N; i++)
                 {
                     int a = first + k * row + i;
                     mb.Quad(SkinMeshBuilder.Opaque, a, a + row, a + row + 1, a + 1);
                 }
-            // crotch cap (fan), seen from below
+            mb.EndSmoothPart();
+            // crotch cap (fan), seen from below: its own vertices / smoothing so the bottom ring of the torso is not
+            // darkened by the downward facing cap normals
             Ring r0 = b.Torso[0];
+            mb.BeginPart();
+            int capFirst = mb.V.Count;
+            for (int i = 0; i <= N; i++) mb.Add(mb.V[first + i], mb.UV[first + i], mb.W[first + i]);
             int c = mb.Add(new Vector3(0, b.CrotchY + 0.004f * b.Scale, (r0.F * 0.9f - r0.B) * 0.3f), reg.UV(0.5f, 0f), SkinWeight.One(BoneId.Hips));
-            for (int i = 0; i < N; i++) mb.Tri(SkinMeshBuilder.Opaque, c, first + i, first + i + 1);
+            for (int i = 0; i < N; i++) mb.Tri(SkinMeshBuilder.Opaque, c, capFirst + i, capFirst + i + 1);
+            mb.EndSmoothPart();
+        }
+
+        /// <summary>
+        /// (iteration 2) Flared mini skirt of a dress (<see cref="BodySpec.SkirtLen"/>): a cone from the waist over the hips
+        /// to the hem, textured with the bottom of the torso strip (the waist at v 0.40, the hem at v 0). The hem follows
+        /// the thighs (each side weighted to its leg, front / back centre shared) so the legs never poke through.
+        /// </summary>
+        static void MiniSkirt(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
+        {
+            int N = Mathf.Max(12, b.TorsoSides);
+            var T = CharacterAtlas.TorsoT;
+            var reg = CharacterAtlas.Torso;
+            float s = b.Scale;
+            float hemY = b.CrotchY - b.SkirtLen;
+            Ring waist = b.Torso[3], low = b.Torso[2], hip = b.Torso[1];
+            float hipW = hip.W * 1.05f;
+            // the hem must clear both thighs: thigh centre at HipJointX, radius ~LegRx[7]
+            float hemW = Mathf.Max(hipW * 1.06f, b.HipJointX + b.LegRx[7] * 1.25f + 0.02f * s);
+            float hemF = Mathf.Max(hip.F * 1.25f, b.LegRz[7] * 1.45f + 0.03f * s);
+            float hemB = Mathf.Max(hip.B * 1.12f, b.LegRz[7] * 1.45f + 0.035f * s);
+            float[] ys = { Mathf.Lerp(b.CrotchY, b.NeckY, T[3]), Mathf.Lerp(b.CrotchY, b.NeckY, T[2]), Mathf.Lerp(b.CrotchY, b.NeckY, T[1]),
+                           b.CrotchY - 0.02f * s, hemY };
+            Ring[] rs =
+            {
+                new Ring(waist.W + 0.004f * s, waist.F + 0.004f * s, waist.B + 0.004f * s, waist.C),
+                new Ring(low.W + 0.008f * s, low.F + 0.006f * s, low.B + 0.006f * s, low.C),
+                new Ring(hipW, hip.F + 0.012f * s, hip.B + 0.008f * s, hip.C),
+                new Ring(Mathf.Lerp(hipW, hemW, 0.55f), Mathf.Lerp(hip.F, hemF, 0.6f), Mathf.Lerp(hip.B, hemB, 0.6f), 0f),
+                new Ring(hemW, hemF, hemB, 0.004f * s),
+            };
+            float[] vs = { 0.40f, 0.30f, 0.20f, 0.10f, 0.0f };
+            mb.BeginPart();
+            int first = mb.V.Count;
+            for (int k = 0; k < rs.Length; k++)
+            {
+                for (int i = 0; i <= N; i++)
+                {
+                    float th = Theta(i, N);
+                    float ath = Mathf.Abs(th);
+                    Vector2 q = RingPoint(rs[k], th, 2.0f);
+                    float z = q.y;
+                    if (b.Butt > 0f && k >= 1 && k <= 3) z -= b.Butt * (k == 2 ? 1f : 0.6f) * Bump(ath, 152f, 24f) * 0.9f;
+                    if (b.Belly > 0f && k <= 1) z += b.Belly * Bump(ath, 0f, 45f);
+                    float y = ys[k];
+                    if (k == 4) y += 0.006f * s * Mathf.Sin(th * Mathf.Deg2Rad * 6f); // soft flare folds at the hem
+                    float side = Mathf.Sin(th * Mathf.Deg2Rad);
+                    BoneId leg = side >= 0f ? BoneId.RUpperLeg : BoneId.LUpperLeg;
+                    float sa = Mathf.Abs(side);
+                    SkinWeight w;
+                    switch (k)
+                    {
+                        case 0: w = SkinWeight.Two(BoneId.Hips, BoneId.Spine, 0.3f); break;
+                        case 1: w = SkinWeight.One(BoneId.Hips); break;
+                        case 2: w = SkinWeight.One(BoneId.Hips).Plus(leg, 0.12f * sa); break;
+                        default:
+                        {
+                            // sides follow their own thigh, the centre front / back is shared by both thighs
+                            float lw = k == 3 ? 0.4f : 0.7f;
+                            BoneId other = leg == BoneId.RUpperLeg ? BoneId.LUpperLeg : BoneId.RUpperLeg;
+                            w = SkinWeight.One(BoneId.Hips);
+                            w.W0 = 1f - lw;
+                            w.B1 = (int)leg; w.W1 = lw * (0.5f + 0.5f * sa);
+                            w.B2 = (int)other; w.W2 = lw * 0.5f * (1f - sa);
+                            break;
+                        }
+                    }
+                    mb.Add(new Vector3(q.x, y, z), reg.UV((float)i / N, vs[k]), w.Normalized());
+                }
+            }
+            int row = N + 1;
+            for (int k = 0; k < rs.Length - 1; k++)
+                for (int i = 0; i < N; i++)
+                {
+                    int a = first + (k + 1) * row + i; // lower ring first (bottom-left)
+                    mb.Quad(SkinMeshBuilder.Opaque, a, a - row, a - row + 1, a + 1);
+                }
             mb.EndSmoothPart();
         }
 
@@ -235,7 +348,7 @@ namespace PrisonersOfOmar.Characters
                             x += Mathf.Sign(x) * 0.05f * hh;
                         }
                         // hair volume where the texture shows hair
-                        float d = HairThickness(b, ath, Y[k]) * b.Scale;
+                        float d = HairThickness(b, th, Y[k]) * b.Scale;
                         if (d > 0f)
                         {
                             Vector2 dir = new Vector2(x, z - axisZ);
@@ -276,8 +389,9 @@ namespace PrisonersOfOmar.Characters
         }
 
         /// <summary>Hair volume (meters at 1.8 m scale) on the head, matching the painted hairlines in char_textures.py.</summary>
-        static float HairThickness(BodySpec b, float ath, float yRel)
+        static float HairThickness(BodySpec b, float th, float yRel)
         {
+            float ath = Mathf.Abs(th);
             float hl, d;
             switch (b.Hair)
             {
@@ -294,7 +408,11 @@ namespace PrisonersOfOmar.Characters
                     d = 0.016f;
                     break;
                 case HairStyle.LongBangs:
-                    hl = Curve(ath, 0, 0.62f, 30, 0.62f, 44, 0.60f, 52, 0.50f, 57, 0.20f, 63, -0.2f, 70, -0.6f, 180, -0.6f);
+                    if (b.BobHair && b.FringeSweep > 0f)
+                        hl = Curve(ath, 0, 0.62f, 30, 0.62f, 44, 0.60f, 52, 0.50f, 57, 0.22f, 63, 0.02f, 75, -0.06f, 110, -0.12f, 150, -0.2f, 180, -0.22f)
+                             + FringeSweep(th, b.FringeSweep);
+                    else
+                        hl = Curve(ath, 0, 0.62f, 30, 0.62f, 44, 0.60f, 52, 0.50f, 57, 0.20f, 63, -0.2f, 70, -0.6f, 180, -0.6f);
                     d = 0.013f;
                     break;
                 default: return 0f;
@@ -308,6 +426,14 @@ namespace PrisonersOfOmar.Characters
                 if (ath > 60f && yRel > 0f) d *= 1.4f;
             }
             return d * t;
+        }
+
+        /// <summary>Side-swept fringe of the bob: the hairline rises at the parting (theta ~ +22) and sweeps down to the other
+        /// temple. MUST match bob_sweep() in Tools/AssetPipeline/characters/char_textures.py.</summary>
+        static float FringeSweep(float th, float amount)
+        {
+            float a = (th - 22f) / 15f, c = (th + 34f) / 16f;
+            return amount * (0.17f * Mathf.Exp(-a * a) - 0.04f * Mathf.Exp(-c * c));
         }
 
         static float Curve(float x, params float[] xy)
@@ -354,6 +480,7 @@ namespace PrisonersOfOmar.Characters
                 }
                 float rx = b.LegRx[k], rz = b.LegRz[k];
                 float back = k == 2 ? 1.18f : k == 1 ? 1.08f : 1f;   // calf
+                if (b.Butt > 0f && k >= 6) back *= 1f + b.Butt / b.Scale * (k == 6 ? 3f : k == 7 ? 8f : 12f); // full back of the thigh under the buttocks
                 float front = k == 4 ? 1.06f : 1f;                     // kneecap
                 Ring r = new Ring(rx, rz * front, rz * back, k == 2 ? -0.006f * b.Scale : 0f);
                 for (int i = 0; i <= N; i++)
@@ -362,7 +489,7 @@ namespace PrisonersOfOmar.Characters
                     Vector2 q = RingPoint(r, th, 2f);
                     // thighs: inner side flatter
                     float x = q.x;
-                    if (k >= 6 && (x * (side == 0 ? 1 : -1)) > 0) x *= 0.85f;
+                    if (k >= 6 && (x * (side == 0 ? 1 : -1)) > 0) x *= b.Butt > 0f ? 0.97f : 0.85f; // (women: thighs touch at the top)
                     float u = (float)i / N;
                     if (side == 0) u = 1f - u;
                     mb.Add(c + new Vector3(x, 0, q.y), reg.UV(u, t), w);
@@ -387,9 +514,13 @@ namespace PrisonersOfOmar.Characters
             float sx = side == 0 ? -1f : 1f;
             BoneId up = BoneId.LUpperArm + o, lo = BoneId.LLowerArm + o, hd = BoneId.LHand + o;
             Vector3 sh = sk.Pos[(int)up], el = sk.Pos[(int)lo], wr = sk.Pos[(int)hd];
-            Vector3 top = sh + new Vector3(-sx * 0.012f * b.Scale, 0.035f * b.Scale, 0);
+            // round shoulders: the tube ends flush with the shoulder line and is closed by a deltoid dome (no open rim
+            // poking above the torso)
+            bool round = b.RoundShoulders;
+            Vector3 top = sh + new Vector3(-sx * 0.012f * b.Scale, (round ? -0.004f : 0.035f) * b.Scale, 0);
             mb.BeginPart();
             int first = mb.V.Count;
+            Vector3 lastC = top, lastAxis = Vector3.up;
             for (int k = 0; k < T.Length; k++)
             {
                 float t = T[k];
@@ -421,14 +552,43 @@ namespace PrisonersOfOmar.Characters
                     if (side == 0) u = 1f - u;
                     mb.Add(c + right * q.x + fwd * q.y, reg.UV(u, t), w);
                 }
+                lastC = c; lastAxis = axis;
+            }
+            int rings = T.Length;
+            if (round)
+            {
+                // dome: one smaller ring leaning towards the neck, then the pole
+                Vector3 ax = lastAxis.normalized;
+                float rr = b.ArmR[T.Length - 1];
+                Frame(ax, out Vector3 right, out Vector3 fwd);
+                Vector3 inward = new Vector3(-sx, 0, 0);
+                Vector3 c1 = lastC + ax * rr * 0.36f + inward * rr * 0.22f;
+                var w1 = SkinWeight.Two(up, BoneId.Chest, 0.45f);
+                for (int i = 0; i <= N; i++)
+                {
+                    float th = Theta(i, N);
+                    Vector2 q = RingPoint(new Ring(rr * 0.74f, rr * 0.8f, rr * 0.8f), th, 2f);
+                    float u = (float)i / N;
+                    if (side == 0) u = 1f - u;
+                    mb.Add(c1 + right * q.x + fwd * q.y, reg.UV(u, 1f), w1);
+                }
+                rings++;
             }
             int row = N + 1;
-            for (int k = 0; k < T.Length - 1; k++)
+            for (int k = 0; k < rings - 1; k++)
                 for (int i = 0; i < N; i++)
                 {
                     int a = first + k * row + i;
                     mb.Quad(SkinMeshBuilder.Opaque, a, a + row, a + row + 1, a + 1);
                 }
+            if (round)
+            {
+                Vector3 ax = lastAxis.normalized;
+                float rr = b.ArmR[T.Length - 1];
+                int pole = mb.Add(lastC + ax * rr * 0.52f + new Vector3(-sx, 0, 0) * rr * 0.36f, reg.UV(0.5f, 1f), SkinWeight.Two(up, BoneId.Chest, 0.5f));
+                int last = first + (rings - 1) * row;
+                for (int i = 0; i < N; i++) mb.Tri(SkinMeshBuilder.Opaque, last + i, pole, last + i + 1);
+            }
             mb.EndSmoothPart();
         }
 
@@ -623,12 +783,22 @@ namespace PrisonersOfOmar.Characters
             float[] bd = { headB * 0.95f, headB * 1.02f, headB * 0.9f, torsoNeck.B + 0.06f * s, torsoSh.B + 0.035f * s, torsoArm.B + 0.025f * s, torsoChest.B + 0.03f * s };
             float[] vz = { 1f, 0.85f, 0.65f, 0.5f, 0.36f, 0.2f, 0f };
             BoneId[] wb = { BoneId.Head, BoneId.Head, BoneId.Head, BoneId.Neck, BoneId.Chest, BoneId.Chest, BoneId.Chest };
+            bool sweptBob = b.BobHair && b.FringeSweep > 0f;
+            if (sweptBob)
+            {
+                // (iteration 2) jaw-length bob: the back hangs straight down from the skull to the nape, all on the head
+                ys = new[] { sk.ChinY + 0.80f * hh, sk.ChinY + 0.42f * hh, sk.ChinY + 0.05f * hh, sk.ChinY - 0.12f * hh,
+                             sk.ChinY - 0.24f * hh, sk.ChinY - 0.32f * hh, sk.ChinY - 0.38f * hh };
+                hw = new[] { headW * 0.92f, headW * 1.04f, headW * 1.02f, headW * 0.99f, headW * 0.97f, headW * 0.97f, headW * 0.99f };
+                bd = new[] { headB * 0.95f, headB * 1.03f, headB * 0.98f, headB * 0.92f, headB * 0.88f, headB * 0.87f, headB * 0.88f };
+            }
             const int C = 6;
             int first = mb.V.Count;
             mb.BeginPart();
             for (int r = 0; r < ys.Length; r++)
             {
-                SkinWeight w = r == 2 ? SkinWeight.Two(BoneId.Head, BoneId.Neck, 0.4f)
+                SkinWeight w = sweptBob ? (r >= 5 ? SkinWeight.Two(BoneId.Head, BoneId.Neck, 0.2f) : SkinWeight.One(BoneId.Head))
+                    : r == 2 ? SkinWeight.Two(BoneId.Head, BoneId.Neck, 0.4f)
                     : r == 3 ? SkinWeight.Two(BoneId.Neck, BoneId.Head, 0.35f)
                     : r == 4 ? SkinWeight.Two(BoneId.Chest, BoneId.Neck, 0.4f)
                     : SkinWeight.One(wb[r]);
@@ -637,8 +807,8 @@ namespace PrisonersOfOmar.Characters
                     float f = (float)c / C;              // 0 = right side, 1 = left side
                     float ang = Mathf.Lerp(-95f, 95f, f) * Mathf.Deg2Rad; // around the back
                     float x = Mathf.Sin(ang) * hw[r] * (r >= 3 ? 1f : 1f);
-                    float z = -Mathf.Cos(ang) * bd[r] + (r <= 2 ? axisZ : -0.01f * s);
-                    if (r >= 3) z = Mathf.Lerp(z, -bd[r] * 0.55f, Mathf.Abs(Mathf.Sin(ang)) * 0.5f);
+                    float z = -Mathf.Cos(ang) * bd[r] + (r <= 2 || sweptBob ? axisZ : -0.01f * s);
+                    if (r >= 3 && !sweptBob) z = Mathf.Lerp(z, -bd[r] * 0.55f, Mathf.Abs(Mathf.Sin(ang)) * 0.5f);
                     if (wavy && r >= 3) x += Mathf.Sin(f * 9f + r) * 0.008f * s;
                     // x mirrored: f=0 is the character's right (+X)
                     mb.Add(new Vector3(-x, ys[r], z), reg.UV(1f - f, vz[r]), w);
@@ -663,8 +833,18 @@ namespace PrisonersOfOmar.Characters
                 float frontZ = torsoSh.F + 0.03f * s;
                 Vector3 t2 = new Vector3(sx * (wavy ? 0.115f : 0.09f) * s, b.NeckY - 0.02f * s, wavy ? frontZ * 0.6f : frontZ * 0.4f);
                 Vector3 t3 = new Vector3(sx * (wavy ? 0.12f : 0.1f) * s, yEnd + (wavy ? 0.06f : 0.1f) * s, torsoChest.F * 0.75f + b.Bust * 0.6f + 0.03f * s);
-                Vector3[] spine = { t0, t1, t2, t3 };
                 float[] widths = wavy ? new[] { 0.05f * s, 0.075f * s, 0.095f * s, 0.10f * s } : new[] { 0.045f * s, 0.06f * s, 0.075f * s, 0.07f * s };
+                if (b.BobHair && b.FringeSweep > 0f)
+                {
+                    // jaw-length bob: the side locks frame the cheeks and curl in under the jaw line
+                    Ring hc = HeadRingAt(b, 0.25f);
+                    t0 = new Vector3(sx * (head.W * hh + 0.012f * s), yTop, axisZ + 0.012f * s);
+                    t1 = new Vector3(sx * (hc.W * hh + 0.014f * s), sk.ChinY + 0.25f * hh, axisZ + 0.010f * s);
+                    t2 = new Vector3(sx * (hc.W * hh + 0.008f * s), sk.ChinY - 0.04f * hh, axisZ + 0.004f * s);
+                    t3 = new Vector3(sx * (hc.W * hh - 0.004f * s), sk.ChinY - 0.15f * hh, axisZ + 0.006f * s);
+                    widths = new[] { 0.045f * s, 0.06f * s, 0.06f * s, 0.05f * s };
+                }
+                Vector3[] spine = { t0, t1, t2, t3 };
                 SkinWeight[] ws = { SkinWeight.One(BoneId.Head), SkinWeight.Two(BoneId.Head, BoneId.Neck, 0.3f), SkinWeight.Two(BoneId.Chest, BoneId.Neck, 0.35f), SkinWeight.One(BoneId.Chest) };
                 float[] vs = { 0.95f, 0.65f, 0.4f, 0f };
                 int f0 = mb.V.Count;
@@ -672,11 +852,13 @@ namespace PrisonersOfOmar.Characters
                 for (int r = 0; r < spine.Length; r++)
                 {
                     Vector3 along = r < spine.Length - 1 ? spine[r + 1] - spine[r] : spine[r] - spine[r - 1];
-                    // strip faces forward (hair lying over the shoulder / framing the face)
-                    Vector3 across = Vector3.Cross(along.normalized, Vector3.forward);
+                    // strip faces forward (hair lying over the shoulder / framing the face); the bob's locks lie
+                    // flat against the side of the head instead (facing out and a little forward)
+                    Vector3 facing = sweptBob ? new Vector3(sx, 0f, 0.45f).normalized : Vector3.forward;
+                    Vector3 across = Vector3.Cross(along.normalized, facing);
                     if (across.sqrMagnitude < 1e-6f) across = Vector3.right;
                     across.Normalize();
-                    if (across.x < 0) across = -across;
+                    if (sweptBob ? across.z < 0 : across.x < 0) across = -across;
                     float u0 = side == 0 ? 0.0f : 0.6f, u1 = u0 + 0.4f;
                     mb.Add(spine[r] - across * widths[r] * 0.5f, reg.UV(u0, vs[r]), ws[r]);
                     mb.Add(spine[r] + across * widths[r] * 0.5f, reg.UV(u1, vs[r]), ws[r]);

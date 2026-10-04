@@ -36,10 +36,24 @@ namespace PrisonersOfOmar.Characters
         public Ring[] HeadRings;                 // 10 rings in head units (x HeadH)
         public float HeadSquare = 2.2f;          // superellipse exponent of head rings
         public float TorsoSquare = 2.2f;         // superellipse exponent of torso rings (2 = round, higher = boxy)
+        public int TorsoSides = 12;              // ring vertex count of the torso tube (women: 16, for the bust)
         public float ShoulderSlope = 0.022f;     // how much the shoulder line drops towards the arms (x Scale)
         public float Nose = 0.07f;               // nose protrusion (head units)
         public float HandScale = 1f;
         public float FootLen = 0.26f, FootW = 0.095f, ShoeH = 0.11f;
+        // (iteration 2) feminine shape: bust lobes centred at +-BustAngle degrees (width BustWidth), an extra
+        // under-bust ring, rounder buttocks (meters at 1.8 m scale, like Bust)
+        public float BustAngle = 30f, BustWidth = 22f;
+        public float Butt;
+        /// <summary>Superellipse exponent of the crotch ring (0 = TorsoSquare); boxier so both thigh tops fit under it.</summary>
+        public float CrotchSquare;
+        /// <summary>Arm strip t (0 = wrist) where a long sleeve starts (0 = bare arms); the first person forearm gets a cuff there.</summary>
+        public float SleeveT;
+        /// <summary>(iteration 2) Flared mini skirt of a dress, from the waist to this far below the crotch (m, 0 = none).
+        /// Textured with the bottom of the torso strip (v 0.40 at the waist .. 0 at the hem).</summary>
+        public float SkirtLen;
+        /// <summary>(iteration 2) The arm tubes end flush with the shoulder line under a rounded deltoid cap (no square corners).</summary>
+        public bool RoundShoulders;
 
         // features
         public HeadShape HeadShape = HeadShape.Human;
@@ -47,7 +61,9 @@ namespace PrisonersOfOmar.Characters
         public GlassesStyle Glasses = GlassesStyle.None;
         public bool Apron, Noose, Skirt, Rags;
         public bool Barefoot;                    // feet use the skin / plastic texture for the sole too
-        public bool BobHair;                     // LongBangs cut short at the jaw / neck (the grandmother)
+        public bool BobHair;                     // LongBangs cut short at the jaw / neck (the grandmother, the camerawoman)
+        /// <summary>(iteration 2) Bob with a side-swept fringe and jaw-length side locks (texture: hairline "bob" + bob_sweep).</summary>
+        public float FringeSweep;
 
         public float Scale => Height / 1.8f;
 
@@ -63,6 +79,36 @@ namespace PrisonersOfOmar.Characters
             new Ring(0.32f, 0.37f, 0.43f, 0.00f),   // forehead
             new Ring(0.26f, 0.27f, 0.34f, -0.01f),  // upper skull
             new Ring(0.0f, 0.0f, 0.0f, -0.03f),     // crown (pole)
+        };
+
+        /// <summary>Young woman: slimmer neck, soft narrow jaw and small pointed chin, full cheeks high up, rounder skull.</summary>
+        static readonly Ring[] FemaleHead =
+        {
+            new Ring(0.215f, 0.195f, 0.205f, -0.06f), // neck base
+            new Ring(0.185f, 0.175f, 0.185f, -0.05f), // neck mid
+            new Ring(0.200f, 0.315f, 0.215f, -0.03f), // chin / jaw: narrow V
+            new Ring(0.262f, 0.375f, 0.310f, -0.005f),// mouth
+            new Ring(0.298f, 0.395f, 0.365f, 0.00f),  // nose / cheekbones
+            new Ring(0.318f, 0.380f, 0.415f, 0.00f),  // eyes
+            new Ring(0.324f, 0.395f, 0.435f, 0.00f),  // brow
+            new Ring(0.316f, 0.365f, 0.430f, 0.00f),  // forehead
+            new Ring(0.258f, 0.275f, 0.345f, -0.01f), // upper skull
+            new Ring(0.0f, 0.0f, 0.0f, -0.03f),       // crown (pole)
+        };
+
+        /// <summary>Boy: round chubby cheeks, short soft chin, slightly bigger skull.</summary>
+        static readonly Ring[] KidHead =
+        {
+            new Ring(0.225f, 0.20f, 0.21f, -0.06f),
+            new Ring(0.20f, 0.185f, 0.195f, -0.05f),
+            new Ring(0.255f, 0.325f, 0.235f, -0.03f), // round soft jaw
+            new Ring(0.305f, 0.395f, 0.33f, -0.005f), // chubby cheeks
+            new Ring(0.322f, 0.405f, 0.38f, 0.00f),
+            new Ring(0.330f, 0.385f, 0.425f, 0.00f),
+            new Ring(0.335f, 0.40f, 0.445f, 0.00f),
+            new Ring(0.330f, 0.375f, 0.445f, 0.00f),
+            new Ring(0.272f, 0.285f, 0.355f, -0.01f),
+            new Ring(0.0f, 0.0f, 0.0f, -0.03f),
         };
 
         static readonly Ring[] SackHead =
@@ -123,9 +169,37 @@ namespace PrisonersOfOmar.Characters
                 case CharacterSkin.Prisoner2: b.GirlInRed(); break;
                 case CharacterSkin.Prisoner3: b.Redhead(); break;
                 case CharacterSkin.Prisoner4: b.Nerd(); break;
+                case CharacterSkin.Prisoner5: b.Camerawoman(); break;
+                case CharacterSkin.Prisoner6: b.Kid(); break;
+                case CharacterSkin.Prisoner7: b.Father(); break;
                 default: b.Omar(); break;
             }
             return b;
+        }
+
+        /// <summary>(iteration 2) Slim, clearly feminine limbs for the playable women: slender ankles / wrists, rounded calves, full thighs.</summary>
+        void WomanLimbs(float s, float bulk)
+        {
+            LegRx = Arr(s * bulk, 0.027f, 0.033f, 0.047f, 0.040f, 0.042f, 0.051f, 0.071f, 0.088f, 0.078f);
+            LegRz = Arr(s * bulk, 0.033f, 0.038f, 0.053f, 0.044f, 0.046f, 0.054f, 0.072f, 0.074f, 0.062f);
+            ArmR = Arr(s * bulk, 0.0205f, 0.025f, 0.029f, 0.027f, 0.032f, 0.036f, 0.041f);
+        }
+
+        /// <summary>(iteration 2) Shared look of the playable women: soft narrow face, 16-sided torso with a real bust.</summary>
+        void Woman(float bust, float butt)
+        {
+            HeadRings = FemaleHead;
+            HeadSquare = 2.05f;
+            Nose = 0.052f;
+            TorsoSides = 16;
+            TorsoSquare = 2.05f;
+            BustAngle = 24f; BustWidth = 17f;
+            Bust = bust * Scale;
+            Butt = butt * Scale;
+            ShoulderSlope = 0.026f;
+            RoundShoulders = true;
+            HipJointX = 0.100f * Scale; // wide pelvis: the thighs carry the hip line down without a step
+            CrotchSquare = 3.2f;
         }
 
         void MaleLimbs(float s, float bulk)
@@ -159,36 +233,111 @@ namespace PrisonersOfOmar.Characters
 
         void GirlInRed()
         {
+            // curvy: full bust in the tight crop top, small waist, wide hips (CzRaIQcVIAAElQD.jpg)
             Skeleton(1.68f, true);
             float s = Scale;
             Torso = Rings(s,
-                new Ring(0.150f, 0.080f, 0.100f), new Ring(0.182f, 0.090f, 0.122f), new Ring(0.165f, 0.086f, 0.098f),
-                new Ring(0.132f, 0.080f, 0.076f), new Ring(0.142f, 0.090f, 0.080f), new Ring(0.152f, 0.098f, 0.085f),
-                new Ring(0.158f, 0.094f, 0.090f), new Ring(0.188f, 0.066f, 0.070f), new Ring(0.056f, 0.048f, 0.052f, -0.01f));
-            Bust = 0.040f * s;
-            FemaleLimbs(s, 1.0f);
-            ShoulderX = 0.152f * s; ElbowX = 0.178f * s; WristX = 0.205f * s;
+                new Ring(0.220f, 0.092f, 0.098f), new Ring(0.198f, 0.094f, 0.112f), new Ring(0.172f, 0.084f, 0.100f),
+                new Ring(0.124f, 0.074f, 0.070f), new Ring(0.132f, 0.082f, 0.074f), new Ring(0.146f, 0.088f, 0.082f),
+                new Ring(0.154f, 0.086f, 0.086f), new Ring(0.178f, 0.062f, 0.066f), new Ring(0.049f, 0.043f, 0.047f, -0.01f));
+            Woman(0.054f, 0.018f);
+            WomanLimbs(s, 1.0f);
+            ShoulderX = 0.150f * s; ElbowX = 0.182f * s; WristX = 0.226f * s;
             Hair = HairStyle.LongWavy;
-            HandScale = 0.9f;
+            HandScale = 0.88f;
+            SleeveT = 0.05f;
             FootLen = 0.24f; FootW = 0.085f; ShoeH = 0.10f;
         }
 
         void Redhead()
         {
+            // petite and slim, softer curves under the sweater
             Skeleton(1.58f, true);
             float s = Scale;
             Torso = Rings(s,
-                new Ring(0.150f, 0.080f, 0.098f), new Ring(0.176f, 0.088f, 0.118f), new Ring(0.162f, 0.086f, 0.096f),
-                new Ring(0.136f, 0.082f, 0.078f), new Ring(0.145f, 0.090f, 0.082f), new Ring(0.155f, 0.096f, 0.086f),
-                new Ring(0.160f, 0.094f, 0.090f), new Ring(0.186f, 0.068f, 0.072f), new Ring(0.056f, 0.048f, 0.052f, -0.01f));
-            Bust = 0.026f * s;
-            FemaleLimbs(s, 1.02f);
-            ShoulderX = 0.152f * s; ElbowX = 0.176f * s; WristX = 0.200f * s;
+                new Ring(0.216f, 0.092f, 0.098f), new Ring(0.194f, 0.092f, 0.110f), new Ring(0.170f, 0.086f, 0.098f),
+                new Ring(0.128f, 0.078f, 0.074f), new Ring(0.136f, 0.084f, 0.078f), new Ring(0.148f, 0.090f, 0.084f),
+                new Ring(0.155f, 0.088f, 0.088f), new Ring(0.178f, 0.064f, 0.068f), new Ring(0.050f, 0.044f, 0.048f, -0.01f));
+            Woman(0.040f, 0.014f);
+            WomanLimbs(s, 1.02f);
+            ShoulderX = 0.150f * s; ElbowX = 0.180f * s; WristX = 0.222f * s;
             Hair = HairStyle.LongBangs;
             Glasses = GlassesStyle.Rect;
             HeadH = 0.138f * Height; // a little big-headed (small young woman)
-            HandScale = 0.88f;
+            HandScale = 0.86f;
+            SleeveT = 0.05f;
             FootLen = 0.235f; FootW = 0.085f; ShoeH = 0.11f;
+        }
+
+        /// <summary>(iteration 2) Prisoner5: slim young woman in a grey plaid long-sleeve mini dress, auburn bob, mary-janes.</summary>
+        void Camerawoman()
+        {
+            Skeleton(1.65f, true);
+            float s = Scale;
+            Torso = Rings(s,
+                new Ring(0.216f, 0.092f, 0.098f), new Ring(0.194f, 0.092f, 0.110f), new Ring(0.170f, 0.084f, 0.098f),
+                new Ring(0.124f, 0.074f, 0.070f), new Ring(0.134f, 0.082f, 0.076f), new Ring(0.147f, 0.088f, 0.083f),
+                new Ring(0.154f, 0.087f, 0.087f), new Ring(0.178f, 0.063f, 0.067f), new Ring(0.049f, 0.043f, 0.047f, -0.01f));
+            Woman(0.044f, 0.014f);
+            WomanLimbs(s, 0.98f);
+            ShoulderX = 0.150f * s; ElbowX = 0.180f * s; WristX = 0.222f * s;
+            Hair = HairStyle.LongBangs;
+            BobHair = true;
+            FringeSweep = 1f;
+            HandScale = 0.86f;
+            SleeveT = 0.05f;
+            SkirtLen = 0.13f;
+            FootLen = 0.235f; FootW = 0.08f; ShoeH = 0.075f; // flat mary-janes
+        }
+
+        /// <summary>(iteration 2) Prisoner6: a stocky boy (~12) - big round head, short neck, soft belly, short limbs.</summary>
+        void Kid()
+        {
+            Skeleton(1.48f, false);
+            RoundShoulders = true;
+            float s = Scale;
+            HeadH = 0.152f * Height;
+            NeckY = 0.832f * Height;
+            ShoulderY = NeckY - 0.03f * Height;
+            ChestY = 0.705f * Height;
+            ElbowY = ShoulderY - 0.166f * Height;
+            WristY = ElbowY - 0.140f * Height;
+            Torso = Rings(s,
+                new Ring(0.152f, 0.088f, 0.098f), new Ring(0.168f, 0.100f, 0.110f), new Ring(0.166f, 0.106f, 0.098f),
+                new Ring(0.160f, 0.108f, 0.090f), new Ring(0.160f, 0.106f, 0.090f), new Ring(0.166f, 0.104f, 0.094f),
+                new Ring(0.170f, 0.098f, 0.096f), new Ring(0.192f, 0.074f, 0.078f), new Ring(0.060f, 0.054f, 0.058f, -0.01f));
+            TorsoSquare = 2.05f;
+            Belly = 0.014f * s;
+            MaleLimbs(s, 1.02f);
+            ArmR = Arr(s, 0.026f, 0.031f, 0.036f, 0.034f, 0.040f, 0.044f, 0.049f);
+            ShoulderX = 0.164f * s; ElbowX = 0.190f * s; WristX = 0.206f * s;
+            ShoulderSlope = 0.028f;
+            HeadRings = KidHead;
+            HeadSquare = 2.05f;
+            Nose = 0.048f;
+            Hair = HairStyle.Short;
+            HandScale = 0.86f;
+            SleeveT = 0.05f;
+            FootLen = 0.235f; FootW = 0.09f; ShoeH = 0.10f;
+        }
+
+        /// <summary>(iteration 2) Prisoner7: the father - average build, a bit of a belly, white dress shirt, dark slacks.</summary>
+        void Father()
+        {
+            Skeleton(1.83f, false);
+            RoundShoulders = true;
+            float s = Scale;
+            Torso = Rings(s,
+                new Ring(0.148f, 0.082f, 0.094f), new Ring(0.166f, 0.094f, 0.108f), new Ring(0.160f, 0.104f, 0.094f),
+                new Ring(0.156f, 0.108f, 0.088f), new Ring(0.162f, 0.108f, 0.090f), new Ring(0.180f, 0.112f, 0.098f),
+                new Ring(0.190f, 0.104f, 0.100f), new Ring(0.214f, 0.074f, 0.078f), new Ring(0.062f, 0.054f, 0.058f, -0.01f));
+            Belly = 0.016f * s;
+            MaleLimbs(s, 1.02f);
+            ShoulderX = 0.180f * s; ElbowX = 0.202f * s; WristX = 0.214f * s;
+            Hair = HairStyle.Short;
+            HandScale = 1.02f;
+            SleeveT = 0.06f;
+            FootLen = 0.27f; FootW = 0.095f; ShoeH = 0.095f;
         }
 
         void Nerd()
@@ -205,6 +354,7 @@ namespace PrisonersOfOmar.Characters
             Hair = HairStyle.Short;
             Glasses = GlassesStyle.Round;
             HeadH = 0.131f * Height;
+            SleeveT = 0.045f;
         }
 
         void Omar()
@@ -236,6 +386,7 @@ namespace PrisonersOfOmar.Characters
             HandScale = 1.4f;
             FootLen = 0.30f; FootW = 0.11f; ShoeH = 0.17f;
             Apron = true; Noose = true; Skirt = true;
+            SleeveT = 0.04f;
         }
 
         /// <summary>(iteration 2) The grandmother: small, frail and stooped, thin bony limbs, a white bob, floral dress.</summary>
