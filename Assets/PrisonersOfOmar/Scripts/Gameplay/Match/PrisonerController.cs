@@ -126,6 +126,17 @@ namespace PrisonersOfOmar.Gameplay
             var st = Status;
             if (st == null) return;
             float dt = Time.deltaTime;
+            if (_w.Ending != null)
+            {
+                // the ending screen owns the picture: drop every local effect once and stop driving them
+                EndDrag();
+                if (_arms != null) _arms.SetVisible(false);
+                SetHandLights(false, false);
+                _captureFx = 0f; _hitFx = 0f;
+                VhsEffect.StaticOverride = 0f; VhsEffect.Damage = 0f; VhsEffect.Hiding = 0f;
+                AudioManager.SetDistortion(0f); AudioManager.SetMuffle(0f);
+                return;
+            }
             bool active = st.Life == LifeState.Free || st.Life == LifeState.Caged;
             if (!active)
             {
@@ -160,6 +171,7 @@ namespace PrisonersOfOmar.Gameplay
             var st = Status;
             if (st == null) return;
             if (st.Life != LifeState.Free && st.Life != LifeState.Caged) return;
+            if (_w.Ending != null) return;
             PlaceCamera(st);
         }
 

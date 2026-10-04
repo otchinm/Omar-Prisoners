@@ -24,6 +24,13 @@ namespace PrisonersOfOmar.Gameplay
             var w = MatchWorld.Instance;
             var rig = PsxCameraRig.Instance;
             if (w == null || rig == null || w.Map == null) return;
+            if (w.Ending != null)
+            {
+                // the night is over: let the beds and the drone fade away under the ending screen
+                if (_current != (AmbientType)254) { _current = (AmbientType)254; AudioManager.SetAmbience(null); }
+                if (_anomaly != null) { AudioManager.Stop(_anomaly, 1f); _anomaly = null; }
+                return;
+            }
             Vector3 p = rig.transform.position;
             var type = ZoneAt(w.Map, p);
             if (type != _current)

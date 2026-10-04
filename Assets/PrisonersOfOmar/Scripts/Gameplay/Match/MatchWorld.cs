@@ -332,6 +332,7 @@ namespace PrisonersOfOmar.Gameplay
             TickPlayer(dt);
             TickWorld(dt);
             for (int i = 0; i < Cages.Length; i++) Cages[i].Tick(dt);
+            TickMannequins();
             for (int i = 0; i < Traps.Count; i++) Traps[i].Tick(dt);
 
             for (int i = Messages.Count - 1; i >= 0; i--) if (Messages[i].Value < UnityEngine.Time.time) Messages.RemoveAt(i);

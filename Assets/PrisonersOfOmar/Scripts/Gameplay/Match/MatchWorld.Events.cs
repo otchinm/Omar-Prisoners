@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PrisonersOfOmar.Audio;
 using PrisonersOfOmar.Map;
 using PrisonersOfOmar.Net;
@@ -98,23 +99,45 @@ namespace PrisonersOfOmar.Gameplay
                     AudioManager.SetVolume(_emitters[i], on && i < Map.SoundEmitters.Count ? Map.SoundEmitters[i].Volume : 0f);
         }
 
+        // mannequin index -> pose it must move to as soon as nobody local is looking at it
+        readonly Dictionary<int, Pose> _pendingMannequin = new Dictionary<int, Pose>();
+
+        /// <summary>
+        /// Every peer picks the same new poses (the random stream is consumed identically for every mannequin), so the
+        /// figures end up in the same places for everyone; a move is only postponed while the local camera looks at it.
+        /// </summary>
         void ShuffleMannequins(int seed)
         {
             var rng = new DeterministicRandom(seed, 7);
-            foreach (var m in Map.Mannequins)
+            for (int i = 0; i < Map.Mannequins.Count; i++)
             {
-                if (m == null || m.Root == null || m.AltPoses == null || m.AltPoses.Length == 0) continue;
-                if (!rng.Chance(0.6f)) continue;
-                // never move one the local player is looking straight at
-                if (LocalAvatar != null && PsxCameraRig.Instance != null)
-                {
-                    var cam = PsxCameraRig.Instance.transform;
-                    Vector3 to = m.Root.position + Vector3.up - cam.position;
-                    if (to.magnitude < 10f && Vector3.Dot(to.normalized, cam.forward) > 0.75f) continue;
-                }
-                var p = m.AltPoses[rng.Range(0, m.AltPoses.Length)];
-                m.Root.SetPositionAndRotation(p.position, p.rotation);
+                var m = Map.Mannequins[i];
+                bool move = rng.Chance(0.6f);
+                int pick = rng.Range(0, 1 << 20);
+                if (m == null || m.Root == null || m.AltPoses == null || m.AltPoses.Length == 0 || !move) continue;
+                _pendingMannequin[i] = m.AltPoses[pick % m.AltPoses.Length];
             }
+            TickMannequins();
+        }
+
+        void TickMannequins()
+        {
+            if (_pendingMannequin.Count == 0) return;
+            var cam = PsxCameraRig.Instance != null ? PsxCameraRig.Instance.transform : null;
+            List<int> done = null;
+            foreach (var kv in _pendingMannequin)
+            {
+                var m = kv.Key < Map.Mannequins.Count ? Map.Mannequins[kv.Key] : null;
+                if (m == null || m.Root == null) { (done ??= new List<int>()).Add(kv.Key); continue; }
+                if (cam != null && LocalAvatar != null)
+                {
+                    Vector3 to = m.Root.position + Vector3.up - cam.position;
+                    if (to.magnitude < 10f && Vector3.Dot(to.normalized, cam.forward) > 0.75f) continue; // watched: later
+                }
+                m.Root.SetPositionAndRotation(kv.Value.position, kv.Value.rotation);
+                (done ??= new List<int>()).Add(kv.Key);
+            }
+            if (done != null) foreach (int k in done) _pendingMannequin.Remove(k);
         }
     }
 
