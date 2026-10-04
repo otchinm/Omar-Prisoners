@@ -118,7 +118,7 @@ namespace PrisonersOfOmar.Gameplay
                 GameInput.SetCursorLocked(!ui.AnyModal);
             }
 
-            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null || AdminFreeCam.Active;
+            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null || AdminFreeCam.Active || Time.time < _recoverUntil;
             var look = GameInput.Look;
             _yaw += look.x * (Stunned ? 0.3f : 1f);
             _pitch = Mathf.Clamp(_pitch - look.y, -80f, 80f);
@@ -217,6 +217,8 @@ namespace PrisonersOfOmar.Gameplay
 
         // ------------------------------------------------------------------ attack
 
+        float _recoverUntil;
+
         void HandleAttack(float dt)
         {
             _attackCooldown -= dt;
@@ -224,6 +226,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 _attackCooldown = Tuning.AttackCooldown;
                 _attackPending = Tuning.AttackWindup;
+                _recoverUntil = Time.time + Tuning.AttackWindup + Tuning.AttackRecover; // plants his feet for the swing
                 _arms?.Play(CharacterAction.Attack);
                 _w.SendAction(CharacterAction.Attack);
                 AudioManager.Play2D(AudioManager.Variant(Snd.OmarWindup, 2), 0.8f, Random.Range(0.92f, 1.04f), AudioCategory.Omar);

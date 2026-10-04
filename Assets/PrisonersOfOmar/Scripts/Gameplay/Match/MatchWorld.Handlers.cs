@@ -256,8 +256,9 @@ namespace PrisonersOfOmar.Gameplay
             if (t.Kind == TrapKind.Tripwire)
             {
                 AudioManager.Play3D(Snd.TripwireSnap, p, 0.9f, 1f, 1.5f, 15f);
-                // the siren: loud and far reaching (Omar's alarm)
+                // the siren: loud and far reaching (Omar's alarm) - and the spot bathes in pulsing red light
                 Chase.PlayAlarm(p);
+                AlarmBeacon.Spawn(_dynamicRoot, t.InteractPoint + Vector3.up * 0.9f, 25f);
                 if (LocalIsOmar) Pings.Add(new OmarPing { Position = p, Expire = UnityEngine.Time.time + 10f, Kind = 1 });
                 if (victim == LocalId) { VhsEffect.TriggerGlitch(0.8f, 0.4f); AddMessage("A WIRE! THE SIREN!", 3f); }
             }

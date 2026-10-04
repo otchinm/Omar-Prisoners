@@ -15,7 +15,7 @@ namespace PrisonersOfOmar.Gameplay
         public const int Iterations = 20000;
         public const int KeyLength = 32;
         public const string SaltHex = "f1c54b20818ef7029c23df0b0fbb40e0";
-        public const string VerifierHex = "c0b4ec3e637dc53a9a5121a5170953f398ac37dd04ba2082684ac661cbab9c9c";
+        public const string VerifierHex = "c06c98c3e68f1d850bde5ce4607d85aec7ec3294add221e40e56e43f1ffdd296";
 
         /// <summary>Upper case, without spaces and dashes (so "abcd-efgh ijkl" == "ABCDEFGHIJKL").</summary>
         public static string Normalize(string password)

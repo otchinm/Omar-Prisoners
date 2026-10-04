@@ -250,7 +250,9 @@ namespace PrisonersOfOmar.Gameplay
         public const float OmarEyeHeight = 2.12f;
         /// <summary>How much lower Omar's head / eyes go when he fully stoops under a door frame (he is ~2.3 m tall).</summary>
         public const float OmarDuckDrop = 0.24f;
-        public const float AttackRange = 2.1f, AttackCooldown = 1.45f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
+        // shorter reach and slower swings; after every swing he stands still for AttackRecover seconds
+        public const float AttackRange = 1.65f, AttackCooldown = 2.6f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
+        public const float AttackRecover = 1.5f;
         public const float ScreamCooldown = 22f, SenseCooldown = 30f, SenseRadius = 16f;
         public const int TripwireCharges = 3, BearTrapCharges = 2;
         public const float TrapRecharge = 100f;

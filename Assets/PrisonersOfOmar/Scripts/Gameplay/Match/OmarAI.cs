@@ -30,7 +30,7 @@ namespace PrisonersOfOmar.Gameplay
         float _modeTimer, _waitTimer;
         int _target = -1;
         Vector3 _lastKnown;
-        float _attackCooldown, _windup = -1f;
+        float _attackCooldown, _windup = -1f, _recoverUntil;
         float _nextScreamAt;
         float _stunUntil;
         float _noiseScore;
@@ -146,6 +146,7 @@ namespace PrisonersOfOmar.Gameplay
             D.Tick(dt, eye, fwd, AdminState.OmarBlind, OnDetect);
 
             if (W.Time < _stunUntil || AdminState.OmarFrozen || W.Time < AdminState.OmarSleepUntil) { Publish(M.Move(Vector3.zero, dt)); return; }
+            if (W.Time < _recoverUntil) { _attackCooldown -= dt; Publish(M.Move(Vector3.zero, dt)); return; } // stands after a swing
             if (_revenge >= 0 && W.Time >= _revengeAt)
             {
                 var av = W.AvatarOf(_revenge);
@@ -158,7 +159,7 @@ namespace PrisonersOfOmar.Gameplay
             if (_windup >= 0f)
             {
                 _windup -= dt;
-                if (_windup < 0f) H.DoAttack(A.Id, _target >= 0 ? _target : 255);
+                if (_windup < 0f) { H.DoAttack(A.Id, _target >= 0 ? _target : 255); _recoverUntil = W.Time + Tuning.AttackRecover; }
             }
 
             switch (_mode)
