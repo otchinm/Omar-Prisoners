@@ -204,6 +204,7 @@ namespace PrisonersOfOmar.Gameplay
         public void DeliverNoise(Vector3 pos, float radius)
         {
             GrandmaHeard(pos, radius);
+            if (AdminState.OmarDeaf) return;
             radius *= Tuning.OmarHearingMul;
             foreach (var ai in _ais) if (ai != null) ai.OnNoise(pos, radius);
             var omar = S.FindOmar();
@@ -379,6 +380,7 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 p = r.ReadVector3();
             float radius = r.ReadByte();
             if (!IsPrisoner(sender)) return;
+            if (AdminState.Invisible.Contains(sender)) return;
             if (Vector3.Distance(p, PosOf(sender)) > 6f) p = PosOf(sender);
             DeliverNoise(p, Mathf.Min(radius, 60f));
         }
@@ -758,6 +760,7 @@ namespace PrisonersOfOmar.Gameplay
             var t = W.Traps[id];
             var st = W.StatusOf(sender);
             if (t.State != TrapState.Armed || st == null || st.Life != LifeState.Free || !IsPrisoner(sender)) return;
+            if (AdminState.GodMode.Contains(sender)) return;
             Vector3 p = PosOf(sender);
             float d = t.Kind == TrapKind.Tripwire ? DistanceToSegment(p, t.A, t.B) : GeoUtil.FlatDistance(p, t.A);
             if (d > 3f) return;
@@ -847,7 +850,8 @@ namespace PrisonersOfOmar.Gameplay
             if (W.Time - last < Tuning.AttackCooldown * 0.7f) return;
             _lastAttack[omarId] = W.Time;
             var st = W.StatusOf(target);
-            bool valid = st != null && IsPrisoner(target) && st.Life == LifeState.Free && !st.Hidden && Near(omarId, PosOf(target), Tuning.AttackRange + 1.4f);
+            bool valid = st != null && IsPrisoner(target) && st.Life == LifeState.Free && !st.Hidden && Near(omarId, PosOf(target), Tuning.AttackRange + 1.4f)
+                && !AdminState.GodMode.Contains(target);
             if (!valid) { BroadcastAttack(omarId, 255, 0); return; }
 
             if (st.Injured)
@@ -932,6 +936,7 @@ namespace PrisonersOfOmar.Gameplay
             int target = r.ReadByte();
             bool spotted = r.ReadBool();
             if (!IsOmar(sender)) return;
+            if (spotted && (AdminState.Invisible.Contains(target) || AdminState.OmarBlind)) return;
             DoDetect(target, spotted);
         }
 
@@ -1090,7 +1095,7 @@ namespace PrisonersOfOmar.Gameplay
             if (prisoners == 0 || free == 0 || timeUp) EndMatch(timeUp);
         }
 
-        void EndMatch(bool timeUp)
+        void EndMatch(bool timeUp, EndingId force = EndingId.None)
         {
             _ended = true;
             var res = new EndingResult { Duration = W.Time };
@@ -1119,6 +1124,7 @@ namespace PrisonersOfOmar.Gameplay
                 res.Id = Endings.ForRoute(best);
             }
             else res.Id = timeUp ? EndingId.Dawn : EndingId.SecondClass;
+            if (force != EndingId.None) res.Id = force; // admin
             res.Twist = _rng.Chance(0.25f) && Endings.HasTwist(res.Id) ? (int)res.Id : -1;
             var w = S.Begin(Msg.MatchEnd);
             res.Write(w);

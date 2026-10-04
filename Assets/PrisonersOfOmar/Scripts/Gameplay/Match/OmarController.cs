@@ -90,6 +90,15 @@ namespace PrisonersOfOmar.Gameplay
             if (_arms != null) Destroy(_arms.gameObject);
         }
 
+        public void ClearStun() => _stunUntil = 0f;
+
+        /// <summary>Admin teleport (the host follows our position).</summary>
+        public void AdminTeleport(Vector3 p)
+        {
+            _motor.Teleport(p, _yaw);
+            _teleportSeq++;
+        }
+
         public void Stun(float seconds)
         {
             _stunUntil = Mathf.Max(_stunUntil, _w.Time + seconds);
@@ -109,7 +118,7 @@ namespace PrisonersOfOmar.Gameplay
                 GameInput.SetCursorLocked(!ui.AnyModal);
             }
 
-            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null;
+            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null || AdminFreeCam.Active;
             var look = GameInput.Look;
             _yaw += look.x * (Stunned ? 0.3f : 1f);
             _pitch = Mathf.Clamp(_pitch - look.y, -80f, 80f);
@@ -151,7 +160,19 @@ namespace PrisonersOfOmar.Gameplay
         {
             Vector2 input = frozen ? Vector2.zero : GameInput.Move;
             bool wantSprint = !frozen && GameInput.Sprint && input.y > 0.1f && !_exhausted;
-            float speed = wantSprint ? Tuning.OmarRunSpeed : Tuning.OmarWalkSpeed;
+            float speed = (wantSprint ? Tuning.OmarRunSpeed : Tuning.OmarWalkSpeed) * AdminState.SpeedMultiplier;
+            if (AdminState.InfiniteStamina) { _stamina = 1f; _exhausted = false; }
+            if (AdminState.Noclip && !frozen)
+            {
+                _motor.Controller.enabled = false;
+                Vector3 fv = Quaternion.Euler(_pitch, _yaw, 0) * new Vector3(input.x, 0, input.y);
+                if (Input.GetKey(KeyCode.Space)) fv += Vector3.up;
+                if (Input.GetKey(KeyCode.LeftControl)) fv += Vector3.down;
+                _avatar.transform.position += fv * Mathf.Max(speed, 4f) * 1.5f * dt;
+                _avatar.transform.rotation = Quaternion.Euler(0, _yaw, 0);
+                return;
+            }
+            if (!_motor.Controller.enabled) _motor.Controller.enabled = true;
             _sprintingNow = wantSprint && input.sqrMagnitude > 0.01f;
             if (_sprintingNow)
             {

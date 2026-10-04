@@ -69,6 +69,28 @@ namespace PrisonersOfOmar.Gameplay
         // ------------------------------------------------------------------ host notifications
 
         public void Stun(float seconds) => _stunUntil = Mathf.Max(_stunUntil, W.Time + seconds);
+        public void ClearStun() => _stunUntil = 0f;
+
+        /// <summary>Admin: go for this prisoner now.</summary>
+        public void AdminHunt(int id)
+        {
+            var av = W.AvatarOf(id);
+            var st = W.StatusOf(id);
+            if (av == null || st == null || st.Life != LifeState.Free) return;
+            D.ForceSpot(id, av.Position, OnDetect);
+        }
+
+        /// <summary>Admin: off to the butcher table.</summary>
+        public void AdminChop() { if (W.Map.Kitchen != null) StartChop(); }
+
+        /// <summary>Admin: move the body instantly.</summary>
+        public void TeleportTo(Vector3 p)
+        {
+            M.Teleport(p, _yaw);
+            _path.Clear();
+            _stuckRef = p;
+            if (_mode == Mode.Chop) { _mode = Mode.Patrol; PickPatrol(); }
+        }
 
         /// <summary>A prisoner smashed him from behind: once he can see straight again he goes for them.</summary>
         public void OnHitBy(int prisoner, float stunSeconds)
@@ -82,6 +104,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (_mode == Mode.Chase || _mode == Mode.Waking) return;
             if (_chopping) radius *= 0.5f; // the chopping drowns out small sounds
+            if (AdminState.OmarDeaf) return;
             float d = Vector3.Distance(pos, A.Position);
             if (d > radius * 1.3f) return;
             float score = radius / Mathf.Max(1f, d);
@@ -120,9 +143,9 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 eye = A.EyePosition;
             Vector3 fwd = Quaternion.Euler(_pitch, _yaw, 0) * Vector3.forward;
             D.SightScale = _chopping ? 0.45f : 1f; // busy with the meat, eyes on the block
-            D.Tick(dt, eye, fwd, false, OnDetect);
+            D.Tick(dt, eye, fwd, AdminState.OmarBlind, OnDetect);
 
-            if (W.Time < _stunUntil) { Publish(M.Move(Vector3.zero, dt)); return; }
+            if (W.Time < _stunUntil || AdminState.OmarFrozen || W.Time < AdminState.OmarSleepUntil) { Publish(M.Move(Vector3.zero, dt)); return; }
             if (_revenge >= 0 && W.Time >= _revengeAt)
             {
                 var av = W.AvatarOf(_revenge);

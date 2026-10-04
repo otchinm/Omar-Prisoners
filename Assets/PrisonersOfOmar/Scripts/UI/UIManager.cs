@@ -136,6 +136,8 @@ namespace PrisonersOfOmar.UI
             var rig = PsxCameraRig.Instance;
             Vector2Int res = rig != null ? rig.Resolution : new Vector2Int(426, 240);
             Vector2 mouse = rig != null ? rig.ScreenToLowRes(Input.mousePosition) : Vector2.zero;
+            // F10: the owner's admin panel (lobby, match, menus)
+            if (Input.GetKeyDown(KeyCode.F10) && Find<AdminScreen>() == null) AdminScreen.Toggle();
             bool modal = AnyModal;
             bool click = Input.GetMouseButtonDown(0) && !GameInput.CursorLocked;
             UI.BeginFrame(res.x, res.y, mouse, click);

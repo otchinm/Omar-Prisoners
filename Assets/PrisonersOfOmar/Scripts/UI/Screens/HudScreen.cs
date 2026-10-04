@@ -22,6 +22,7 @@ namespace PrisonersOfOmar.UI
             else if (w.LocalPrisoner != null && w.Spectator == null) DrawPrisoner(ui, w);
             else DrawSpectator(ui, w);
             DrawMessages(ui, w);
+            if (Admin.IsAdmin) Admin.DrawOverlay(ui);
         }
 
         // ------------------------------------------------------------------ prisoner

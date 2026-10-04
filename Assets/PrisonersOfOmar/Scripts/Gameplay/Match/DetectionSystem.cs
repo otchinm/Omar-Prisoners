@@ -53,6 +53,7 @@ namespace PrisonersOfOmar.Gameplay
             if (target == null || !target.Visible) return false;
             var st = _w.StatusOf(target.Id);
             if (st == null || st.Life != LifeState.Free || st.Hidden) return false;
+            if (AdminState.Invisible.Contains(target.Id)) return false;
             Vector3 chest = target.ChestPosition;
             Vector3 to = chest - eye;
             distance = to.magnitude;

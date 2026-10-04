@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Checks the admin password algorithm (PBKDF2-HMAC-SHA256 + SHA-256 verifier) against the published test vector.
+       Run: dotnet run, project Tools/AdminAuthTest (the real password is never in the repository) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/PrisonersOfOmar/Scripts/Gameplay/Admin/AdminAuth.cs" />
+  </ItemGroup>
+</Project>

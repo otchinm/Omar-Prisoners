@@ -218,6 +218,22 @@ namespace PrisonersOfOmar.Gameplay
             else if (Mathf.Abs(vel) > 150f) DoorNoise(d, 5f);
         }
 
+        partial void AdminDoors(AdminCmd cmd)
+        {
+            EnsureDoorArrays();
+            foreach (var d in W.Doors)
+            {
+                if (d.Grabber >= 0) ReleaseDoor(d, d.Angle, 0f);
+                switch (cmd)
+                {
+                    case AdminCmd.OpenAllDoors: if (!d.Locked && !d.Boarded) BroadcastDoor(d, false, false, d.MaxAngle * 0.95f, 0f); break;
+                    case AdminCmd.CloseAllDoors: if (!d.Boarded) BroadcastDoor(d, d.Locked, false, 0f, 0f); break;
+                    case AdminCmd.UnlockAllDoors: BroadcastDoor(d, false, false, d.Angle, 0f); break;
+                }
+                _doorDirty[d.Index] = true;
+            }
+        }
+
         /// <summary>Omar never stops at a door: whatever Omar body walks into a leaf shoves it out of the way.</summary>
         void OmarShovesDoors(float dt)
         {

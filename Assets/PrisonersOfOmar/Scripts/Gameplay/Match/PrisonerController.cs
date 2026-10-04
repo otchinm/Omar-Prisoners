@@ -145,7 +145,7 @@ namespace PrisonersOfOmar.Gameplay
             HandleMenus();
             HandleDoorDrag(st, dt);
             Look(st);
-            bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f && !CamPathActive;
+            bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f && !CamPathActive && !AdminFreeCam.Active;
             Move(st, dt, canMove);
             HandleItems(st, dt);
             HandleInteraction(st, dt);
@@ -177,7 +177,7 @@ namespace PrisonersOfOmar.Gameplay
         void Look(PlayerStatus st)
         {
             var d = GameInput.Look;
-            if (_drag != null || CamPathActive) d = Vector2.zero; // the mouse moves the door / we are climbing in or out
+            if (_drag != null || CamPathActive || AdminFreeCam.Active) d = Vector2.zero; // the mouse moves the door / we are climbing in or out
             _yaw += d.x;
             _pitch = Mathf.Clamp(_pitch - d.y, -85f, 85f);
             if (st.Hidden && st.HidingSpot < _w.Hiding.Length)
@@ -227,7 +227,11 @@ namespace PrisonersOfOmar.Gameplay
                 if (_exhausted && _stamina > 0.35f) _exhausted = false;
             }
 
+            speed *= AdminState.SpeedMultiplier;
+            if (AdminState.InfiniteStamina) { _stamina = 1f; _exhausted = false; }
             Quaternion yawRot = Quaternion.Euler(0, _yaw, 0);
+            if (AdminState.Noclip && canMove) { Fly(input, speed, dt); _avatar.transform.rotation = yawRot; return; }
+            if (_noclipWas) { _noclipWas = false; if (!st.Hidden && !st.InCar) _motor.Controller.enabled = true; }
             Vector3 wish = yawRot * new Vector3(input.x, 0, input.y) * speed;
             if (!_motor.Controller.enabled) wish = Vector3.zero;
             float moved = _motor.Move(wish, dt);
@@ -271,6 +275,29 @@ namespace PrisonersOfOmar.Gameplay
         }
 
         bool _sprintingNow;
+        bool _noclipWas;
+
+        /// <summary>Admin noclip: fly where you look, through walls (Space up, Ctrl down).</summary>
+        void Fly(Vector2 input, float speed, float dt)
+        {
+            _noclipWas = true;
+            _motor.Controller.enabled = false;
+            Vector3 v = Quaternion.Euler(_pitch, _yaw, 0) * new Vector3(input.x, 0, input.y);
+            if (Input.GetKey(KeyCode.Space)) v += Vector3.up;
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C)) v += Vector3.down;
+            _avatar.transform.position += v * Mathf.Max(speed, 4f) * 1.5f * dt;
+            _sprintingNow = false;
+            _lastFeet = _avatar.transform.position;
+        }
+
+        /// <summary>Admin teleport (the host follows our position).</summary>
+        public void AdminTeleport(Vector3 p)
+        {
+            var st = Status;
+            if (st == null || st.Hidden || st.InCar) return;
+            EndDrag();
+            Teleport(p, _yaw);
+        }
 
         void PlayStep(float volume)
         {
@@ -371,7 +398,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (l == null || ht != ItemType.Lighter || hidden) _lighterOn = false;
                 else if (LighterLit)
                 {
-                    l.Charge = Mathf.Max(0f, l.Charge - dt / Tuning.LighterBurnSeconds);
+                    if (!AdminState.InfiniteLight) l.Charge = Mathf.Max(0f, l.Charge - dt / Tuning.LighterBurnSeconds);
                     if (l.Charge <= 0f) { _lighterOn = false; AudioManager.Play2D(Snd.LighterClose, 0.6f); _w.AddMessage("THE LIGHTER IS OUT OF FUEL", 3f); }
                 }
             }
@@ -381,7 +408,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (f == null || ht != ItemType.Flashlight || hidden) _flashOn = false;
                 else
                 {
-                    f.Charge = Mathf.Max(0f, f.Charge - dt / Tuning.FlashlightBurnSeconds);
+                    if (!AdminState.InfiniteLight) f.Charge = Mathf.Max(0f, f.Charge - dt / Tuning.FlashlightBurnSeconds);
                     if (f.Charge <= 0f) { _flashOn = false; AudioManager.Play2D(Snd.FlashlightClick, 0.6f); _w.AddMessage("THE BATTERIES ARE DEAD", 3f); }
                 }
             }

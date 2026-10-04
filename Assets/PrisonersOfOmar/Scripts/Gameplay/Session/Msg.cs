@@ -97,5 +97,7 @@ namespace PrisonersOfOmar.Gameplay
         AdminCmdReq = 143,   // admin client -> host: run a command
         AdminLog = 144,      // host -> admin: command feedback text
         AdminState = 145,    // host -> admin: debug state (positions, codes...)
+        AdminTeleport = 146, // host -> one player: move yourself here (admin "bring player" / "bring Omar")
+        AdminItemSpawn = 147, // host -> all: a new item appears (admin give / spawn)
     }
 }

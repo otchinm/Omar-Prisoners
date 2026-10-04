@@ -31,6 +31,9 @@ namespace PrisonersOfOmar.Gameplay
         float _clock;
         public float Time => _clock;
         public float NightLength => Settings.NightMinutes * 60f;
+        /// <summary>Admin: move the night forward (host; clients follow the snapshots' clock).</summary>
+        public void AdminAddTime(float seconds) { if (IsHost) _clock += seconds; }
+        public void AdminSetTime(float t) { if (IsHost) _clock = Mathf.Max(_clock, t); }
         /// <summary>0 at 01:00 AM .. 1 at 06:00 AM.</summary>
         public float NightProgress => Mathf.Clamp01(_clock / Mathf.Max(60f, NightLength));
 
@@ -151,6 +154,7 @@ namespace PrisonersOfOmar.Gameplay
                 UnregisterHandlers();
             }
             try { Grandma?.Destroy(); } catch { }
+            Admin.OnMatchEnded();
             AnomalySystem.Reset();
             VhsEffect.ResetTransient();
             PsxEnvironment.Brightness = 1f;
@@ -321,7 +325,7 @@ namespace PrisonersOfOmar.Gameplay
         void Update()
         {
             float dt = UnityEngine.Time.deltaTime;
-            if (Running && Ending == null) _clock += dt;
+            if (Running && Ending == null && !(IsHost && AdminState.ClockPaused)) _clock += dt;
 
             TickPlayer(dt);
             TickWorld(dt);

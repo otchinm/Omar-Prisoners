@@ -68,6 +68,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.EscapeReq, (id, r) => Host?.OnEscapeReq(id, r));
             RegisterPlayerHandlers(s);
             RegisterWorldHandlers(s);
+            RegisterAdminHandlers(s);
         }
 
         void UnregisterHandlers()
@@ -75,6 +76,7 @@ namespace PrisonersOfOmar.Gameplay
             foreach (var m in HandledMessages) Session.Off(m);
             UnregisterPlayerHandlers(Session);
             UnregisterWorldHandlers(Session);
+            UnregisterAdminHandlers(Session);
         }
 
         // ------------------------------------------------------------------ avatars
@@ -339,6 +341,7 @@ namespace PrisonersOfOmar.Gameplay
         void OnOmarStun(int sender, NetReader r)
         {
             float seconds = r.ReadFloat();
+            if (seconds < 0f) { LocalOmar?.ClearStun(); return; } // admin: unfreeze
             if (LocalOmar != null) LocalOmar.Stun(seconds);
             var oa = OmarAvatar;
             if (oa != null)

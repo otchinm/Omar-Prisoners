@@ -80,6 +80,7 @@ namespace PrisonersOfOmar.Gameplay
             On(Msg.MatchBegin, OnMatchBegin);
             On(Msg.ReturnToLobby, OnReturnToLobby);
             On(Msg.Kick, OnKick);
+            Admin.Attach(this);
         }
 
         void OnDestroy()
@@ -237,6 +238,60 @@ namespace PrisonersOfOmar.Gameplay
         {
             Begin(Msg.LoadedReq);
             SendToHost(NetChannel.Reliable);
+        }
+
+        // ------------------------------------------------------------------ admin (host)
+
+        /// <summary>Host: kick a client (admin panel).</summary>
+        public void AdminKick(int playerId, string reason)
+        {
+            if (!IsHost || playerId == LocalId) return;
+            var p = Find(playerId);
+            if (p == null || p.IsBot) return;
+            var w = Begin(Msg.Kick);
+            w.WriteString(reason);
+            SendTo(playerId, NetChannel.Reliable);
+            try { _server?.Flush(); _server?.Disconnect(playerId, DisconnectReason.Kicked); } catch { }
+        }
+
+        /// <summary>Host: start even if somebody isn't ready (admin panel).</summary>
+        public bool AdminForceStart(out string why)
+        {
+            why = "";
+            if (!IsHost || State != SessionState.Lobby) { why = "NOT IN THE LOBBY"; return false; }
+            if (PrisonerCount == 0) { why = "NEED AT LEAST ONE PRISONER"; return false; }
+            foreach (var p in Players) p.Ready = true;
+            if (!HostStartMatch()) { why = LastError; return false; }
+            return true;
+        }
+
+        /// <summary>Host: put a player on a role (admin panel). A taken Omar slot is swapped.</summary>
+        public void AdminSetRole(int playerId, PlayerRole role)
+        {
+            if (!IsHost || State != SessionState.Lobby) return;
+            var p = Find(playerId);
+            if (p == null) return;
+            if (role == PlayerRole.Omar)
+            {
+                var omar = FindOmar();
+                if (omar != null && omar != p) { omar.Role = PlayerRole.Prisoner; omar.Skin = FreeSkin(omar.Id); }
+                p.Role = PlayerRole.Omar; p.Skin = CharacterSkin.Omar;
+            }
+            else if (role == PlayerRole.Prisoner)
+            {
+                if (!p.IsPrisoner && PrisonerCount >= GameInfo.MaxPrisoners) return;
+                p.Role = PlayerRole.Prisoner;
+                if (!GameInfo.IsPrisonerSkin(p.Skin) || Players.Exists(o => o != p && o.IsPrisoner && o.Skin == p.Skin)) p.Skin = FreeSkin(p.Id);
+            }
+            else p.Role = PlayerRole.Spectator;
+            BroadcastRoster();
+        }
+
+        CharacterSkin FreeSkin(int forId)
+        {
+            foreach (var s in GameInfo.PrisonerSkins)
+                if (!Players.Exists(o => o.Id != forId && o.IsPrisoner && o.Skin == s) && Characters.HumanoidFactory.HasSkin(s)) return s;
+            return CharacterSkin.Prisoner1;
         }
 
         /// <summary>Host: back to the lobby after the ending screen.</summary>

@@ -357,6 +357,33 @@ namespace PrisonersOfOmar.Gameplay
             return false;
         }
 
+        partial void AdminGrandma(AdminCmd cmd)
+        {
+            var g = W.Grandma;
+            if (g == null || g.Dead) return;
+            switch (cmd)
+            {
+                case AdminCmd.GrandmaRoam:
+                    _gRoaming = true; g.Stage = 1; _gSitUntil = -1f; _gPath = null; _gPauseUntil = 0f;
+                    SetGrandma(GrandmaMode.Roaming, GrandmaEntity.VoiceNone, -1);
+                    break;
+                case AdminCmd.GrandmaReturn:
+                    GrandmaPathTo(g, g.Info.ChairPose.position);
+                    _gGoingHome = true;
+                    if (!_gRoaming) { g.Position = g.Info.ChairPose.position; g.Yaw = g.Info.ChairPose.rotation.eulerAngles.y; _gPath = null; }
+                    SetGrandma(_gRoaming ? GrandmaMode.Roaming : GrandmaMode.WatchingTv, GrandmaEntity.VoiceNone, -1);
+                    break;
+                case AdminCmd.GrandmaKill:
+                    g.Target = -1; _gTarget = -1;
+                    SetGrandma(GrandmaMode.Dead, GrandmaEntity.VoiceDeath, -1);
+                    break;
+                case AdminCmd.GrandmaScream:
+                    SetGrandma(g.Mode, GrandmaEntity.VoiceScream, g.Target);
+                    GrandmaAlert(g);
+                    break;
+            }
+        }
+
         /// <summary>A shot hit the grandmother: she dies (only the revolver can do it).</summary>
         partial void OnShotHit(int shooter, Collider c, Vector3 point, ref byte kind)
         {
