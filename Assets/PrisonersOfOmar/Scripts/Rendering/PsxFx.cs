@@ -71,8 +71,8 @@ namespace PrisonersOfOmar.Rendering
         // ------------------------------------------------------------------ persistent effects
 
         /// <summary>
-        /// Lighter flame (persistent; destroy or SetActive(false) to hide): two tall tongues with a white-yellow core
-        /// that lag behind motion and sometimes split, plus a soft warm glow. ~5 cm tall at scale 1.
+        /// Lighter flame (persistent; destroy or SetActive(false) to hide): one tall tongue with a white-yellow core
+        /// that sways and trails behind motion, plus a soft warm glow. ~5 cm tall at scale 1.
         /// </summary>
         public static GameObject CreateFlame(Transform parent, float scale = 1f)
         {
@@ -85,19 +85,16 @@ namespace PrisonersOfOmar.Rendering
             var frames = PsxFxAssets.Frames("flame_", 4);
             var mat = PsxFxAssets.Material(frames[0], PsxSurface.Additive);
             var flame = go.AddComponent<PsxFlame>();
-            for (int i = 0; i < 2; i++)
-            {
-                var t = PersistentSprite(go.transform, i == 0 ? "TongueA" : "TongueB", Vector3.zero, layer, PsxFxAssets.QuadBottom, mat, true);
-                t.Frames = frames;
-                t.Fps = i == 0 ? 15f : 11f;
-                t.StartSize = t.EndSize = new Vector2(flame.Width, flame.Height);
-                t.StartColor = t.EndColor = i == 0 ? new Color(1f, 0.97f, 0.9f, 1f) : new Color(1f, 0.78f, 0.5f, 0.85f);
-                t.Flicker = i == 0 ? 0.12f : 0.25f;
-                t.SizeJitter = 0.18f;
-                t.Play();
-                if (i == 0) { flame.TongueA = t; flame.BillA = t.GetComponent<PsxBillboard>(); }
-                else { flame.TongueB = t; flame.BillB = t.GetComponent<PsxBillboard>(); }
-            }
+            var t = PersistentSprite(go.transform, "Tongue", Vector3.zero, layer, PsxFxAssets.QuadBottom, mat, true);
+            t.Frames = frames;
+            t.Fps = 13f;
+            t.StartSize = t.EndSize = new Vector2(flame.Width, flame.Height);
+            t.StartColor = t.EndColor = new Color(1f, 0.97f, 0.9f, 1f);
+            t.Flicker = 0.12f;
+            t.SizeJitter = 0.15f;
+            t.Play();
+            flame.Tongue = t;
+            flame.Bill = t.GetComponent<PsxBillboard>();
 
             var glow = PersistentSprite(go.transform, "FlameGlow", new Vector3(0f, 0.02f, 0f), layer, PsxFxAssets.QuadCenter,
                 PsxFxAssets.Material("glow", PsxSurface.Additive), false);

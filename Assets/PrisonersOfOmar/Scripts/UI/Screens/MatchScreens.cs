@@ -58,6 +58,7 @@ namespace PrisonersOfOmar.UI
                     try
                     {
                         _model = ItemMeshFactory.Build(type);
+                        if (type == ItemType.Lighter) ItemMeshFactory.SetLighterLid(_model, 1f); // shown open, like its icon
                         _model.transform.SetParent(_root, false);
                         GeoUtil.SetLayerRecursive(_model, Layers.Preview);
                     }
