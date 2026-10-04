@@ -14,9 +14,12 @@ namespace PrisonersOfOmar.Gameplay
         public ItemType UsesItem;
         /// <summary>Noise radius emitted while holding (prying, cutting...).</summary>
         public float NoiseWhileHolding;
+        /// <summary>Hold the left mouse button and move the mouse (doors) instead of pressing E.</summary>
+        public bool IsDrag;
 
         public static InteractPrompt Press(string text, ItemType item = ItemType.None) => new InteractPrompt { Text = text, Enabled = true, UsesItem = item };
         public static InteractPrompt Hold(string text, float seconds, ItemType item = ItemType.None, float noise = 0f) => new InteractPrompt { Text = text, HoldTime = seconds, Enabled = true, UsesItem = item, NoiseWhileHolding = noise };
+        public static InteractPrompt Drag(string text) => new InteractPrompt { Text = text, Enabled = true, IsDrag = true };
         public static InteractPrompt Info(string text) => new InteractPrompt { Text = text, Enabled = false };
     }
 

@@ -103,6 +103,94 @@ def door_slam(rng):
     return fin(y, rng, 1.0, 0.4, sat=2.5)
 
 
+# ---- iteration 2: physical doors (creak loops follow the swing speed in game, limit hits, unlock)
+def xfade_loop(y, m):
+    """Fold the last m samples over the first m (equal power): a seamless loop of len(y) - m samples."""
+    n = len(y) - m
+    out = y[:n].copy()
+    t = np.arange(m) / m
+    out[:m] = y[:m] * np.sin(t * np.pi / 2) + y[n:n + m] * np.cos(t * np.pi / 2)
+    return out
+
+
+def tape_hiss(n, rng, amt=0.02):
+    return amt * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
+
+
+def creak_loop(rng, dur, lo, hi, base, metal=0.0, kind="wood"):
+    m = N(0.3)
+    n = N(dur) + m
+    rate = lo + (hi - lo) * (0.5 + 0.5 * np.tanh(dsp.smooth_rand(n, rng, 1.6, circular=False)))
+    e = 0.75 + 0.25 * np.tanh(dsp.smooth_rand(n, rng, 3.0, circular=False))
+    y = sfx.creak(n, rng, rate, kind=kind, base=base, amp_env=e, jitter=0.3)
+    if metal:
+        y += metal * sfx.creak(n, rng, rate * 1.4, kind="metal", base=base * 1.9, amp_env=e ** 2, jitter=0.2)
+    y = dsp.norm(y) + 0.05 * dsp.norm(sfx.whoosh(n, rng, 120, 420, 0.5, 0.6, 0.6))
+    y = dsp.lofi(dsp.norm(y), 10, 1.6, 1.5, 7500) + tape_hiss(n, rng, 0.025)
+    return xfade_loop(dsp.norm(y), m)
+
+
+@sound("World/door_creak_loop_1", ch=1, loop=True, norm=("lufs", -17.0, -2.0), desc="wooden hinge creak while the leaf swings (loop)")
+def door_creak_loop_1(rng):
+    return creak_loop(rng, 2.6, 45, 130, 760, 0.2)
+
+
+@sound("World/door_creak_loop_2", ch=1, loop=True, norm=("lufs", -17.0, -2.0), desc="low wooden groan while the leaf swings (loop)")
+def door_creak_loop_2(rng):
+    return creak_loop(rng, 2.2, 22, 60, 420, 0.1)
+
+
+@sound("World/metal_door_creak_loop", ch=1, loop=True, norm=("lufs", -17.0, -2.0), desc="rusty metal hinge squeal while the door swings (loop)")
+def metal_door_creak_loop(rng):
+    y = creak_loop(rng, 2.4, 18, 45, 560, 0.0, kind="metal")
+    return y
+
+
+def latch(rng, f, settle=0.5):
+    n = N(0.5)
+    y = np.zeros(n)
+    dsp.place(y, latch_clack(rng, N(0.2), f), 0, 0.8)
+    dsp.place(y, dsp.lp(door_bang(rng, N(0.4), 90, 0.25, 0.08), 1800), N(0.004), settle)
+    return y
+
+
+@sound("World/door_latch_1", desc="latch bolt clicks into the strike plate", **ONE)
+def door_latch_1(rng):
+    y = latch(rng, 980, 0.45)
+    return fin(y + tape_hiss(len(y), rng, 0.015), rng, 0.6, 0.18, bits=10)
+
+
+@sound("World/door_latch_2", desc="soft latch click, the leaf settles in its frame", **ONE)
+def door_latch_2(rng):
+    y = latch(rng, 860, 0.6)
+    return fin(y + tape_hiss(len(y), rng, 0.015), rng, 0.6, 0.18, bits=10)
+
+
+@sound("World/door_bump_1", desc="door leaf knocks against its stop / the wall", **ONE)
+def door_bump_1(rng):
+    n = N(0.7)
+    y = door_bang(rng, n, 78, 0.45, 0.25)
+    return fin(y + tape_hiss(n, rng, 0.015), rng, 0.7, 0.22, bits=10, sat=1.4)
+
+
+@sound("World/door_bump_2", desc="dull knock of a swinging door hitting something", **ONE)
+def door_bump_2(rng):
+    n = N(0.6)
+    y = dsp.lp(door_bang(rng, n, 66, 0.35, 0.12), 2600)
+    return fin(y + tape_hiss(n, rng, 0.015), rng, 0.7, 0.22, bits=10, sat=1.4)
+
+
+@sound("World/door_unlock", desc="lock bolt shot back, handle rattles", **ONE)
+def door_unlock(rng):
+    n = N(0.7)
+    y = np.zeros(n)
+    dsp.place(y, latch_clack(rng, N(0.25), 720, 1.0), 0, 0.9)
+    dsp.place(y, latch_clack(rng, N(0.25), 1050, 0.7), N(0.12), 0.6)
+    for k in range(3):
+        dsp.place(y, small_metal(rng, N(0.12), rng.uniform(1300, 1900), (0.01, 0.05)), N(0.2 + 0.05 * k), 0.3 * 0.7 ** k)
+    return fin(y + tape_hiss(n, rng, 0.015), rng, 0.6, 0.18, bits=10)
+
+
 def heavy_scrape(rng, n, env_):
     res = [(f, rng.uniform(15, 40), g) for f, g in ((210, 1.0), (470, 0.8), (890, 0.6), (1520, 0.4), (2350, 0.3))]
     return sfx.scrape(n, rng, env_, 150, 4000, grit=900, res=res)

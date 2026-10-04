@@ -17,6 +17,11 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.DoorState, OnDoorState);
             s.On(Msg.HideState, OnHideState);
             s.On(Msg.DoorReq, (id, r) => Host?.OnDoorReq(id, r));
+            s.On(Msg.DoorGrabReq, (id, r) => Host?.OnDoorGrabReq(id, r));
+            s.On(Msg.DoorDragReq, (id, r) => Host?.OnDoorDragReq(id, r));
+            s.On(Msg.DoorGrab, OnDoorGrab);
+            s.On(Msg.DoorAngles, OnDoorAngles);
+            s.On(Msg.DoorFx, OnDoorFx);
         }
 
         void UnregisterPlayerHandlers(NetSession s)
@@ -24,12 +29,18 @@ namespace PrisonersOfOmar.Gameplay
             s.Off(Msg.DoorState);
             s.Off(Msg.HideState);
             s.Off(Msg.DoorReq);
+            s.Off(Msg.DoorGrabReq);
+            s.Off(Msg.DoorDragReq);
+            s.Off(Msg.DoorGrab);
+            s.Off(Msg.DoorAngles);
+            s.Off(Msg.DoorFx);
         }
 
         /// <summary>Every frame (doors, hiding spots).</summary>
         void TickPlayer(float dt)
         {
-            for (int i = 0; i < Doors.Length; i++) Doors[i].Tick(dt);
+            bool authority = IsHost;
+            for (int i = 0; i < Doors.Length; i++) Doors[i].Tick(dt, authority);
             for (int i = 0; i < Hiding.Length; i++) Hiding[i].Tick(dt);
         }
 
@@ -39,6 +50,25 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteShort((short)door);
             w.WriteBool(open);
             Session.SendToHost(NetChannel.Reliable);
+        }
+
+        public void SendDoorGrab(int door, bool grab, float angle, float velocity)
+        {
+            var w = Session.Begin(Msg.DoorGrabReq);
+            w.WriteShort((short)door);
+            w.WriteBool(grab);
+            w.WriteFloat(angle);
+            w.WriteFloat(velocity);
+            Session.SendToHost(NetChannel.Reliable);
+        }
+
+        public void SendDoorDrag(int door, float angle, float velocity)
+        {
+            var w = Session.Begin(Msg.DoorDragReq);
+            w.WriteShort((short)door);
+            w.WriteFloat(angle);
+            w.WriteFloat(velocity);
+            Session.SendToHost(NetChannel.Unreliable);
         }
 
         public void SendSearch(int spot)
@@ -52,8 +82,61 @@ namespace PrisonersOfOmar.Gameplay
         {
             int id = r.ReadShort();
             byte f = r.ReadByte();
+            float angle = r.ReadFloat();
+            float vel = r.ReadFloat();
             if (id < 0 || id >= Doors.Length) return;
-            Doors[id].Apply((f & 1) != 0, (f & 2) != 0, (f & 4) != 0, (f & 8) != 0);
+            var d = Doors[id];
+            d.ApplyState((f & 2) != 0, (f & 4) != 0, angle, vel, IsHost);
+            if (d.LocalDrive && (d.Locked || d.Boarded)) d.LocalDrive = false;
+        }
+
+        void OnDoorGrab(int sender, NetReader r)
+        {
+            int id = r.ReadShort();
+            int g = r.ReadByte(); if (g == 255) g = -1;
+            float angle = r.ReadFloat();
+            float vel = r.ReadFloat();
+            if (id < 0 || id >= Doors.Length) return;
+            var d = Doors[id];
+            d.Grabber = g;
+            if (g != LocalId && d.LocalDrive)
+            {
+                // refused, or Omar tore it out of our hand
+                d.LocalDrive = false;
+                d.PredictUntil = 0f;
+            }
+            if (!IsHost && !d.LocalDrive) d.SetNet(angle, vel);
+        }
+
+        void OnDoorAngles(int sender, NetReader r)
+        {
+            int n = r.ReadByte();
+            for (int k = 0; k < n; k++)
+            {
+                int id = r.ReadShort();
+                float angle = r.ReadFloat();
+                float vel = r.ReadFloat();
+                if (id < 0 || id >= Doors.Length || IsHost) continue;
+                var d = Doors[id];
+                if (!d.LocalDrive) d.SetNet(angle, vel);
+            }
+        }
+
+        void OnDoorFx(int sender, NetReader r)
+        {
+            int id = r.ReadShort();
+            int kind = r.ReadByte();
+            float strength = r.ReadUnit();
+            if (id < 0 || id >= Doors.Length) return;
+            var d = Doors[id];
+            if (kind == 10)
+            {
+                // Omar's shoulder hits the leaf
+                AudioManager.Play3D(Snd.OmarDoorPush, d.Info.Center + Vector3.up, 0.9f, Random.Range(0.9f, 1.02f), 2f, 30f, AudioCategory.Omar);
+                d.PlayHit(DoorHit.Bump, 0.8f);
+                return;
+            }
+            d.PlayHit((DoorHit)kind, strength);
         }
 
         void OnHideState(int sender, NetReader r)

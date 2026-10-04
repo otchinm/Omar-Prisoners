@@ -229,8 +229,8 @@ namespace PrisonersOfOmar.UI
             int a = ui.Menu(items, ref _sel, ui.Width * 0.5f, ui.Height * 0.32f, 1, 3, input);
             var w = MatchWorld.Instance;
             string help = w != null && w.LocalIsOmar
-                ? "WASD MOVE  SHIFT RUN  LMB CLEAVER  RMB SCREAM  E OPEN / SEARCH  T TRIPWIRE  G BEAR TRAP  Q SENSE"
-                : "WASD MOVE  SHIFT RUN  C CROUCH  E INTERACT  F / LMB USE ITEM  1-3 / WHEEL SELECT  G DROP  TAB INVENTORY";
+                ? "WASD MOVE  SHIFT RUN  LMB CLEAVER  RMB SCREAM  WALK INTO DOORS  E UNLOCK / SEARCH  T TRIPWIRE  G BEAR TRAP  Q SENSE"
+                : "WASD MOVE  SHIFT RUN  C CROUCH  E INTERACT  HOLD LMB DRAG DOORS  F / LMB USE ITEM  1-3 SELECT  G DROP  TAB INVENTORY";
             ui.TextWrapped(help, ui.Width * 0.5f, ui.Height * 0.72f, ui.Width - 50, VhsUI.Dim, 1, Align.Center, ui.TinyFont);
             if (!input) return;
             if (Input.GetKeyDown(KeyCode.Escape) && Time.frameCount > 1) { UIManager.Instance.Remove(this); return; }

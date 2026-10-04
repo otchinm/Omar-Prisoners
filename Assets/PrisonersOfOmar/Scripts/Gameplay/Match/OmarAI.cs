@@ -509,7 +509,8 @@ namespace PrisonersOfOmar.Gameplay
                 {
                     if (_smashTimer < 0f) { _smashTimer = 1.6f; _smashDoor = i; H.BroadcastAction(A.Id, CharacterAction.Attack); }
                 }
-                else if (!d.Open) H.RequestDoor(A.Id, i, true);
+                // unlocked leaves are simply shoved aside by his body (MatchHost door simulation); locked ones he unlocks
+                else if (d.Locked) H.RequestDoor(A.Id, i, true);
             }
         }
 

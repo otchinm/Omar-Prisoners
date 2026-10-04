@@ -49,6 +49,13 @@ namespace PrisonersOfOmar.Gameplay
         // item use with hold (bandages, fuel)
         float _useHold;
         ItemType _useHoldItem;
+        // door dragging (hold LMB on a leaf, move the mouse)
+        DoorEntity _drag;
+        Vector3 _dragLocal;
+        Vector3 _targetPoint;
+        float _dragVel, _dragSendTimer;
+        bool _lmbOnDoor;
+        static readonly int DragBlockMask = Layers.Mask(Layers.Player);
 
         // states
         Vector3 _lastFeet;
@@ -69,6 +76,7 @@ namespace PrisonersOfOmar.Gameplay
         public ItemType UseHoldItem => _useHoldItem;
         public bool Crouching => _crouch;
         public bool PainkillersActive => Time.time < _painkillersUntil;
+        public bool DraggingDoor => _drag != null;
 
         public static PrisonerController Attach(Avatar avatar, MatchWorld w)
         {
@@ -92,6 +100,7 @@ namespace PrisonersOfOmar.Gameplay
 
         void OnDestroy()
         {
+            EndDrag();
             if (_arms != null) Destroy(_arms.gameObject);
             DestroyHandLights();
         }
@@ -108,6 +117,7 @@ namespace PrisonersOfOmar.Gameplay
             bool active = st.Life == LifeState.Free || st.Life == LifeState.Caged;
             if (!active)
             {
+                EndDrag();
                 if (_arms != null) _arms.SetVisible(false);
                 SetHandLights(false, false);
                 // let the capture / death static fade out, clear the rest
@@ -121,6 +131,7 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             HandleMenus();
+            HandleDoorDrag(st, dt);
             Look(st);
             bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f;
             Move(st, dt, canMove);
@@ -154,6 +165,7 @@ namespace PrisonersOfOmar.Gameplay
         void Look(PlayerStatus st)
         {
             var d = GameInput.Look;
+            if (_drag != null) d = Vector2.zero; // the mouse moves the door, not the view
             _yaw += d.x;
             _pitch = Mathf.Clamp(_pitch - d.y, -85f, 85f);
             if (st.Hidden && st.HidingSpot < _w.Hiding.Length)
@@ -351,7 +363,7 @@ namespace PrisonersOfOmar.Gameplay
             // hold-to-use consumables
             if (_useHoldItem != ItemType.None)
             {
-                if ((Input.GetKey(KeyCode.F) || Input.GetMouseButton(0)) && !GameInput.GameplayBlocked && ht == _useHoldItem)
+                if ((Input.GetKey(KeyCode.F) || (Input.GetMouseButton(0) && _drag == null)) && !GameInput.GameplayBlocked && ht == _useHoldItem)
                 {
                     _useHold += dt;
                     if (_useHold >= UseHoldTime(_useHoldItem))
@@ -365,7 +377,8 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             if (GameInput.DropDown && !hidden) { Drop(held); return; }
-            if (!GameInput.UseDown || hidden) return;
+            bool useDown = GameInput.ToggleItemDown || (GameInput.PrimaryDown && !_lmbOnDoor && _drag == null);
+            if (!useDown || hidden) return;
 
             switch (ht)
             {
@@ -495,14 +508,15 @@ namespace PrisonersOfOmar.Gameplay
 
         /// <summary>Closest interactable along the ray; trigger volumes up to 0.6 m behind the first solid hit
         /// still count (interaction volumes often sit inside furniture).</summary>
-        static IInteractable PickInteractable(RaycastHit[] hits)
+        static IInteractable PickInteractable(RaycastHit[] hits, out Vector3 point)
         {
             float block = float.MaxValue;
+            point = Vector3.zero;
             foreach (var h in hits)
             {
                 if (h.distance > block + 0.6f) break;
                 var it = InteractableRef.From(h.collider);
-                if (it != null && (!h.collider.isTrigger || h.distance <= block + 0.6f)) return it;
+                if (it != null && (!h.collider.isTrigger || h.distance <= block + 0.6f)) { point = h.point; return it; }
                 if (!h.collider.isTrigger && block == float.MaxValue) block = h.distance;
             }
             return null;
@@ -543,6 +557,9 @@ namespace PrisonersOfOmar.Gameplay
                 return;
             }
 
+            // holding a door: the hand is busy
+            if (_drag != null) { _target = _drag; _hold = 0; return; }
+
             // look-at target
             IInteractable target = null;
             var rig = PsxCameraRig.Instance;
@@ -551,7 +568,7 @@ namespace PrisonersOfOmar.Gameplay
                 var ray = new Ray(rig.transform.position, rig.transform.forward);
                 var hits = Physics.RaycastAll(ray, Tuning.InteractRange, Layers.InteractRay, QueryTriggerInteraction.Collide);
                 System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                target = PickInteractable(hits);
+                target = PickInteractable(hits, out _targetPoint);
             }
             // in a car: the car itself (we look around from inside)
             if (st.InCar)
@@ -567,7 +584,7 @@ namespace PrisonersOfOmar.Gameplay
 
             if (_prompt.HoldTime <= 0f)
             {
-                if (GameInput.InteractDown)
+                if (GameInput.InteractDown && !_prompt.IsDrag)
                 {
                     _target.Interact(_who);
                     _arms?.Play(CharacterAction.Interact);
@@ -600,6 +617,111 @@ namespace PrisonersOfOmar.Gameplay
                 _holdLock = true;
                 _actionItem = ItemType.None;
             }
+        }
+
+        // ================================================================== doors
+
+        /// <summary>
+        /// Hold LMB on a door leaf and move the mouse: forward / back pushes and pulls the leaf, sideways swings it.
+        /// The view is frozen while holding; the leaf stops against our own body; letting go keeps its momentum.
+        /// </summary>
+        void HandleDoorDrag(PlayerStatus st, float dt)
+        {
+            _lmbOnDoor = false;
+            bool can = _w.Running && !GameInput.GameplayBlocked && st.Life == LifeState.Free && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f;
+            var rig = PsxCameraRig.Instance;
+            if (_drag == null)
+            {
+                if (!can || rig == null || !GameInput.PrimaryDown) return;
+                var door = _target as DoorEntity;
+                if (door == null || door.Boarded || door.Info.Pivot == null) return;
+                if (Vector3.Distance(rig.transform.position, _targetPoint) > Tuning.InteractRange + 0.3f) return;
+                _lmbOnDoor = true; // this click belongs to the door, not to the item in hand
+                if (door.Locked)
+                {
+                    door.Rattle();
+                    _arms?.Play(CharacterAction.Interact);
+                    MakeNoise(4f);
+                    return;
+                }
+                if (door.Grabber >= 0 && door.Grabber != _avatar.Id) return;
+                BeginDrag(door);
+                return;
+            }
+
+            var d = _drag;
+            bool keep = can && rig != null && Input.GetMouseButton(0) && d.LocalDrive && !d.Locked && !d.Boarded;
+            Vector3 grab = d.Info.Pivot.TransformPoint(_dragLocal);
+            if (keep)
+            {
+                Vector3 eye = rig.transform.position;
+                Vector3 flat = grab - eye; flat.y = 0f;
+                if (flat.magnitude > Tuning.InteractRange + 1.1f || Mathf.Abs(grab.y - eye.y) > 2f) keep = false;
+            }
+            if (!keep) { EndDrag(); return; }
+
+            // mouse motion -> a push of the grabbed point (forward = away from us, sideways = along our right)
+            Vector2 look = GameInput.Look;
+            Vector3 right = rig.transform.right; right.y = 0f; right.Normalize();
+            Vector3 fwd = Quaternion.Euler(0, _yaw, 0) * Vector3.forward;
+            Vector3 push = (right * look.x + fwd * look.y) * 0.013f;
+            Vector3 r = grab - d.Hinge; r.y = 0f;
+            float rl = Mathf.Max(r.magnitude, 0.3f);
+            Vector3 tangent = d.Sign * Vector3.Cross(Vector3.up, r / rl); // where the grabbed point goes when the door opens
+            float delta = Mathf.Clamp(Mathf.Rad2Deg * Vector3.Dot(push, tangent) / rl, -28f, 28f);
+
+            float prev = d.Angle;
+            float next = Mathf.Clamp(prev + delta, 0f, d.MaxAngle);
+            if (Mathf.Abs(next - prev) > 0.0001f && d.Blocked(next, DragBlockMask) && !d.Blocked(prev, DragBlockMask))
+            {
+                // the leaf runs into us / someone: go as far as it fits
+                float half = (prev + next) * 0.5f;
+                next = d.Blocked(half, DragBlockMask) ? prev : half;
+            }
+            d.Angle = next;
+            float inst = dt > 0f ? (next - prev) / dt : 0f;
+            _dragVel = Mathf.Lerp(_dragVel, inst, 1f - Mathf.Exp(-dt * 16f));
+            if (Mathf.Abs(look.x) + Mathf.Abs(look.y) < 0.01f) _dragVel = Mathf.MoveTowards(_dragVel, 0f, dt * 900f);
+            d.Velocity = Mathf.Clamp(_dragVel, -420f, 420f);
+
+            _dragSendTimer -= dt;
+            if (_dragSendTimer <= 0f)
+            {
+                _dragSendTimer = 0.05f;
+                _w.SendDoorDrag(d.Index, d.Angle, d.Velocity);
+            }
+            // moving a door is not silent
+            if (Mathf.Abs(d.Velocity) > 140f) MakeNoise(5f);
+        }
+
+        void BeginDrag(DoorEntity door)
+        {
+            _drag = door;
+            Vector3 local = door.Info.Pivot.InverseTransformPoint(_targetPoint);
+            // grabbing right next to the hinge gives no leverage: take it further out along the leaf
+            local.x = Mathf.Clamp(local.x, door.LeafLength * 0.45f, door.LeafLength);
+            _dragLocal = local;
+            door.LocalDrive = true;
+            door.PredictUntil = 0f;
+            door.Grabber = _avatar.Id;
+            door.Velocity = 0f;
+            _dragVel = 0f;
+            _dragSendTimer = 0.05f;
+            _w.SendDoorGrab(door.Index, true, door.Angle, 0f);
+            _arms?.Play(CharacterAction.Interact);
+            _w.SendAction(CharacterAction.Interact);
+            if (door.Shut) AudioManager.Play3D(AudioManager.Variant(Snd.DoorLatch, 2), door.Info.Center + Vector3.up, 0.35f, 1.2f, 1f, 8f);
+        }
+
+        void EndDrag()
+        {
+            var d = _drag;
+            _drag = null;
+            if (d == null || !d.LocalDrive) return;
+            d.LocalDrive = false;
+            // keep swinging locally until the host's stream catches up (the host continues from these values)
+            d.PredictUntil = Time.time + 0.6f;
+            if (_w != null) _w.SendDoorGrab(d.Index, false, d.Angle, d.Velocity);
         }
 
         // ================================================================== traps

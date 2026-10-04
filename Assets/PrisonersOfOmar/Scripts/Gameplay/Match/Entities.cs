@@ -83,23 +83,72 @@ namespace PrisonersOfOmar.Gameplay
         public void Interact(Interactor who) => MatchWorld.Instance?.SendPickup(Entity.Id);
     }
 
+    /// <summary>What happened at a swing limit (see <see cref="DoorEntity.Integrate"/>).</summary>
+    public enum DoorHit : byte { None = 0, Latch = 1, Slam = 2, Bump = 3, Blocked = 4 }
+
+    /// <summary>
+    /// A physical hinged door. The leaf has an opening angle (0 = shut .. <see cref="MaxAngle"/>) and an angular
+    /// velocity; it swings freely with friction, latches when it closes gently, slams when it closes hard and
+    /// bounces off its stop. Prisoners drag it with the mouse (the grabber drives it), Omar shoves it open just by
+    /// walking into it. The host simulates free doors and relays the angles; everybody else follows smoothly.
+    /// </summary>
     public sealed class DoorEntity : IInteractable
     {
         public readonly int Index;
         public readonly DoorInfo Info;
-        public bool Open, Locked, Boarded;
-        float _angle, _target;
+        public bool Locked, Boarded;
+        /// <summary>Player holding the leaf (-1 = nobody).</summary>
+        public int Grabber = -1;
+        /// <summary>Degrees opened, 0 = shut. Always positive; <see cref="Sign"/> maps it onto the hinge.</summary>
+        public float Angle;
+        /// <summary>Degrees per second (positive = opening).</summary>
+        public float Velocity;
+        public readonly float MaxAngle;
+        public readonly float Sign;
+        /// <summary>The local player is dragging this leaf (its local angle wins over the network).</summary>
+        public bool LocalDrive;
+        /// <summary>Until this time (Time.time) the leaf is simulated locally (after a local release / a local shove).</summary>
+        public float PredictUntil;
+
+        public bool Open => Angle > 15f;
+        public bool Shut => Angle < 0.5f;
+        public bool Metal => Info.Kind == DoorKind.Metal || Info.Kind == DoorKind.Restroom || Info.Kind == DoorKind.Silo || Info.Kind == DoorKind.Shelter;
+        public float LeafLength { get; }
+        public float LeafThickness { get; }
+
         readonly Quaternion _closed;
-        float _speed = 170f;
+        readonly Vector3 _boxCenter;   // leaf box centre in pivot space
+        readonly Quaternion _boxRot;   // leaf box rotation in pivot space
+        readonly Vector3 _boxHalf;
+        float _netAngle, _netVel, _netAt = -1f;
+        float _shownAngle;
+        float _creakVol;
+        AudioSource _creak;
+        static readonly Collider[] _overlap = new Collider[8];
 
         public DoorEntity(int index, DoorInfo info)
         {
             Index = index; Info = info;
             _closed = info.Pivot != null ? info.Pivot.localRotation : Quaternion.identity;
-            Open = info.StartsOpen;
+            MaxAngle = Mathf.Max(10f, Mathf.Abs(info.OpenAngle));
+            Sign = info.OpenAngle < 0f ? -1f : 1f;
             Locked = info.StartsLocked;
             Boarded = info.Kind == DoorKind.Boarded;
-            _angle = _target = Open ? info.OpenAngle : 0f;
+            Angle = _netAngle = _shownAngle = info.StartsOpen ? MaxAngle : 0f;
+            var box = info.Leaf as BoxCollider;
+            if (box != null && info.Pivot != null)
+            {
+                _boxCenter = info.Pivot.InverseTransformPoint(box.transform.TransformPoint(box.center));
+                _boxRot = Quaternion.Inverse(info.Pivot.rotation) * box.transform.rotation;
+                _boxHalf = Vector3.Scale(box.size, box.transform.lossyScale) * 0.5f;
+                LeafLength = _boxHalf.x * 2f;
+                LeafThickness = _boxHalf.z * 2f;
+            }
+            else
+            {
+                _boxCenter = new Vector3(0.45f, 1f, 0f); _boxRot = Quaternion.identity; _boxHalf = new Vector3(0.45f, 1f, 0.03f);
+                LeafLength = 0.9f; LeafThickness = 0.05f;
+            }
             ApplyRotation();
             if (info.Leaf != null) InteractableRef.Attach(info.Leaf, this);
             if (info.Boards != null)
@@ -107,9 +156,122 @@ namespace PrisonersOfOmar.Gameplay
                 foreach (var c in info.Boards.GetComponentsInChildren<Collider>()) InteractableRef.Attach(c, this);
                 info.Boards.SetActive(Boarded);
             }
+            UpdateLeafLayer();
         }
 
         public Vector3 InteractPoint => Info.Center + Vector3.up;
+
+        // ------------------------------------------------------------------ geometry
+
+        public Vector3 Hinge => Info.Pivot != null ? Info.Pivot.position : Info.Center;
+        Quaternion ParentRot => Info.Pivot != null && Info.Pivot.parent != null ? Info.Pivot.parent.rotation : Quaternion.identity;
+        /// <summary>World rotation of the pivot at a given opening angle.</summary>
+        public Quaternion PivotRotation(float angle) => ParentRot * _closed * Quaternion.Euler(0, Sign * angle, 0);
+        /// <summary>Unit vector from the hinge to the latch edge at a given angle.</summary>
+        public Vector3 LeafDir(float angle) => PivotRotation(angle) * Vector3.right;
+        /// <summary>Unit direction the leaf face moves in when the door opens further.</summary>
+        public Vector3 OpenDir(float angle) => Sign * Vector3.Cross(Vector3.up, LeafDir(angle));
+
+        /// <summary>Would the leaf at <paramref name="angle"/> overlap a collider on <paramref name="mask"/> (visible avatars only)?</summary>
+        public bool Blocked(float angle, int mask, Collider ignore = null)
+        {
+            if (Info.Pivot == null) return false;
+            var rot = PivotRotation(angle);
+            Vector3 c = Hinge + rot * _boxCenter;
+            Vector3 half = new Vector3(Mathf.Max(0.05f, _boxHalf.x - 0.05f), Mathf.Max(0.05f, _boxHalf.y - 0.08f), _boxHalf.z);
+            int n = Physics.OverlapBoxNonAlloc(c, half, _overlap, rot * _boxRot, mask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var col = _overlap[i];
+                if (col == null || col == ignore || col == Info.Leaf) continue;
+                var av = col.GetComponentInParent<Avatar>();
+                if (av != null && !av.Visible) continue;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Free swing with hinge friction for <paramref name="dt"/>; stops at the limits. Returns what it hit
+        /// (latched shut, slammed shut, bumped the stop, or bounced off a person on <paramref name="blockMask"/>).
+        /// </summary>
+        public DoorHit Integrate(float dt, int blockMask)
+        {
+            if (Locked || Boarded) { Velocity = 0f; return DoorHit.None; }
+            if (Velocity == 0f) return DoorHit.None;
+            // hinge friction: a constant part (heavy doors stop) + a speed dependent part
+            float friction = (Metal ? 70f : 55f) + Mathf.Abs(Velocity) * 1.6f;
+            float v = Velocity;
+            float nv = Mathf.MoveTowards(v, 0f, friction * dt);
+            float prev = Angle;
+            float next = Angle + (v + nv) * 0.5f * dt;
+            Velocity = nv;
+            DoorHit hit = DoorHit.None;
+            if (next <= 0f)
+            {
+                next = 0f;
+                if (v < -150f) hit = DoorHit.Slam;
+                else if (v < -12f) hit = DoorHit.Latch;
+                Velocity = 0f;
+            }
+            else if (next >= MaxAngle)
+            {
+                next = MaxAngle;
+                if (v > 90f) hit = DoorHit.Bump;
+                Velocity = v > 30f ? -v * 0.22f : 0f;
+            }
+            if (blockMask != 0 && Mathf.Abs(next - prev) > 0.001f && Blocked(next, blockMask) && !Blocked(prev, blockMask))
+            {
+                hit = Mathf.Abs(v) > 70f ? DoorHit.Blocked : DoorHit.None;
+                next = prev;
+                Velocity = -v * 0.25f;
+                if (Mathf.Abs(Velocity) < 8f) Velocity = 0f;
+            }
+            Angle = next;
+            if (Mathf.Abs(Velocity) < 1.5f && nv == 0f) Velocity = 0f;
+            return hit;
+        }
+
+        /// <summary>
+        /// Omar's body at <paramref name="p"/> (feet) moving with <paramref name="v"/> shoves the leaf out of his way:
+        /// from behind it swings away ahead of him, from the swing side he rips it open towards himself.
+        /// Returns true when the swing changed.
+        /// </summary>
+        public bool Shove(Vector3 p, Vector3 v)
+        {
+            if (Locked || Boarded || Info.Pivot == null) return false;
+            Vector3 rel = p - Hinge;
+            if (rel.y < -1.2f || rel.y > 1.2f) return false;
+            rel.y = 0f;
+            Vector3 dir = LeafDir(Angle); dir.y = 0f; dir.Normalize();
+            Vector3 od = OpenDir(Angle); od.y = 0f; od.Normalize();
+            float s = Vector3.Dot(rel, dir);
+            if (s < -0.2f || s > LeafLength + 0.35f) return false;
+            float q = Vector3.Dot(rel, od);
+            float vn = Vector3.Dot(v, od);
+            float reach = 0.45f + LeafThickness * 0.5f + 0.15f;
+            if (q <= 0f && q > -reach)
+            {
+                // behind the leaf, walking into it: it swings away a bit faster than he walks
+                if (vn < 0.15f || Angle >= MaxAngle - 2f) return false;
+                float need = Mathf.Rad2Deg * (vn * 1.3f + 0.35f) / Mathf.Max(s, 0.35f);
+                need = Mathf.Min(need, 460f);
+                if (Velocity >= need) return false;
+                Velocity = need;
+                return true;
+            }
+            if (q > 0f && q < reach + 0.3f)
+            {
+                // on the side it swings towards: he yanks it open
+                if (vn > -0.15f || Angle >= MaxAngle - 2f) return false;
+                if (Velocity >= 230f) return false;
+                Velocity = 280f;
+                return true;
+            }
+            return false;
+        }
+
+        // ------------------------------------------------------------------ interaction
 
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
@@ -120,14 +282,17 @@ namespace PrisonersOfOmar.Gameplay
                 else p = InteractPrompt.Info("BOARDED UP - I NEED A CROWBAR");
                 return true;
             }
-            if (Locked && !Open)
+            if (Locked)
             {
                 if (who.IsOmar) p = InteractPrompt.Press("UNLOCK");
                 else if (who.Has(ItemType.Lockpick)) p = InteractPrompt.Hold("PICK THE LOCK", 4f, ItemType.Lockpick, 2f);
                 else p = InteractPrompt.Info("LOCKED");
                 return true;
             }
-            p = InteractPrompt.Press(Open ? "CLOSE" : "OPEN");
+            // Omar simply walks through doors; prisoners drag the leaf with the mouse
+            if (who.IsOmar) { p = default; return false; }
+            if (Grabber >= 0 && Grabber != who.PlayerId) { p = InteractPrompt.Info("SOMEONE IS HOLDING IT"); return true; }
+            p = InteractPrompt.Drag(Shut ? "PULL / PUSH" : "DRAG");
             return true;
         }
 
@@ -136,24 +301,24 @@ namespace PrisonersOfOmar.Gameplay
             var w = MatchWorld.Instance;
             if (w == null) return;
             if (Boarded) { w.SendUse(UseTarget.Door, Index, who.IsOmar ? -1 : who.ItemId(ItemType.Crowbar)); return; }
-            if (Locked && !Open)
+            if (Locked)
             {
                 if (who.IsOmar) w.SendDoor(Index, true);
                 else if (who.Has(ItemType.Lockpick)) w.SendUse(UseTarget.Door, Index, who.ItemId(ItemType.Lockpick));
-                else AudioManager.Play3D(Snd.LockedRattle, Info.Center + Vector3.up, 0.8f);
-                return;
+                else Rattle();
             }
-            w.SendDoor(Index, !Open);
         }
 
-        /// <summary>Host state arrived.</summary>
-        public void Apply(bool open, bool locked, bool boarded, bool slam)
+        public void Rattle() => AudioManager.Play3D(Snd.LockedRattle, Info.Center + Vector3.up, 0.8f, Random.Range(0.92f, 1.06f));
+
+        // ------------------------------------------------------------------ network
+
+        /// <summary>Reliable state from the host (locks, boards, resting angle).</summary>
+        public void ApplyState(bool locked, bool boarded, float angle, float velocity, bool authority)
         {
-            bool openChanged = open != Open;
             bool boardsChanged = boarded != Boarded;
-            Open = open; Locked = locked; Boarded = boarded;
-            _target = Open ? Info.OpenAngle : 0f;
-            _speed = slam ? 480f : 170f;
+            bool unlocked = Locked && !locked;
+            Locked = locked; Boarded = boarded;
             Vector3 p = Info.Center + Vector3.up;
             if (boardsChanged && !Boarded)
             {
@@ -161,27 +326,119 @@ namespace PrisonersOfOmar.Gameplay
                 AudioManager.Play3D(Snd.WoodBreak, p, 1f, 1f, 2f, 30f);
                 try { PsxFx.Dust(p, 1.2f); } catch { }
             }
-            if (openChanged)
+            if (boardsChanged && Boarded && Info.Boards != null) Info.Boards.SetActive(true);
+            if (unlocked) AudioManager.Play3D(Snd.DoorUnlock, p, 0.8f, Random.Range(0.95f, 1.05f), 1.5f, 14f);
+            UpdateLeafLayer();
+            if (authority) { Angle = angle; Velocity = velocity; }
+            else SetNet(angle, velocity);
+        }
+
+        /// <summary>Angle stream from the host.</summary>
+        public void SetNet(float angle, float velocity)
+        {
+            _netAngle = Mathf.Clamp(angle, 0f, MaxAngle);
+            _netVel = velocity;
+            _netAt = Time.time;
+        }
+
+        /// <summary>Locked / boarded leaves block Omar too (he only passes through doors he can shove open).</summary>
+        void UpdateLeafLayer()
+        {
+            if (Info.Leaf == null) return;
+            int layer = Locked || Boarded ? Layers.World : Layers.Door;
+            if (Info.Leaf.gameObject.layer != layer) Info.Leaf.gameObject.layer = layer;
+        }
+
+        /// <summary>Play the sound of a limit hit.</summary>
+        public void PlayHit(DoorHit hit, float strength)
+        {
+            Vector3 p = Info.Center + Vector3.up;
+            switch (hit)
             {
-                bool metal = Info.Kind == DoorKind.Metal || Info.Kind == DoorKind.Restroom || Info.Kind == DoorKind.Silo || Info.Kind == DoorKind.Shelter;
-                string clip;
-                if (slam) clip = Snd.DoorSlam;
-                else if (metal) clip = Open ? Snd.MetalDoorOpen : Snd.MetalDoorClose;
-                else clip = AudioManager.Variant(Open ? Snd.DoorOpen : Snd.DoorClose, 2);
-                AudioManager.Play3D(clip, p, slam ? 1f : 0.75f, Random.Range(0.93f, 1.05f), 1.5f, slam ? 35f : 18f);
+                case DoorHit.Latch:
+                    AudioManager.Play3D(Metal ? Snd.MetalDoorClose : AudioManager.Variant(Snd.DoorLatch, 2), p, Metal ? 0.6f : 0.7f, Random.Range(0.93f, 1.06f), 1.5f, 16f);
+                    break;
+                case DoorHit.Slam:
+                    AudioManager.Play3D(Snd.DoorSlam, p, Mathf.Clamp(0.6f + strength * 0.4f, 0.6f, 1f), Random.Range(0.9f, 1.04f), 2f, 38f);
+                    try { PsxFx.Dust(p + Vector3.up * 0.8f, 0.5f); } catch { }
+                    break;
+                case DoorHit.Bump:
+                case DoorHit.Blocked:
+                    AudioManager.Play3D(AudioManager.Variant(Snd.DoorBump, 2), p, Mathf.Clamp(0.35f + strength * 0.4f, 0.35f, 0.8f), Random.Range(0.9f, 1.08f), 1.5f, 20f);
+                    break;
             }
         }
 
-        public void Tick(float dt)
+        // ------------------------------------------------------------------ per frame
+
+        /// <summary>Presentation. <paramref name="authority"/> = this machine runs the door simulation (host).</summary>
+        public void Tick(float dt, bool authority)
         {
-            if (Mathf.Approximately(_angle, _target)) return;
-            _angle = Mathf.MoveTowards(_angle, _target, _speed * dt);
-            ApplyRotation();
+            if (!authority && !LocalDrive)
+            {
+                if (Time.time < PredictUntil)
+                {
+                    Integrate(dt, 0);
+                    // fold the host's stream in gently while predicting
+                    if (_netAt >= 0f) Angle = Mathf.Lerp(Angle, NetTarget(), 1f - Mathf.Exp(-dt * 2f));
+                }
+                else if (_netAt >= 0f)
+                {
+                    Angle = Mathf.Lerp(Angle, NetTarget(), 1f - Mathf.Exp(-dt * 14f));
+                    Velocity = _netVel;
+                }
+            }
+            Angle = Mathf.Clamp(Angle, 0f, MaxAngle);
+
+            // the shown leaf follows the simulated angle smoothly (remote drags arrive ~20 times a second)
+            float shown = LocalDrive ? Angle : Mathf.Lerp(_shownAngle, Angle, 1f - Mathf.Exp(-dt * 22f));
+            if (Mathf.Abs(shown - Angle) < 0.02f) shown = Angle;
+            float speed = dt > 0f ? Mathf.Abs(shown - _shownAngle) / dt : 0f;
+            if (Mathf.Abs(shown - _shownAngle) > 0.0001f)
+            {
+                _shownAngle = shown;
+                ApplyRotation();
+            }
+            UpdateCreak(speed, dt);
+        }
+
+        float NetTarget()
+        {
+            float ahead = Mathf.Clamp(Time.time - _netAt, 0f, 0.12f);
+            return Mathf.Clamp(_netAngle + _netVel * ahead, 0f, MaxAngle);
+        }
+
+        void UpdateCreak(float speed, float dt)
+        {
+            // hinges groan while the leaf moves; louder and higher the faster it swings
+            float target = speed < 6f ? 0f : Mathf.Clamp01((speed - 6f) / 160f);
+            _creakVol = Mathf.MoveTowards(_creakVol, target, dt * (target > _creakVol ? 6f : 2.5f));
+            if (_creakVol > 0.01f)
+            {
+                if (_creak == null)
+                {
+                    string clip = Metal ? Snd.MetalDoorCreakLoop : AudioManager.Variant(Snd.DoorCreakLoop, 2);
+                    _creak = AudioManager.Loop3D(clip, Hinge + Vector3.up * 1.2f, 0f, 16f, AudioCategory.Sfx, null, 0f);
+                }
+                AudioManager.SetVolume(_creak, _creakVol * (Metal ? 0.55f : 0.6f));
+                AudioManager.SetPitch(_creak, 0.82f + _creakVol * 0.35f);
+            }
+            else if (_creak != null)
+            {
+                AudioManager.Stop(_creak, 0.15f);
+                _creak = null;
+            }
+        }
+
+        public void StopSounds()
+        {
+            AudioManager.Stop(_creak, 0.05f);
+            _creak = null;
         }
 
         void ApplyRotation()
         {
-            if (Info.Pivot != null) Info.Pivot.localRotation = _closed * Quaternion.Euler(0, _angle, 0);
+            if (Info.Pivot != null) Info.Pivot.localRotation = _closed * Quaternion.Euler(0, Sign * _shownAngle, 0);
         }
     }
 

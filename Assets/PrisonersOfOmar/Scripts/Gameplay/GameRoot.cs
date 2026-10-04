@@ -76,6 +76,8 @@ namespace PrisonersOfOmar.Gameplay
             Physics.IgnoreLayerCollision(Layers.Foliage, Layers.Player, true);
             Physics.IgnoreLayerCollision(Layers.Foliage, Layers.Omar, true);
             Physics.IgnoreLayerCollision(Layers.Corpse, Layers.Player, false);
+            // Omar walks through unlocked door leaves and shoves them open (locked leaves move to World)
+            Physics.IgnoreLayerCollision(Layers.Omar, Layers.Door, true);
             Physics.queriesHitTriggers = false;
         }
 

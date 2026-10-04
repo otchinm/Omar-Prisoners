@@ -164,6 +164,13 @@ namespace PrisonersOfOmar.Gameplay
         void BuildEntities()
         {
             var rng = DeterministicRandom.For(Seed, "entities");
+            // Only real door leaves stay on the Door layer (Omar passes through those and shoves them);
+            // cage doors, gates and the shelter hatch must block him like walls.
+            var leaves = new HashSet<Collider>();
+            foreach (var di in Map.Doors) if (di.Leaf != null) leaves.Add(di.Leaf);
+            if (Map.Root != null)
+                foreach (var c in Map.Root.GetComponentsInChildren<Collider>(true))
+                    if (c.gameObject.layer == Layers.Door && !leaves.Contains(c)) c.gameObject.layer = Layers.World;
             Doors = new DoorEntity[Map.Doors.Count];
             for (int i = 0; i < Doors.Length; i++) Doors[i] = new DoorEntity(i, Map.Doors[i]);
             Hiding = new HidingEntity[Map.HidingSpots.Count];

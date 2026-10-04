@@ -95,7 +95,7 @@ namespace PrisonersOfOmar.UI
             if (!has || string.IsNullOrEmpty(p.Text)) return;
             // right under the crosshair, like the label on the thing you look at
             float y = ui.Height * 0.5f + 6;
-            string key = !p.Enabled ? "" : p.HoldTime > 0 ? "[HOLD E] " : "[E] ";
+            string key = !p.Enabled ? "" : p.IsDrag ? "[HOLD LMB] " : p.HoldTime > 0 ? "[HOLD E] " : "[E] ";
             ui.Text(key + p.Text, ui.Width * 0.5f, y, p.Enabled ? VhsUI.White : new Color(0.6f, 0.58f, 0.55f), 1, Align.Center);
             if (p.Enabled && p.HoldTime > 0 && progress > 0f)
                 ui.Bar(new Rect(ui.Width * 0.5f - 40, y + ui.LineHeight() + 2, 80, 4), progress, VhsUI.White, new Color(0, 0, 0, 0.6f));

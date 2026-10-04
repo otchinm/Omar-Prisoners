@@ -172,6 +172,14 @@ namespace PrisonersOfOmar.Gameplay
             Quaternion yawRot = Quaternion.Euler(0, _yaw, 0);
             float moved = _motor.Move(yawRot * new Vector3(input.x, 0, input.y) * speed, dt);
             _avatar.transform.rotation = yawRot;
+            // doors give way the moment we walk into them (the host runs the real swing; we predict it)
+            if (!_w.IsHost && moved > 0.2f)
+            {
+                Vector3 p = _avatar.transform.position;
+                Vector3 v = _motor.Velocity; v.y = 0f;
+                foreach (var d in _w.Doors)
+                    if ((d.Info.Center - p).sqrMagnitude < 9f && d.Shove(p, v)) d.PredictUntil = Time.time + 0.5f;
+            }
             if (_motor.Grounded && moved > 0.2f)
             {
                 float stride = _sprintingNow ? 1.25f : 0.9f;

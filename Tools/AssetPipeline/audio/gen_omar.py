@@ -210,3 +210,17 @@ def grab(rng):
     g = omar_voice(rng, "scream_2", 0.5, 0.45, 0.48, 0.6, 0.6) * dsp.env([(0, 0), (0.04, 1), (0.45, 0)], N(0.45))
     dsp.place(y, dsp.norm(g), N(0.1), 0.45)
     return fin(y, rng, 0.5, 0.12, sat=2.0)
+
+
+@sound("Omar/door_push", desc="Omar's shoulder slams a door open: body thud, leaf bang, hinge shriek", **LOUD)
+def door_push(rng):
+    n = N(1.3)
+    y = np.zeros(n)
+    dsp.place(y, sfx.thud(N(0.6), rng, 52, 0.12, 0.8, noise=0.5), 0, 1.0)
+    dsp.place(y, door_bang(rng, N(0.9), 70, 0.8, 0.4), N(0.01), 0.9)
+    m = N(0.6)
+    sq = sfx.creak(m, rng, np.interp(T(m), [0, 0.15, 0.6], [180, 120, 40]), kind="wood", base=700,
+                   amp_env=dsp.env([(0, 0), (0.03, 1), (0.6, 0)], m))
+    dsp.place(y, sq, N(0.05), 0.5)
+    y = dsp.norm(y) + 0.02 * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
+    return fin(y, rng, 0.8, 0.25, sat=2.2, bits=10)
