@@ -622,7 +622,7 @@ namespace PrisonersOfOmar.Gameplay
             bool changed = open != Open;
             Open = open; Occupant = occupant;
             _target = Open ? Info.OpenAngle : 0f;
-            if (changed && Active) AudioManager.Play3D(Open ? Snd.CageOpen : Snd.CageClose, InteractPoint, 0.9f, 1f, 2f, 20f);
+            if (changed && Active) AudioManager.Play3D(Open ? Snd.CageOpen : Snd.CageClose, InteractPoint, 0.45f, 1f, 1.5f, 11f);
         }
 
         public void Tick(float dt)

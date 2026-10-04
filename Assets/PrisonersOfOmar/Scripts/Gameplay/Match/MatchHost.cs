@@ -537,7 +537,7 @@ namespace PrisonersOfOmar.Gameplay
             var it = W.GetItem(itemId);
             if (it == null || !Holds(p, itemId, it.Type)) return;
             if (it.Type == ItemType.Lockpick) Consume(p, itemId);
-            else if (it.Type == ItemType.BoltCutters) DeliverNoise(c.Info.Outside.position, 22f);
+            else if (it.Type == ItemType.BoltCutters) DeliverNoise(c.Info.Outside.position, 12f);
             else if (it.Type != ItemType.CageKey) return;
             ReleaseCage(cage);
         }

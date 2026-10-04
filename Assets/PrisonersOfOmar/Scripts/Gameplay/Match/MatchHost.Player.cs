@@ -147,7 +147,7 @@ namespace PrisonersOfOmar.Gameplay
             int i = d.Index;
             if (!force && W.Time < _doorNoiseAt[i]) return;
             _doorNoiseAt[i] = W.Time + 0.9f;
-            DeliverNoise(d.Info.Center + Vector3.up, radius);
+            DeliverNoise(d.Info.Center + Vector3.up, radius * 0.5f); // doors carry half as far as they used to
         }
 
         void ReleaseDoor(DoorEntity d, float angle, float velocity)

@@ -170,4 +170,5 @@ _FUNCS = {"wood": step_wood, "concrete": step_concrete, "dirt": step_dirt, "gras
 for _s, _f in _FUNCS.items():
     for _i in range(1, 5):
         register(f"Steps/{_s}_{_i}", (lambda f, i: (lambda rng: f(rng, i)))(_f, _i), ch=1,
-                 norm=("peak", -1.0), desc=f"footstep on {_s}" if _s != "omar" else "Omar heavy boot step")
+                 norm=("peak", -1.0) if _s != "omar" else ("loud", -0.3),
+                 desc=f"footstep on {_s}" if _s != "omar" else "Omar heavy boot step (loud, muffled)")

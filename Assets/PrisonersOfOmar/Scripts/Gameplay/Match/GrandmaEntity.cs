@@ -116,10 +116,10 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             // the wheels squeak while she rolls
-            float wheelVol = Dead ? 0f : Mathf.Clamp01(_speed / 0.8f) * 0.7f;
+            float wheelVol = Dead ? 0f : Mathf.Clamp01(_speed / 0.6f);
             if (wheelVol > 0.02f)
             {
-                if (_wheel == null) _wheel = AudioManager.Loop3D(Snd.WheelchairLoop, Position, 0f, 16f, AudioCategory.Sfx, Root, 0.1f);
+                if (_wheel == null) _wheel = AudioManager.Loop3D(Snd.WheelchairLoop, Position, 0f, 24f, AudioCategory.Stinger, Root, 0.1f);
                 AudioManager.SetVolume(_wheel, wheelVol);
                 AudioManager.SetPitch(_wheel, 0.85f + 0.3f * Mathf.Clamp01(_speed));
             }

@@ -110,6 +110,7 @@ namespace PrisonersOfOmar.Gameplay
             Tuning.ApplyDifficulty(Settings.Difficulty);
             PsxEnvironment.Brightness = Tuning.Brightness;
             PsxEnvironment.GradeAmount = Tuning.LightGrade;
+            AudioManager.ListenerIsOmar = false;
             PsxItemGlow.GlobalStrength = Tuning.GlowStrength;
             AdminState.Reset();
             AnomalySystem.Reset();
@@ -160,6 +161,7 @@ namespace PrisonersOfOmar.Gameplay
             VhsEffect.ResetTransient();
             PsxEnvironment.Brightness = 1f;
             PsxEnvironment.GradeAmount = 0f;
+            AudioManager.ListenerIsOmar = false;
             PsxItemGlow.GlobalStrength = 1f;
             AdminState.Reset();
             try { PsxFx.ClearBloodDecals(); } catch { }

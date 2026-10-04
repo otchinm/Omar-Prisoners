@@ -253,7 +253,7 @@ namespace PrisonersOfOmar.Gameplay
             if (!_motor.Grounded) _airTime += dt;
             else
             {
-                if (_airTime > 0.45f) { PlayStep(1.2f); MakeNoise(8f); }
+                if (_airTime > 0.45f) { PlayStep(1.2f); MakeNoise(5f); }
                 _airTime = 0f;
             }
 
@@ -268,9 +268,10 @@ namespace PrisonersOfOmar.Gameplay
                     _stepDistance = 0f;
                     float vol = _crouch ? 0.12f : sprinting ? 0.6f : 0.32f;
                     PlayStep(vol);
-                    float noise = _crouch ? 1.2f : sprinting ? 14f : 5f;
-                    if (injured) noise += 2f;
-                    if (held == ItemType.GasCan && sprinting) noise += 3f;
+                    // quiet: walking only carries a few metres, sprinting ~9 m (Omar found people far too easily)
+                    float noise = _crouch ? 1.2f : sprinting ? 9f : 3f;
+                    if (injured) noise += 1.5f;
+                    if (held == ItemType.GasCan && sprinting) noise += 2f;
                     MakeNoise(noise);
                 }
             }
@@ -803,7 +804,7 @@ namespace PrisonersOfOmar.Gameplay
                 _w.SendDoorDrag(d.Index, d.Angle, d.Velocity);
             }
             // moving a door is not silent
-            if (Mathf.Abs(d.Velocity) > 140f) MakeNoise(5f);
+            if (Mathf.Abs(d.Velocity) > 180f) MakeNoise(3f);
         }
 
         void BeginDrag(DoorEntity door)

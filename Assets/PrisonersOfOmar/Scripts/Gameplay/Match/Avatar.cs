@@ -380,12 +380,13 @@ namespace PrisonersOfOmar.Gameplay
             if (!Simulated && _remoteSpeedSmoothed < 0.3f) return;
             var surf = CharacterMotor.SurfaceAt(transform.position);
             bool crouch = Crouching;
-            float vol = crouch ? 0.18f : Sprinting ? 0.95f : 0.55f;
-            float maxD = crouch ? 6f : Sprinting ? 28f : 16f;
+            float vol = crouch ? 0.15f : Sprinting ? 0.8f : 0.45f;
+            float maxD = crouch ? 5f : Sprinting ? 22f : 12f;
+            if (MatchWorld.Instance != null && MatchWorld.Instance.LocalIsOmar) maxD *= 0.5f; // Omar barely hears them
             if (IsOmar)
             {
-                // heavy, muffled, carry far (also through walls)
-                AudioManager.Play3D(AudioManager.Variant(Snd.OmarStep, 4), transform.position, 1f, Random.Range(0.88f, 1.0f), 3.5f, Sprinting ? 38f : 26f, AudioCategory.Omar);
+                // heavy, muffled, loud: carries far and through walls, nothing like a prisoner's step
+                AudioManager.Play3D(AudioManager.Variant(Snd.OmarStep, 4), transform.position, 1f, Random.Range(0.86f, 0.98f), 7f, Sprinting ? 52f : 38f, AudioCategory.Omar);
             }
             else
             {

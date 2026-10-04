@@ -256,52 +256,67 @@ def stunned(rng):
 
 
 # ---- iteration 2: butcher routine + the heavy wind-up
-def _chop(rng, f_body, wet):
+def _meat_hit(rng, n, bright=1800.0):
+    """A heavy slab of raw meat being struck: dull, fleshy thwack (low noise burst), no liquid bubbles."""
+    thwack = dsp.lp(rng.standard_normal(n), bright) * dsp.perc(n, 0.0008, 0.035)
+    flesh = dsp.bp(rng.standard_normal(n), 150, 700) * dsp.perc(n, 0.002, 0.07)
+    smack = dsp.bp(rng.standard_normal(n), 900, 3200) * dsp.perc(n, 0.0005, 0.012)
+    return dsp.norm(thwack) + 0.8 * dsp.norm(flesh) + 0.35 * dsp.norm(smack)
+
+
+def _chop(rng, f_body, bone=False):
+    """Butcher chopping: a short whoosh, the cleaver goes through the meat and bites deep into the wooden block."""
     n = N(1.0)
     y = np.zeros(n)
-    dsp.place(y, sfx.whoosh(N(0.18), rng, 300, 1800, 0.8, 1.2, 0.3), 0, 0.35)
-    hit = sfx.strike(N(0.5), rng, sfx.wood_modes(rng, 140, 9, 0.06), 0.9, noise_mix=0.6)   # cleaver into the block
-    dsp.place(y, dsp.norm(hit), N(0.15), 0.9)
-    dsp.place(y, sfx.thud(N(0.5), rng, f_body, 0.07, 0.6, noise=0.8, noise_lp=1400), N(0.15), 0.9)
-    m = N(0.45)  # meat: wet slap + squelch
-    slap = dsp.bp(rng.standard_normal(m), 400, 3500) * dsp.perc(m, 0.001, 0.05)
-    dsp.place(y, slap, N(0.152), 0.8)
-    dsp.place(y, sfx.liquid(m, rng, 220 * dsp.env([(0, 1), (0.45, 0)], m), 300, 1400, 0.4), N(0.16), wet)
-    dsp.place(y, small_metal(rng, N(0.3), rng.uniform(1700, 2300), (0.03, 0.12)), N(0.155), 0.25)  # blade ring
-    return dsp.vhs(fin(y, rng, 0.6, 0.18, sat=1.8), rng, bits=8, drive=2.0, lp_hz=6000)
+    dsp.place(y, sfx.whoosh(N(0.16), rng, 300, 1600, 0.8, 1.2, 0.3), 0, 0.25)
+    t = N(0.15)
+    dsp.place(y, _meat_hit(rng, N(0.4)), t, 0.9)                                                    # through the meat
+    block = sfx.strike(N(0.5), rng, sfx.wood_modes(rng, 120, 9, 0.07), 0.85, noise_mix=0.45, noise_lp=3000)
+    dsp.place(y, dsp.norm(block), t + N(0.006), 1.0)                                                 # into the block
+    dsp.place(y, sfx.thud(N(0.5), rng, f_body, 0.08, 0.6, noise=0.7, noise_lp=1000), t, 0.9)        # the heavy table
+    dsp.place(y, small_metal(rng, N(0.25), rng.uniform(1700, 2300), (0.02, 0.07)), t + N(0.004), 0.12)  # blade ring
+    if bone:
+        crack = dsp.hp(rng.standard_normal(N(0.05)), 1200) * dsp.perc(N(0.05), 0.0004, 0.01)
+        dsp.place(y, crack, t + N(0.002), 0.7)
+    # pulling the blade back out of the wood
+    dsp.place(y, sfx.creak(N(0.18), rng, np.full(N(0.18), 55.0), kind="wood", base=420,
+                            amp_env=dsp.env([(0, 0), (0.03, 1), (0.18, 0)], N(0.18))), t + N(0.32), 0.25)
+    return dsp.vhs(fin(y, rng, 0.5, 0.15, sat=2.0), rng, bits=8, drive=2.0, lp_hz=5500)
 
 
-@sound("Omar/chop_1", desc="cleaver slams through meat into the butcher block", **LOUD)
+@sound("Omar/chop_1", desc="cleaver chops through raw meat into the wooden butcher block", **LOUD)
 def chop_1(rng):
-    return _chop(rng, 85, 0.5)
+    return _chop(rng, 85)
 
 
-@sound("Omar/chop_2", desc="cleaver chop, wetter", **LOUD)
+@sound("Omar/chop_2", desc="cleaver chop, heavier", **LOUD)
 def chop_2(rng):
-    return _chop(rng, 75, 0.8)
+    return _chop(rng, 72)
 
 
-@sound("Omar/chop_3", desc="cleaver chop hitting bone", **LOUD)
+@sound("Omar/chop_3", desc="cleaver chop splitting a bone", **LOUD)
 def chop_3(rng):
-    y = _chop(rng, 95, 0.4)
-    crack = dsp.hp(rng.standard_normal(N(0.04)), 1500) * dsp.perc(N(0.04), 0.0005, 0.008)
-    dsp.place(y, crack, N(0.15), 0.6)
-    return y
+    return _chop(rng, 95, bone=True)
 
 
 def _squelch(rng, dur):
+    """Meat being slapped down and pushed around on the block: soft fleshy smacks and a dragging scrape, no bubbles."""
     n = N(dur)
-    y = sfx.liquid(n, rng, 160 * dsp.env([(0, 0.3), (0.1, 1), (dur, 0)], n), 250, 1200, 0.5)
-    y += 0.4 * dsp.lp(sfx.cloth(n, rng, dsp.env([(0, 0), (0.05, 1), (dur, 0)], n), 300, 2000, 300), 2000)
-    return dsp.vhs(fin(y, rng, 0.4, 0.12), rng, bits=8, drive=1.8, lp_hz=5000)
+    y = np.zeros(n)
+    t = 0.02
+    while t < dur - 0.12:
+        dsp.place(y, _meat_hit(rng, N(0.12), bright=rng.uniform(900, 1500)), N(t), rng.uniform(0.35, 0.8))
+        t += rng.uniform(0.12, 0.25)
+    y += 0.35 * dsp.lp(sfx.scrape(n, rng, dsp.env([(0, 0), (0.05, 1), (dur, 0)], n), 200, 1500, 300), 1500)
+    return dsp.vhs(fin(y, rng, 0.4, 0.12), rng, bits=8, drive=1.8, lp_hz=4500)
 
 
-@sound("Omar/meat_squelch_1", desc="wet meat squelch as the pile is pushed around", **ONE)
+@sound("Omar/meat_squelch_1", desc="raw meat slapped down and pushed around on the block", **ONE)
 def meat_squelch_1(rng):
     return _squelch(rng, 0.6)
 
 
-@sound("Omar/meat_squelch_2", desc="longer wet squelch", **ONE)
+@sound("Omar/meat_squelch_2", desc="longer: meat pushed and slapped about", **ONE)
 def meat_squelch_2(rng):
     return _squelch(rng, 0.9)
 

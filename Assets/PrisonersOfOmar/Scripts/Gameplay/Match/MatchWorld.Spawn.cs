@@ -97,7 +97,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (local)
                 {
                     LocalAvatar = av;
-                    if (pl.IsOmar) LocalOmar = OmarController.Attach(av, this);
+                    if (pl.IsOmar) { LocalOmar = OmarController.Attach(av, this); AudioManager.ListenerIsOmar = true; }
                     else LocalPrisoner = PrisonerController.Attach(av, this);
                 }
                 else if (pl.IsBot && IsHost)

@@ -237,7 +237,8 @@ namespace PrisonersOfOmar.Gameplay
     {
         // prisoners
         public const float WalkSpeed = 2.1f, RunSpeed = 4.6f, CrouchSpeed = 1.15f, InjuredSpeedMul = 0.82f;
-        public const float StaminaSeconds = 7f, StaminaRegenDelay = 1.2f, StaminaRegenRate = 0.2f;
+        // prisoner stamina: set per difficulty by ApplyDifficulty (Nightmare = the original 7 s)
+        public static float StaminaSeconds = 12.5f, StaminaRegenDelay = 0.9f, StaminaRegenRate = 0.26f;
         public const float EyeHeight = 1.58f, CrouchEyeHeight = 0.95f;
         public const float InteractRange = 2.3f;
         public static float LighterBurnSeconds = 170f, FlashlightBurnSeconds = 260f;
@@ -277,6 +278,13 @@ namespace PrisonersOfOmar.Gameplay
             CurrentDifficulty = d;
             float baseRun = 4.75f, lighter = 170f, flash = 260f;
             LightGrade = d == Difficulty.Hard ? 0.75f : d == Difficulty.Nightmare ? 0.9f : 0f;
+            switch (d)
+            {
+                case Difficulty.Easy: StaminaSeconds = 15f; StaminaRegenDelay = 0.8f; StaminaRegenRate = 0.3f; break;
+                case Difficulty.Hard: StaminaSeconds = 10.5f; StaminaRegenDelay = 1.0f; StaminaRegenRate = 0.23f; break;
+                case Difficulty.Nightmare: StaminaSeconds = 7f; StaminaRegenDelay = 1.2f; StaminaRegenRate = 0.2f; break;
+                default: StaminaSeconds = 12.5f; StaminaRegenDelay = 0.9f; StaminaRegenRate = 0.26f; break;
+            }
             switch (d)
             {
                 case Difficulty.Easy:

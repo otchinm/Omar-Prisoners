@@ -54,6 +54,11 @@ namespace PrisonersOfOmar.Audio
         // Omar stays at full gain; everything else sits a little under him so he is the loudest thing in the night
         static readonly float[] CategoryGain = { 1f, 0.85f, 0.7f, 0.7f, 1f, 0.85f };
 
+        /// <summary>(iteration 2) The local player is Omar: world / prisoner sounds (Sfx: steps, doors, items, cages) are
+        /// played much quieter for him so prisoners are not found just by ear. His own sounds are AudioCategory.Omar.</summary>
+        public static bool ListenerIsOmar;
+        const float OmarListenerSfxGain = 0.4f;
+
         public static AudioManager Create(Transform parent)
         {
             if (Instance != null) return Instance;
@@ -314,7 +319,8 @@ namespace PrisonersOfOmar.Audio
                 default: cat = Gameplay.Settings.SfxVolume; break;
             }
             float duck = (v.Category == AudioCategory.Music || v.Category == AudioCategory.Ambience) ? _duck : 1f;
-            return Mathf.Clamp01(v.BaseVolume * CategoryGain[(int)v.Category] * cat * duck * v.Fade);
+            float omarEars = ListenerIsOmar && v.Category == AudioCategory.Sfx ? OmarListenerSfxGain : 1f;
+            return Mathf.Clamp01(v.BaseVolume * CategoryGain[(int)v.Category] * cat * duck * v.Fade * omarEars);
         }
 
         void LateUpdate()

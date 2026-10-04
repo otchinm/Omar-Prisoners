@@ -209,7 +209,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (_stepDist >= stride)
                 {
                     _stepDist = 0f;
-                    AudioManager.Play2D(AudioManager.Variant(Snd.OmarStep, 4), _sprintingNow ? 0.55f : 0.35f, Random.Range(0.9f, 1.05f), AudioCategory.Omar);
+                    AudioManager.Play2D(AudioManager.Variant(Snd.OmarStep, 4), _sprintingNow ? 0.75f : 0.55f, Random.Range(0.88f, 1.0f), AudioCategory.Omar);
                 }
             }
             if (_arms != null) { _arms.MoveSpeed = moved; _arms.Sprinting = _sprintingNow; }
