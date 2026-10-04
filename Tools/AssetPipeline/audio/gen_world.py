@@ -247,6 +247,34 @@ def wardrobe_close(rng):
     return fin(y, rng, 0.5, 0.15)
 
 
+@sound("World/wardrobe_enter", desc="wardrobe door eased open, hangers knocked aside, door pulled shut from inside", **ONE)
+def wardrobe_enter(rng):
+    n = N(1.5)
+    y = np.zeros(n)
+    dsp.place(y, door_creak(rng, 0.45, [(0, 60), (0.2, 110), (0.45, 50)], 1000, 0.1), 0, 0.55)
+    for k in range(4):
+        dsp.place(y, small_metal(rng, N(0.3), rng.uniform(1700, 2600), (0.05, 0.2), 7), N(0.35 + 0.08 * k + rng.uniform(0, 0.04)), 0.22)
+    m = N(0.5)
+    dsp.place(y, sfx.cloth(m, rng, dsp.env([(0, 0), (0.1, 1), (0.5, 0)], m), 600, 4000, 160), N(0.4), 0.45)
+    dsp.place(y, door_creak(rng, 0.3, [(0, 50), (0.3, 30)], 900, 0.1), N(0.9), 0.35)
+    for t, g in ((1.18, 0.7), (1.24, 0.45)):
+        k = sfx.strike(N(0.25), rng, sfx.wood_modes(rng, 200, 9, 0.05), 0.5, noise_mix=0.3)
+        dsp.place(y, dsp.lp(dsp.norm(k), 2500), N(t), g)
+    return fin(y + tape_hiss(n, rng, 0.015), rng, 0.5, 0.15, bits=10)
+
+
+@sound("World/wardrobe_exit", desc="wardrobe doors pushed open from inside, stepping out", **ONE)
+def wardrobe_exit(rng):
+    n = N(1.0)
+    y = np.zeros(n)
+    dsp.place(y, sfx.strike(N(0.15), rng, [(1900, 0.01, 1), (3100, 0.008, 0.6)], 0.8), 0, 0.4)
+    dsp.place(y, door_creak(rng, 0.6, [(0, 80), (0.25, 140), (0.6, 50)], 1050, 0.1), N(0.03), 0.6)
+    for k in range(2):
+        dsp.place(y, small_metal(rng, N(0.3), rng.uniform(1700, 2600), (0.05, 0.15), 7), N(0.25 + 0.1 * k), 0.18)
+    dsp.place(y, dsp.lp(sfx.thud(N(0.25), rng, 90, 0.04, 0.4, noise=0.4), 1500), N(0.7), 0.4)  # foot on the floor
+    return fin(y + tape_hiss(n, rng, 0.015), rng, 0.5, 0.15, bits=10)
+
+
 @sound("World/gate_creak", desc="rusty metal yard gate swinging", **ONE)
 def gate_creak(rng):
     n = N(2.7)

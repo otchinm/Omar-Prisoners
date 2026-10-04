@@ -290,7 +290,7 @@ Shader "PrisonersOfOmar/VHS"
                 // ---------------------------------------------------------------- hiding: soft dark vignette only
                 // (the view through the wardrobe slats comes from the geometry; the HUD must stay readable)
                 float hv = 1.0 - smoothstep(0.35, 0.9, length(cc * float2(1.0, 1.35)));
-                col *= lerp(1.0, lerp(0.55, 1.0, hv), saturate(hiding));
+                col *= lerp(1.0, lerp(0.74, 1.0, hv), saturate(hiding));
 
                 // ---------------------------------------------------------------- CRT vignette + rounded dark corners
                 float vig = 1.0 - _VhsLens.y * pow(saturate(r2 * 2.0), 1.5);

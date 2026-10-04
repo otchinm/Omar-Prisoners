@@ -448,8 +448,15 @@ namespace PrisonersOfOmar.Gameplay
         public readonly HidingSpotInfo Info;
         public int Occupant = -1;
         readonly Quaternion[] _closed;
+        readonly Quaternion _liftClosed;
         float _openTimer;
         float _openAmount;
+        float _liftTimer, _lift;
+        bool _liftDownPlayed = true;
+
+        public bool IsBed => Info.Kind == HidingKind.UnderBed;
+        /// <summary>0..1 how far Omar has tipped the bed up.</summary>
+        public float Lift => _lift;
 
         public HidingEntity(int index, HidingSpotInfo info)
         {
@@ -457,6 +464,7 @@ namespace PrisonersOfOmar.Gameplay
             int n = info.Doors != null ? info.Doors.Length : 0;
             _closed = new Quaternion[n];
             for (int i = 0; i < n; i++) _closed[i] = info.Doors[i] != null ? info.Doors[i].localRotation : Quaternion.identity;
+            _liftClosed = info.LiftPivot != null ? info.LiftPivot.localRotation : Quaternion.identity;
             if (info.Interact != null) InteractableRef.Attach(info.Interact, this);
         }
 
@@ -464,11 +472,11 @@ namespace PrisonersOfOmar.Gameplay
 
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
-            if (who.IsOmar) { p = InteractPrompt.Hold(Info.Kind == HidingKind.UnderBed ? "LOOK UNDER THE BED" : "SEARCH", 0.9f); return true; }
+            if (who.IsOmar) { p = InteractPrompt.Hold(IsBed ? "LIFT THE BED" : "SEARCH", 0.9f); return true; }
             if (who.Status != null && who.Status.HidingSpot == Index) { p = InteractPrompt.Press("LEAVE"); return true; }
             if (Occupant >= 0) { p = InteractPrompt.Info("SOMEONE IS ALREADY HIDING HERE"); return true; }
             if (who.Status != null && who.Status.Trapped) { p = default; return false; }
-            p = InteractPrompt.Press("HIDE");
+            p = InteractPrompt.Press(IsBed ? "CRAWL UNDER" : "HIDE");
             return true;
         }
 
@@ -482,32 +490,72 @@ namespace PrisonersOfOmar.Gameplay
 
         public void Apply(int occupant, bool searched)
         {
-            bool changed = occupant != Occupant;
+            bool entered = occupant >= 0 && occupant != Occupant;
+            bool left = occupant < 0 && Occupant >= 0 && !searched;
             Occupant = occupant;
-            if (changed || searched) _openTimer = searched ? 1.4f : 0.7f;
             Vector3 p = InteractPoint;
             if (searched)
             {
-                AudioManager.Play3D(Snd.HidingRip, p, 1f, 1f, 2f, 25f, AudioCategory.Omar);
+                if (IsBed)
+                {
+                    // Omar grabs the frame and tips the whole bed up
+                    _liftTimer = 1.9f;
+                    _liftDownPlayed = false;
+                    AudioManager.Play3D(Snd.BedLift, p, 1f, Random.Range(0.92f, 1.04f), 2f, 28f, AudioCategory.Omar);
+                }
+                else
+                {
+                    _openTimer = 1.4f;
+                    AudioManager.Play3D(Snd.HidingRip, p, 1f, 1f, 2f, 25f, AudioCategory.Omar);
+                }
+                return;
             }
-            else if (changed && Info.Kind != HidingKind.UnderBed)
+            if (entered || left)
             {
-                AudioManager.Play3D(Info.Kind == HidingKind.Wardrobe ? Snd.WardrobeOpen : Snd.MetalDoorOpen, p, 0.55f, Random.Range(0.95f, 1.1f), 1.5f, 10f);
+                if (IsBed)
+                    AudioManager.Play3D(entered ? Snd.BedCrawlIn : Snd.BedCrawlOut, p, 0.55f, Random.Range(0.95f, 1.05f), 1.2f, 9f);
+                else
+                {
+                    _openTimer = entered ? 0.95f : 0.8f;
+                    string clip = Info.Kind == HidingKind.Wardrobe ? (entered ? Snd.WardrobeEnter : Snd.WardrobeExit) : (entered ? Snd.MetalDoorOpen : Snd.MetalDoorClose);
+                    AudioManager.Play3D(clip, p, 0.55f, Random.Range(0.95f, 1.08f), 1.5f, 10f);
+                }
             }
         }
 
         public void Tick(float dt)
         {
+            TickLift(dt);
             if (Info.Doors == null || Info.Doors.Length == 0) return;
             _openTimer -= dt;
             float target = _openTimer > 0 ? 1f : 0f;
             if (Mathf.Approximately(_openAmount, target)) return;
-            _openAmount = Mathf.MoveTowards(_openAmount, target, dt * 3f);
+            _openAmount = Mathf.MoveTowards(_openAmount, target, dt * 2.6f);
+            float e = _openAmount * _openAmount * (3f - 2f * _openAmount);
             for (int i = 0; i < Info.Doors.Length; i++)
             {
                 if (Info.Doors[i] == null) continue;
                 float ang = Info.DoorOpenAngles != null && i < Info.DoorOpenAngles.Length ? Info.DoorOpenAngles[i] : 80f;
-                Info.Doors[i].localRotation = _closed[i] * Quaternion.Euler(0, ang * _openAmount, 0);
+                Info.Doors[i].localRotation = _closed[i] * Quaternion.Euler(0, ang * e, 0);
+            }
+        }
+
+        void TickLift(float dt)
+        {
+            if (Info.LiftPivot == null) return;
+            _liftTimer -= dt;
+            float target = _liftTimer > 0f ? 1f : 0f;
+            if (Mathf.Approximately(_lift, target) && _liftDownPlayed) return;
+            // quick heave up, slower drop back down
+            _lift = Mathf.MoveTowards(_lift, target, dt * (target > _lift ? 2.6f : 1.8f));
+            float e = target > 0.5f ? 1f - (1f - _lift) * (1f - _lift) : _lift * _lift;
+            Info.LiftPivot.localRotation = _liftClosed * Quaternion.AngleAxis(Info.LiftAngle * e, Info.LiftAxis);
+            if (!_liftDownPlayed && target < 0.5f && _lift <= 0f)
+            {
+                _liftDownPlayed = true;
+                Vector3 p = InteractPoint;
+                AudioManager.Play3D(AudioManager.Variant(Snd.DoorBump, 2), p, 0.9f, 0.7f, 2f, 22f);
+                try { PsxFx.Dust(p, 0.8f); } catch { }
             }
         }
     }

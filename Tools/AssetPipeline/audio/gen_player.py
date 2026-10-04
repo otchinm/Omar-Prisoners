@@ -165,3 +165,35 @@ def gasp(rng):
     dsp.place(y, dsp.norm(v), N(0.005), 0.3)
     y = room(dsp.lp(y, 7500), rng, 0.3, 0.08)
     return dsp.lofi(y, 12, 1.3)
+
+
+# ---- iteration 2: hiding under beds
+def _body_drag(rng, dur, rough=1.0):
+    n = N(dur)
+    e = dsp.env([(0, 0), (0.08, 1), (dur * 0.6, 0.85), (dur, 0)], n) * np.exp(0.35 * dsp.smooth_rand(n, rng, 6.0, circular=False))
+    y = sfx.cloth(n, rng, e, 300, 3500, 120)          # clothes on floorboards
+    y += 0.5 * rough * sfx.scrape(n, rng, e, 150, 1800, 300)
+    for t0 in rng.uniform(0.05, dur - 0.1, 3):         # knees / elbows knocking the boards
+        dsp.place(y, dsp.lp(sfx.thud(N(0.2), rng, rng.uniform(80, 120), 0.03, 0.4, noise=0.4), 1500), N(t0), rng.uniform(0.3, 0.6))
+    return dsp.norm(y)
+
+
+@sound("Player/bed_crawl_in", desc="dropping to the floor and sliding under a bed: cloth on boards, knee knocks, held breath", **ONE)
+def bed_crawl_in(rng):
+    n = N(1.4)
+    y = np.zeros(n)
+    dsp.place(y, sfx.thud(N(0.3), rng, 75, 0.05, 0.5, noise=0.5), 0, 0.6)  # knees hit the floor
+    dsp.place(y, _body_drag(rng, 1.0), N(0.18), 0.9)
+    dsp.place(y, sfx.breath(N(0.5), rng, [(0.0, 0.4, "in", 0.5)]), N(0.9), 0.35)
+    y = dsp.lp(y, 6000) + 0.02 * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
+    return dsp.lofi(room(y, rng, 0.4, 0.1), 10, 1.5, 1.3, 7500)
+
+
+@sound("Player/bed_crawl_out", desc="sliding out from under a bed and getting up", **ONE)
+def bed_crawl_out(rng):
+    n = N(1.3)
+    y = np.zeros(n)
+    dsp.place(y, _body_drag(rng, 0.8), 0, 0.9)
+    dsp.place(y, sfx.cloth(N(0.4), rng, dsp.env([(0, 0), (0.1, 1), (0.4, 0)], N(0.4)), 500, 4000, 200), N(0.85), 0.5)
+    y = dsp.lp(y, 6000) + 0.02 * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
+    return dsp.lofi(room(y, rng, 0.4, 0.1), 10, 1.5, 1.3, 7500)

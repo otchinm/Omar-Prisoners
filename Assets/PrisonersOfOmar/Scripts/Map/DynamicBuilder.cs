@@ -316,8 +316,37 @@ namespace PrisonersOfOmar.Map
             return info;
         }
 
-        /// <summary>Under-bed hiding spot for a bed/cot already built at bedPos (long axis along local Z of bedYaw).</summary>
-        public static HidingSpotInfo UnderBed(MapContext ctx, string name, Vector3 bedPos, float bedYaw, Vector3 openSide, float halfWidth, float length, float clearance)
+        /// <summary>
+        /// A bed / cot Omar can tip over: built under a LiftPivot hinged along the long edge away from
+        /// <paramref name="openSide"/> (floor level), so lifting the open side rotates it up and away from him.
+        /// Pass the returned pivot to <see cref="UnderBed"/>. Things lying on the bed should be parented to it.
+        /// </summary>
+        public static Transform LiftableBed(MapContext ctx, string name, Vector3 bedPos, float yaw, Vector3 openSide, bool cot,
+            bool pillow = true, bool bloody = false, bool bloodOnMattress = false)
+        {
+            var rot = MapMath.Yaw(yaw);
+            var root = GeoUtil.CreateChild(ctx.Dynamic, "Bed_" + name, bedPos, rot, Layers.World);
+            openSide.y = 0; openSide.Normalize();
+            float sx = (Quaternion.Inverse(rot) * openSide).x >= 0 ? 1f : -1f;
+            float hw = cot ? 0.4f : 0.5f;
+            var pivot = GeoUtil.CreateChild(root, "LiftPivot", new Vector3(-sx * hw, 0f, 0f), Quaternion.identity, Layers.World);
+            var c = new Vector3(sx * hw, 0f, 0f);
+            var mb = new MeshBuilder();
+            if (cot) Props.Cot(null, mb, c, 0f);
+            else Props.BedMetal(null, mb, c, 0f, pillow, bloody);
+            if (bloodOnMattress && !cot)
+                Arch.Decal(mb, Mat.Decal("blood_splatter_2"), c + new Vector3(0.08f, Props.BedTop + 0.012f, -0.25f), Vector3.up, 0.9f, 0.7f, 0f);
+            mb.Build("Frame", pivot, Layers.World);
+            ctx.CountRenderer(mb);
+            if (cot) GeoUtil.AddBox(pivot, c + new Vector3(0, 0.23f, 0), new Vector3(0.8f, 0.46f, 1.9f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "Cot");
+            else GeoUtil.AddBox(pivot, c + new Vector3(0, 0.3f, 0), new Vector3(1.0f, 0.6f, 2.0f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "Bed");
+            return pivot;
+        }
+
+        /// <summary>Under-bed hiding spot for a bed/cot at bedPos (long axis along local Z of bedYaw).
+        /// <paramref name="liftPivot"/> = the bed's <see cref="LiftableBed"/> pivot (Omar tips it up when he searches).</summary>
+        public static HidingSpotInfo UnderBed(MapContext ctx, string name, Vector3 bedPos, float bedYaw, Vector3 openSide, float halfWidth, float length, float clearance,
+            Transform liftPivot = null)
         {
             var rot = MapMath.Yaw(bedYaw);
             var root = GeoUtil.CreateChild(ctx.Dynamic, "Hide_" + name, bedPos, rot, Layers.World);
@@ -335,6 +364,11 @@ namespace PrisonersOfOmar.Map
                 Interact = interact,
                 HiddenView = new Pose(viewPos, Quaternion.LookRotation((openSide + Vector3.down * 0.08f).normalized, Vector3.up)),
                 ExitPose = MapMath.FacingPose(bedPos + openSide * (halfWidth + 0.6f), openSide),
+                CrawlStart = MapMath.FacingPose(bedPos + openSide * (halfWidth + 0.45f), -openSide),
+                LifterPose = MapMath.FacingPose(bedPos + openSide * (halfWidth + 0.55f), -openSide),
+                LiftPivot = liftPivot,
+                LiftAxis = Vector3.forward,
+                LiftAngle = sx * 62f,
             };
             ctx.Data.HidingSpots.Add(info);
             return info;

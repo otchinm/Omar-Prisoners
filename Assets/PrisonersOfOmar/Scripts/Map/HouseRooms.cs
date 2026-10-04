@@ -222,10 +222,10 @@ namespace PrisonersOfOmar.Map
             float F = FG;
             Props.Rug(mb, V(7.0f, F, 5.3f), 0f, 2.6f, 1.9f, new Color(0.65f, 0.45f, 0.38f));
             var bedPos = V(9.9f, F, 5.2f);
-            Props.BedMetal(ctx, mb, bedPos, 90f, true, true);
+            var bedLift = Dyn.LiftableBed(ctx, "ClockBedroom.Bed", bedPos, 90f, Vector3.back, false, true, true, true);
             Arch.Blob(mb, bedPos, 2.4f, 1.4f);
-            Dyn.Figure(ctx, ctx.Dynamic, FigureKind.Corpse, FigurePose.LyingOnBack, bedPos + Vector3.up * Props.BedTop, MapMath.Yaw(90f), ctx.Seed ^ 0x51);
-            Dyn.UnderBed(ctx, "ClockBedroom.Bed", bedPos, 90f, Vector3.back, 0.5f, 2.0f, 0.36f);
+            Dyn.Figure(ctx, bedLift, FigureKind.Corpse, FigurePose.LyingOnBack, bedPos + Vector3.up * Props.BedTop, MapMath.Yaw(90f), ctx.Seed ^ 0x51);
+            Dyn.UnderBed(ctx, "ClockBedroom.Bed", bedPos, 90f, Vector3.back, 0.5f, 2.0f, 0.36f, bedLift);
             Props.Nightstand(ctx, mb, V(10.62f, F, 6.15f), 90f);
             Props.Candle(mb, null, V(10.55f, F + Props.NightstandTop, 6.25f));
             // grandfather clock + radiator on the north wall (like Ddf9Y0Y)
@@ -237,7 +237,6 @@ namespace PrisonersOfOmar.Map
             Arch.Decal(mb, Mat.Decal("graffiti_scrawl_1"), V(10.89f, F + 2.0f, 5.2f), Vector3.left, 1.7f, 1.7f, 0f);
             Arch.Decal(mb, Mat.Decal("graffiti_scrawl_2"), V(4.6f, F + 2.0f, 7.89f), Vector3.back, 1.4f, 1.4f, 8f);
             Arch.Decal(mb, Mat.Decal("graffiti_scrawl_1"), V(9.2f, F + 1.9f, 3.08f), Vector3.forward, 1.5f, 1.5f, 20f);
-            Arch.Decal(mb, Mat.Decal("blood_splatter_2"), V(10.6f, F + Props.BedTop + 0.01f, 5.0f), Vector3.up, 0.9f, 0.7f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(8.6f, F, 6.6f), 1.5f, 1.2f, 20f);
             ctx.Key(A, V(7.2f, F + Props.DresserTop, 3.33f));
             ctx.Common(A, V(6.2f, F + 0.74f, 7.8f));
@@ -421,8 +420,8 @@ namespace PrisonersOfOmar.Map
             mb.Color = Shade.Gray(1f);
             Props.WallPicture(mb, V(3.08f, F + 1.75f, -2.4f), Vector3.right, 0.5f, 0.8f, Mat.Lit(Tex.PortraitOmar), Mat.Lit(Tex.WoodFurniture), 0.07f);
             var cotPos = V(6.0f, F, -1.52f);
-            Props.Cot(ctx, mb, cotPos, 90f);
-            Dyn.UnderBed(ctx, "RadioRoom.Cot", cotPos, 90f, Vector3.back, 0.4f, 1.9f, 0.38f);
+            var cotLift = Dyn.LiftableBed(ctx, "RadioRoom.Cot", cotPos, 90f, Vector3.back, true);
+            Dyn.UnderBed(ctx, "RadioRoom.Cot", cotPos, 90f, Vector3.back, 0.4f, 1.9f, 0.38f, cotLift);
             Props.Locker(ctx, mb, V(7.65f, F, -7.65f), 180f, true);
             Dyn.Locker(ctx, "RadioRoom.Locker", V(7.0f, F, -7.65f), 180f, true);
             Props.Bookshelf(ctx, mb, V(9.5f, F, -1.24f), 0f, 1.0f, 2.0f, 702);
@@ -488,9 +487,9 @@ namespace PrisonersOfOmar.Map
             Props.Bookshelf(ctx, mb, V(10.74f, F, 4.0f), 90f, 1.0f, 2.0f, 902);
             Props.Bookshelf(ctx, mb, V(10.74f, F, 5.1f), 90f, 1.0f, 2.0f, 903);
             var bedPos = V(4.1f, F, 4.07f);
-            Props.BedMetal(ctx, mb, bedPos, 180f, true, false);
+            var studyLift = Dyn.LiftableBed(ctx, "Study.Bed", bedPos, 180f, Vector3.right, false, true, false);
             Arch.Blob(mb, bedPos, 1.4f, 2.4f);
-            Dyn.UnderBed(ctx, "Study.Bed", bedPos, 180f, Vector3.right, 0.5f, 2.0f, 0.36f);
+            Dyn.UnderBed(ctx, "Study.Bed", bedPos, 180f, Vector3.right, 0.5f, 2.0f, 0.36f, studyLift);
             Props.FloorLampProp(mb, V(10.5f, F, 7.4f), 1.5f);
             Arch.Decal(mb, Mat.Decal("grime"), V(5.0f, F + 2.0f, 7.89f), Vector3.back, 2.2f, 2.0f, 0f);
             Arch.Decal(mb, Mat.Decal("water_stain"), V(10.89f, F + 2.2f, 6.6f), Vector3.left, 1.6f, 2.0f, 0f);

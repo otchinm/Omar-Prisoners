@@ -1,5 +1,6 @@
 using PrisonersOfOmar.Audio;
 using PrisonersOfOmar.Characters;
+using PrisonersOfOmar.Map;
 using PrisonersOfOmar.Rendering;
 using UnityEngine;
 
@@ -56,6 +57,12 @@ namespace PrisonersOfOmar.Gameplay
         float _dragVel, _dragSendTimer;
         bool _lmbOnDoor;
         static readonly int DragBlockMask = Layers.Mask(Layers.Player);
+        // camera path for climbing into / out of hiding spots
+        struct CamKey { public Vector3 Pos; public Quaternion Rot; public float T; }
+        readonly System.Collections.Generic.List<CamKey> _camPath = new System.Collections.Generic.List<CamKey>();
+        float _camPathTime;
+        bool _camPathEntering;
+        int _camPathSpot = -1;
 
         // states
         Vector3 _lastFeet;
@@ -77,6 +84,8 @@ namespace PrisonersOfOmar.Gameplay
         public bool Crouching => _crouch;
         public bool PainkillersActive => Time.time < _painkillersUntil;
         public bool DraggingDoor => _drag != null;
+        public bool InHidingTransition => CamPathActive;
+        bool CamPathActive => _camPath.Count > 1 && _camPathTime < _camPath[_camPath.Count - 1].T;
 
         public static PrisonerController Attach(Avatar avatar, MatchWorld w)
         {
@@ -133,7 +142,7 @@ namespace PrisonersOfOmar.Gameplay
             HandleMenus();
             HandleDoorDrag(st, dt);
             Look(st);
-            bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f;
+            bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f && !CamPathActive;
             Move(st, dt, canMove);
             HandleItems(st, dt);
             HandleInteraction(st, dt);
@@ -165,7 +174,7 @@ namespace PrisonersOfOmar.Gameplay
         void Look(PlayerStatus st)
         {
             var d = GameInput.Look;
-            if (_drag != null) d = Vector2.zero; // the mouse moves the door, not the view
+            if (_drag != null || CamPathActive) d = Vector2.zero; // the mouse moves the door / we are climbing in or out
             _yaw += d.x;
             _pitch = Mathf.Clamp(_pitch - d.y, -85f, 85f);
             if (st.Hidden && st.HidingSpot < _w.Hiding.Length)
@@ -289,6 +298,22 @@ namespace PrisonersOfOmar.Gameplay
         {
             var rig = PsxCameraRig.Instance;
             if (rig == null) return;
+            if (CamPathActive)
+            {
+                _camPathTime += Time.deltaTime;
+                if (EvalCamPath(out var cp, out var cr))
+                {
+                    rig.transform.SetPositionAndRotation(cp, cr);
+                    rig.FieldOfView = Settings.FieldOfView;
+                    // our body follows the climb so the others see us go in
+                    if (_camPathEntering && st.Hidden && _camPathSpot >= 0 && _camPathSpot < _w.Hiding.Length)
+                    {
+                        var info = _w.Hiding[_camPathSpot].Info;
+                        _avatar.transform.position = new Vector3(cp.x, info.ExitPose.position.y, cp.z);
+                    }
+                    return;
+                }
+            }
             Vector3 pos;
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0);
             if (st.Hidden && st.HidingSpot < _w.Hiding.Length)
@@ -724,6 +749,101 @@ namespace PrisonersOfOmar.Gameplay
             if (_w != null) _w.SendDoorGrab(d.Index, false, d.Angle, d.Velocity);
         }
 
+        // ================================================================== hiding transitions
+
+        static CamKey K(Vector3 p, Quaternion r, float t) => new CamKey { Pos = p, Rot = r, T = t };
+
+        static Quaternion Flat(Vector3 fwd, float pitch = 0f)
+        {
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
+            return Quaternion.LookRotation(fwd.normalized, Vector3.up) * Quaternion.Euler(pitch, 0, 0);
+        }
+
+        void StartEnterPath(HidingSpotInfo info, int spot)
+        {
+            var rig = PsxCameraRig.Instance;
+            if (rig == null) return;
+            Vector3 p0 = rig.transform.position;
+            Quaternion r0 = rig.transform.rotation;
+            var hv = info.HiddenView;
+            var ex = info.ExitPose;
+            _camPath.Clear();
+            _camPath.Add(K(p0, r0, 0f));
+            if (info.Kind == HidingKind.UnderBed)
+            {
+                // get down on the floor beside the bed, look under it, then roll in and face the room
+                Pose cs = info.CrawlStart.position != Vector3.zero ? info.CrawlStart : new Pose(ex.position, Flat(-ex.forward));
+                Vector3 kneel = cs.position + Vector3.up * 0.75f;
+                Vector3 low = cs.position + Vector3.up * 0.28f;
+                Vector3 side = Vector3.Cross(Vector3.up, cs.forward);
+                _camPath.Add(K(kneel, Flat(cs.forward, 32f), 0.3f));
+                _camPath.Add(K(low, Flat(cs.forward, 12f), 0.55f));
+                _camPath.Add(K(Vector3.Lerp(low, hv.position, 0.55f), Flat(side, 6f) * Quaternion.Euler(0, 0, 18f), 0.85f));
+                _camPath.Add(K(hv.position, hv.rotation, 1.15f));
+                _crouch = true; // the others see us get down
+            }
+            else
+            {
+                // step in front of it facing the doors, back in, and turn around to look out through the slats
+                Vector3 front = ex.position + Vector3.up * (Tuning.EyeHeight - 0.05f);
+                Quaternion faceIn = Flat(-ex.forward, 4f);
+                Vector3 side = Vector3.Cross(Vector3.up, ex.forward);
+                _camPath.Add(K(front, faceIn, 0.3f));
+                _camPath.Add(K(Vector3.Lerp(front, hv.position, 0.6f), Flat(side, 2f), 0.6f));
+                _camPath.Add(K(hv.position, hv.rotation, 0.85f));
+            }
+            _camPathTime = 0f;
+            _camPathEntering = true;
+            _camPathSpot = spot;
+        }
+
+        void StartExitPath(HidingSpotInfo info, int spot, bool yanked)
+        {
+            var hv = info.HiddenView;
+            var ex = info.ExitPose;
+            float k = yanked ? 0.45f : 1f;
+            Vector3 eye = ex.position + Vector3.up * Tuning.EyeHeight;
+            Quaternion outRot = Flat(ex.forward);
+            _camPath.Clear();
+            _camPath.Add(K(hv.position, hv.rotation, 0f));
+            if (info.Kind == HidingKind.UnderBed)
+            {
+                Pose cs = info.CrawlStart.position != Vector3.zero ? info.CrawlStart : new Pose(ex.position, Flat(-ex.forward));
+                Vector3 low = cs.position + Vector3.up * 0.3f;
+                _camPath.Add(K(low, Flat(ex.forward, 8f) * Quaternion.Euler(0, 0, -10f), 0.5f * k));
+                _camPath.Add(K(cs.position + Vector3.up * 0.9f, Flat(ex.forward, 14f), 0.8f * k));
+                _camPath.Add(K(eye, outRot, 1.05f * k));
+            }
+            else
+            {
+                _camPath.Add(K(Vector3.Lerp(hv.position, eye, 0.5f), Flat(ex.forward, 3f), 0.35f * k));
+                _camPath.Add(K(eye, outRot, 0.65f * k));
+            }
+            _camPathTime = 0f;
+            _camPathEntering = false;
+            _camPathSpot = spot;
+        }
+
+        bool EvalCamPath(out Vector3 pos, out Quaternion rot)
+        {
+            pos = default; rot = Quaternion.identity;
+            if (_camPath.Count < 2) return false;
+            float t = _camPathTime;
+            for (int i = 1; i < _camPath.Count; i++)
+            {
+                var a = _camPath[i - 1];
+                var b = _camPath[i];
+                if (t > b.T && i < _camPath.Count - 1) continue;
+                float u = Mathf.Clamp01(Mathf.InverseLerp(a.T, b.T, t));
+                u = u * u * (3f - 2f * u);
+                pos = Vector3.Lerp(a.Pos, b.Pos, u);
+                rot = Quaternion.Slerp(a.Rot, b.Rot, u);
+                return true;
+            }
+            return false;
+        }
+
         // ================================================================== traps
 
         void CheckTraps(PlayerStatus st)
@@ -832,8 +952,9 @@ namespace PrisonersOfOmar.Gameplay
             }
             else VhsEffect.StaticOverride = 0f;
             VhsEffect.Damage = dmg;
-            VhsEffect.Hiding = st.Hidden ? 1f : 0f;
-            AudioManager.SetMuffle(st.Hidden ? 0.75f : 0f);
+            bool bed = st.Hidden && st.HidingSpot >= 0 && st.HidingSpot < _w.Hiding.Length && _w.Hiding[st.HidingSpot].IsBed;
+            VhsEffect.Hiding = Mathf.MoveTowards(VhsEffect.Hiding, st.Hidden && !CamPathActive ? (bed ? 0.7f : 1f) : 0f, dt * 1.6f);
+            AudioManager.SetMuffle(st.Hidden ? (bed ? 0.35f : 0.7f) : 0f);
 
             // blood trail is drawn by MatchWorld for every injured avatar
             if (st.Injured && !PainkillersActive && _sprintingNow && Random.value < dt * 0.4f) AudioManager.Play2D(AudioManager.Variant(Snd.Hurt, 3), 0.3f, 1.1f);
@@ -877,20 +998,28 @@ namespace PrisonersOfOmar.Gameplay
                 VhsEffect.Desaturate = 0.6f;
             }
             // entered a hiding spot
-            if (now.Hidden && !before.Hidden)
+            if (now.Hidden && !before.Hidden && now.HidingSpot < _w.Hiding.Length)
             {
+                EndDrag();
                 _motor.Controller.enabled = false;
                 _lighterOn = false; _flashOn = false;
-                var hv = _w.Hiding[now.HidingSpot].Info.HiddenView;
-                _yaw = hv.rotation.eulerAngles.y; _pitch = 0;
-                AudioManager.Play2D(Snd.WardrobeClose, 0.5f);
+                var info = _w.Hiding[now.HidingSpot].Info;
+                var hv = info.HiddenView;
+                _yaw = hv.rotation.eulerAngles.y;
+                _pitch = Mathf.Clamp(Mathf.DeltaAngle(0f, hv.rotation.eulerAngles.x), -35f, 40f);
+                StartEnterPath(info, now.HidingSpot);
             }
             // left / pulled out of a hiding spot
             if (!now.Hidden && before.Hidden && before.HidingSpot >= 0 && before.HidingSpot < _w.Hiding.Length)
             {
-                var ex = _w.Hiding[before.HidingSpot].Info.ExitPose;
+                var info = _w.Hiding[before.HidingSpot].Info;
+                var ex = info.ExitPose;
                 _motor.Controller.enabled = true;
+                _crouch = false;
                 Teleport(ex.position, ex.rotation.eulerAngles.y);
+                _pitch = 0f;
+                bool yanked = (now.Injured && !before.Injured) || now.Life != LifeState.Free;
+                if (now.Life == LifeState.Free) StartExitPath(info, before.HidingSpot, yanked);
             }
             // car
             if (now.InCar && !before.InCar && _w.Map.Car != null && _w.Map.Car.Root != null && now.CarSeat < _w.Map.Car.Seats.Length)

@@ -36,6 +36,9 @@ namespace PrisonersOfOmar.Gameplay
         GameObject _blob;
         Vector3 _lastPos;
         bool _visible = true;
+        // others still see a prisoner climb into a hiding spot for a moment before the body disappears
+        float _hideDelay;
+        bool _wasHidden;
         CharacterPose _statusPose = CharacterPose.Normal;
         float _remoteSpeedSmoothed;
 
@@ -132,6 +135,11 @@ namespace PrisonersOfOmar.Gameplay
 
         void Update()
         {
+            if (_hideDelay > 0f)
+            {
+                _hideDelay -= Time.deltaTime;
+                if (_hideDelay <= 0f) { _statusPose = CharacterPose.Hidden; SetVisible(false); }
+            }
             if (Simulated) return;
             Interpolate();
             ApplyVisualState(Time.deltaTime);
@@ -305,8 +313,13 @@ namespace PrisonersOfOmar.Gameplay
                 else if (s.Trapped) pose = CharacterPose.Trapped;
                 else if (s.InCar) pose = CharacterPose.Seated;
             }
+            bool hiddenNow = s.Life == LifeState.Free && s.Hidden;
+            if (hiddenNow && !_wasHidden && !IsLocal && _visible) _hideDelay = 0.85f;
+            if (!hiddenNow) _hideDelay = 0f;
+            _wasHidden = hiddenNow;
             _statusPose = pose;
-            SetVisible(visible && pose != CharacterPose.Hidden);
+            if (_hideDelay > 0f) { _statusPose = CharacterPose.Normal; SetVisible(true); }
+            else SetVisible(visible && pose != CharacterPose.Hidden);
             if (Hitbox != null) Hitbox.enabled = visible && s.Life == LifeState.Free && !s.Hidden;
         }
 

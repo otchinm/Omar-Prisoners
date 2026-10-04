@@ -224,3 +224,23 @@ def door_push(rng):
     dsp.place(y, sq, N(0.05), 0.5)
     y = dsp.norm(y) + 0.02 * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
     return fin(y, rng, 0.8, 0.25, sat=2.2, bits=10)
+
+
+@sound("Omar/bed_lift", desc="Omar heaves a whole bed up: frame screech, springs, mattress slump, grunt", **LOUD)
+def bed_lift(rng):
+    n = N(1.8)
+    y = np.zeros(n)
+    m = N(0.9)
+    e = dsp.env([(0, 0), (0.05, 1), (0.6, 0.8), (0.9, 0)], m)
+    dsp.place(y, sfx.creak(m, rng, np.interp(T(m), [0, 0.3, 0.9], [60, 140, 50]), kind="metal", base=900, amp_env=e), 0, 0.7)
+    dsp.place(y, heavy_scrape_short(rng, m, e), 0, 0.4)
+    for k in range(6):  # bed springs
+        dsp.place(y, small_metal(rng, N(0.4), rng.uniform(500, 900), (0.1, 0.3), 6, 0.6), N(0.05 + 0.1 * k), 0.25 * 0.85 ** k)
+    dsp.place(y, sfx.thud(N(0.6), rng, 60, 0.15, 0.6, noise=0.6), N(0.55), 0.6)  # mattress slides off
+    dsp.place(y, omar_voice(rng, "scream_2", 0.3, 0.7, 0.55, 0.6, 0.6), N(0.1), 0.8)  # grunt
+    y = dsp.norm(y) + 0.02 * dsp.norm(dsp.band_noise(n, rng, 1500, 9000))
+    return fin(y, rng, 0.8, 0.25, sat=2.0, bits=10)
+
+
+def heavy_scrape_short(rng, n, env_):
+    return sfx.scrape(n, rng, env_, 150, 3000, grit=600)
