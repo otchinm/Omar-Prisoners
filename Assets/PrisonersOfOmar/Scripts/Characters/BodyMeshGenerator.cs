@@ -50,6 +50,9 @@ namespace PrisonersOfOmar.Characters
 
         static float HeadAxisZ(BodySpec b) => 0.006f * b.Scale;
 
+        /// <summary>Mouth position on the face (root space, bind pose).</summary>
+        internal static Vector3 MouthPoint(BodySpec b) => new Vector3(0f, b.Height - b.HeadH + 0.17f * b.HeadH, HeadFrontZ(b, 0.17f));
+
         /// <summary>z of the front of the head (face surface) at head height y_rel.</summary>
         public static float HeadFrontZ(BodySpec b, float yRel)
         {
@@ -608,6 +611,11 @@ namespace PrisonersOfOmar.Characters
             float yShoulder = Mathf.Lerp(b.CrotchY, b.NeckY, CharacterAtlas.TorsoT[7]);
             float yArmpit = Mathf.Lerp(b.CrotchY, b.NeckY, CharacterAtlas.TorsoT[6]);
             float yEnd = wavy ? b.ChestY - 0.05f * s : b.ChestY - 0.02f * s;
+            if (b.BobHair)
+            {
+                // short bob: the panel ends just under the jaw line at the back of the neck
+                yShoulder = b.NeckY - 0.01f * s; yArmpit = b.NeckY - 0.035f * s; yEnd = b.NeckY - 0.06f * s;
+            }
             // rows: y, half-width, back depth (positive = behind), centre z, weight
             float headW = head.W * hh + 0.022f * s, headB = head.B * hh + 0.022f * s;
             float[] ys = { sk.ChinY + 0.80f * hh, sk.ChinY + 0.42f * hh, sk.ChinY + 0.0f * hh, b.NeckY, yShoulder - 0.03f * s, yArmpit - 0.03f * s, yEnd };

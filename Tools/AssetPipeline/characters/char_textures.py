@@ -893,6 +893,83 @@ def corpse_leg(spec, rng, h, w, th, t):
     return mix(img, rgb("#3a0606"), blood(h, w, rng, amount=0.25, scale=5, splatter=0.8) * 0.8)
 
 
+# --------------------------------------------------------------------------------------------- grandmother
+GRANNY_DRESS = "#d8c690"          # faded pale-yellow house dress
+GRANNY_FLOWERS = ("#c8703a", "#b8504a", "#d89a48", "#7a8a48")
+
+
+def floral(h, w, rng, base=GRANNY_DRESS, density=1.0, scale=1.0, stains=0.35):
+    """Faded floral print: small orange / red blossoms with yellow hearts and olive leaves on a pale ground."""
+    img = fabric(h, w, rgb(base), rng, folds=0.2, grain=0.05, stains=stains * 0.6, stain_color=rgb("#b09a64"))
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    n = max(6, int(h * w / (300.0 * S * S) * density))
+    for _ in range(n):
+        cx, cy = rng.uniform(0, w), rng.uniform(0, h)
+        r = rng.uniform(2.8, 4.2) * S * scale
+        # two leaves
+        for k in (-1, 1):
+            lx, ly = cx + k * r * 1.3, cy + r * 0.6
+            dl = ((xx - lx) / (r * 0.9)) ** 2 + ((yy - ly) / (r * 0.45)) ** 2
+            img = mix(img, rgb("#5e7038"), np.clip((1.0 - dl) * 2.5, 0, 1) * 0.85)
+        col = rgb(GRANNY_FLOWERS[rng.randint(3)])
+        # five petals as a lobed disc
+        ang = np.arctan2(yy - cy, xx - cx)
+        rad = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) / r
+        petal = 0.75 + 0.3 * np.cos(5 * ang + rng.uniform(0, 6.28))
+        img = mix(img, col, np.clip((petal - rad) * 4.0, 0, 1) * 0.92)
+        img = mix(img, rgb("#ecd060"), np.clip((0.3 - rad) * 8.0, 0, 1))
+    img = desaturate(img, 0.1)
+    return img
+
+
+def old_skin(spec, rng, h, w):
+    sk = skin(h, w, rgb(spec["skin"]), rng, mottle=0.16, pores=0.05, redness=0.05)
+    spots = smoothstep(0.72, 0.76, fbm(h, w, 14, rng, octaves=3))
+    return mix(sk, rgb("#8a7040"), spots * 0.35)  # liver spots
+
+
+def torso_granny(spec, rng, h, w, th, t):
+    img = floral(h, w, rng)
+    # round collar + a row of small buttons down the front
+    img = mix(img, rgb("#e8e0c8"), band(t, 0.95, 0.985) * 0.85)
+    for bt in (0.86, 0.76, 0.66, 0.56):
+        img = mix(img, rgb("#efe8d8"), np.exp(-((t - bt) / 0.012) ** 2) * np.exp(-(th / 2.2) ** 2))
+    # waist seam, a little gathered
+    img = shade(img, 1 - 0.14 * band(t, 0.40, 0.43))
+    img = shade(img, 1 + 0.08 * np.sin(np.deg2rad(th) * 18) * band(t, 0.30, 0.40))
+    sk = old_skin(spec, rng, h, w)
+    img = mix(img, sk, smoothstep(0.985, 0.995, t))
+    if spec.get("dead"):
+        img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=0.55, scale=6, splatter=2.5) * 0.9)
+    return grime(img, rng, amount=0.2, color=(0.3, 0.26, 0.16))
+
+
+def arm_granny(spec, rng, h, w, th, t):
+    # long floral sleeves to just below the elbow, thin sallow forearms
+    sk = old_skin(spec, rng, h, w)
+    sk = shade(sk, 1 - 0.1 * np.exp(-((t - 0.5) / 0.06) ** 2))  # bony elbow
+    cl = floral(h, w, rng, density=1.4, scale=0.8)
+    img = mix(sk, cl, smoothstep(0.40, 0.42, t))
+    img = mix(img, rgb("#e8e0c8"), band(t, 0.40, 0.44) * 0.7)
+    if spec.get("dead"):
+        img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=0.4, scale=5, splatter=2.0) * 0.85)
+    return img
+
+
+def leg_granny(spec, rng, h, w, th, t):
+    # the dress reaches mid-calf; pale shins; white socks
+    sk = old_skin(spec, rng, h, w)
+    dress = floral(h, w, rng, density=1.1)
+    hem = 0.40 + 0.01 * np.sin(np.deg2rad(th) * 5)
+    img = mix(sk, dress, smoothstep(hem - 0.005, hem + 0.005, t))
+    img = shade(img, 1 - 0.15 * band(t, hem, hem + 0.03))
+    sock = fabric(h, w, rgb("#e4e0d4"), rng, folds=0.1, grain=0.1, stains=0.3, stain_color=rgb("#b8b098"))
+    img = mix(img, sock, 1 - smoothstep(0.14, 0.15, t))
+    if spec.get("dead"):
+        img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=0.45, scale=5, splatter=2.0) * 0.8 * (t > 0.3))
+    return img
+
+
 CHARACTERS = {
     "prisoner1": dict(
         seed=101, skin="#c99472", redness=0.3, eyes="#4a6070", brows="#7a6a3a", lips="#a86a5a", lip_alpha=0.5,
@@ -929,6 +1006,19 @@ CHARACTERS = {
         torso=mannequin_torso(pale_plastic), arm=mannequin_limb(pale_plastic, [0.06, 0.5, 0.94]),
         leg=mannequin_limb(pale_plastic, [0.08, 0.5, 0.95]), extra="surface", misc="none",
         shoe=lambda spec, rng, h, w, view: pale_plastic(h, w, rng)),
+    "grandma": dict(
+        seed=909, female=True, skin="#c8b07a", redness=0.0, mottle=0.22, eyes="#1e1a14", sclera="#c8bc98",
+        brows="#b8b2a4", brow_thick=1.8, lips="#8a6a5a", lip_alpha=0.45, shadow="#3a2a1e", liner=0.6,
+        hair_style="bangs", hair="#cfcbc0", hair_hi="#efebe2", hair_contrast=0.3, straight_cut=True,
+        torso=torso_granny, arm=arm_granny, leg=leg_granny, shoe=sneaker("#e2ded4", "#c8c4b8", sole="#d8d4c8", dirty=0.5),
+        nails="#b8a888", hand_grime=0.25, extra="hair", misc="hair"),
+    "grandma_dead": dict(
+        seed=909, female=True, dead=True, skin="#b8a878", redness=0.0, mottle=0.3, eyes="#1e1a14", sclera="#b8ac88",
+        brows="#b8b2a4", brow_thick=1.8, lips="#5a3a34", lip_alpha=0.7, dead_eyes=True, open_mouth=True,
+        head_blood=0.35, shadow="#3a2a1e", hair_style="bangs", hair="#c8c2b4", hair_hi="#e2ddd2", hair_contrast=0.3,
+        straight_cut=True, torso=torso_granny, arm=arm_granny, leg=leg_granny,
+        shoe=sneaker("#d8d0c4", "#c8c4b8", sole="#d8d4c8", dirty=0.6), nails="#b8a888", hand_blood=0.5, hand_grime=0.3,
+        extra="hair", misc="hair"),
     "corpse": dict(
         seed=808, skin="#8a8a70", redness=0.0, mottle=0.2, eyes="#2a2a24", brows="#3a3028", lips="#4a3434",
         lip_alpha=0.8, dead_eyes=True, open_mouth=True, hair_style="short", hair="#2a241e", hair_hi="#3a3228",

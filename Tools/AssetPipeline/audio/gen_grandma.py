@@ -1,5 +1,6 @@
-"""Grandmother (iteration 2): Audio/Grandma/* - shrieks and screams made from the user's recordings (pitched up,
-shaky old voice, torn apart by the tape), mutters, death rattle, wheelchair squeak loop, her TV."""
+"""Grandmother (iteration 2): Audio/Grandma/* - shrieks and screams cut from the women's screams in the user's
+recording (natural pitch, made old with an uneven vibrato, tremolo and a wet rasp, torn by the tape; no synthetic voice
+layers and never Omar's screams), breathy mutters, death gurgle, wheelchair squeak loop, her TV."""
 import numpy as np
 
 import common
@@ -22,88 +23,104 @@ def shaky(x, rng, rate=6.0, depth=0.035):
     return y * trem
 
 
-def old_shriek(rng, dur, f0s, vowels):
-    """Synthetic shrill old-woman voice layer (glottal + formants), very ragged."""
-    n = N(dur)
-    f0 = np.interp(T(n), np.linspace(0, dur, len(f0s)), f0s)
-    g = sfx.glottal(f0, n, rng, jitter=0.06, shimmer=0.4)
-    seq = [(dur * i / max(1, len(vowels) - 1), v) for i, v in enumerate(vowels)]
-    v = sfx.vowel_track(n, seq, rng, 0.06)
-    y = sfx.formant_filter(g, v, bw=(120, 150, 220, 300), gains=(0.9, 1.0, 0.8, 0.5))
-    y += 0.25 * dsp.bp(rng.standard_normal(n), 2000, 7000)  # breath / rasp
-    return dsp.norm(y) * dsp.env([(0, 0), (0.04, 1), (dur * 0.75, 0.85), (dur, 0)], n)
+def rasp(x, rng, amount=0.35):
+    """Old, wet throat: band noise riding the voice envelope + a little irregular crackle (phlegm)."""
+    n = len(x)
+    e = dsp.lp(np.abs(x), 30)
+    e = e / (e.max() + 1e-9)
+    hiss = dsp.bp(rng.standard_normal(n), 1800, 6500) * e
+    wet = dsp.lp(dsp.crackle(n, rng, 22.0), 2500) * e
+    return x + amount * dsp.norm(hiss) * 0.6 + amount * dsp.norm(wet) * 0.35
 
 
-def tear(y, rng, bits=7, drive=3.2):
-    """Loud, distorted, VHS-degraded finish for her voice."""
-    y = dsp.peq(dsp.norm(y), 2600, 1.0, 6)      # shrill
-    y = dsp.sat(dsp.norm(y) * drive, drive)
-    y = dsp.reverb(y, rng, 0.9, 0.3, bright=4000, dark=900)
-    return dsp.vhs(y, rng, bits=bits, factor=2.0, drive=2.4, lp_hz=6500, hiss=0.03)
+def tear(y, rng, bits=7, drive=2.4):
+    """Loud, distorted, VHS-degraded finish for her voice (a real voice, just worn out by the tape)."""
+    y = dsp.bp(dsp.norm(y), 260, 6000, 2)
+    y = dsp.peq(y, 2400, 1.2, 4)               # shrill presence
+    y = dsp.asym_sat(dsp.norm(y) * drive, drive, 0.15)
+    y = dsp.reverb(y, rng, 0.7, 0.25, bright=3800, dark=900)
+    return dsp.vhs(y, rng, bits=bits, factor=2.0, drive=2.0, lp_hz=6000, hiss=0.03)
 
 
-def _scream(rng, start, dur, ratio, vowels):
-    x = sfx.scream_fragment("screams_long", start, dur, ratio)
-    x = shaky(dsp.norm(x), rng, rng.uniform(5.5, 7.0), 0.04)
-    layer = old_shriek(rng, dur, [rng.uniform(780, 900), rng.uniform(950, 1100), rng.uniform(700, 820)], vowels)
-    y = dsp.norm(x) + 0.55 * layer
+def old_voice(x, rng, ratio=1.0, wobble=0.05, rate=6.2):
+    """A real (female) scream made old: strong uneven vibrato + tremolo, rasp; no synthetic layers."""
+    x = shaky(dsp.norm(x), rng, rate + rng.uniform(-0.5, 0.5), wobble)
+    return rasp(x, rng)
+
+
+def _scream(rng, segs, ratio):
+    """Concatenate pieces of the women's screams (crossfaded), keep the natural pitch (ratio ~1), make them old."""
+    parts = []
+    for (st, dur) in segs:
+        x = sfx.scream_fragment("screams_long", st, dur, ratio)
+        parts.append(dsp.fade(dsp.norm(x), 0.01, 0.12))
+    n = sum(len(p) for p in parts) - N(0.08) * (len(parts) - 1)
+    y = np.zeros(n)
+    pos = 0
+    for p in parts:
+        dsp.place(y, p, pos)
+        pos += len(p) - N(0.08)
+    y = old_voice(y, rng)
     return tear(y, rng)
 
 
-@sound("Grandma/scream_1", desc="the old woman screams for Omar: shrill, shaky, torn", **LOUD)
+@sound("Grandma/scream_1", desc="the old woman screams for Omar: a real shrill scream, shaky and torn by the tape", **LOUD)
 def scream_1(rng):
-    return _scream(rng, 1.2, 2.4, 1.42, ["a", "ae", "a"])
+    return _scream(rng, [(3.62, 2.7)], 0.97)
 
 
 @sound("Grandma/scream_2", desc="second scream variant: higher, cracking", **LOUD)
 def scream_2(rng):
-    return _scream(rng, 7.4, 2.2, 1.55, ["e", "a", "uh"])
+    return _scream(rng, [(8.0, 2.05)], 1.0)
 
 
-@sound("Grandma/scream_3", desc="third scream variant: long wail into a sob", **LOUD)
+@sound("Grandma/scream_3", desc="third scream variant: a long wail breaking into a sob", **LOUD)
 def scream_3(rng):
-    return _scream(rng, 13.0, 2.8, 1.36, ["a", "o", "uh"])
+    y = _scream(rng, [(12.0, 1.7), (15.0, 1.3)], 0.95)
+    # the sob at the end drops in pitch
+    n = len(y)
+    glide = np.interp(np.arange(n), [0, n * 0.6, n], [1.0, 1.0, 0.86])
+    return dsp.pad(dsp.varispeed(y, glide), n)
 
 
-@sound("Grandma/spot", desc="sudden shriek when she first sees someone (stutters on the tape)", **LOUD)
+@sound("Grandma/spot", desc="sudden shriek when she first sees someone (the tape catches on the attack)", **LOUD)
 def spot(rng):
-    x = sfx.scream_fragment("scream_4", 0.05, 1.3, 1.62)
-    x = shaky(dsp.norm(x), rng, 7.5, 0.03)
+    x = sfx.scream_fragment("screams_long", 17.82, 1.3, 1.04)
+    x = old_voice(dsp.fade(dsp.norm(x), 0.004, 0.25), rng, wobble=0.035, rate=7.0)
     head = x[:N(0.07)].copy()
     y = np.zeros(N(1.6))
     for k in range(3):  # the tape catches on the attack
         dsp.place(y, head * (0.6 + 0.2 * k), N(0.07 * k))
     dsp.place(y, x, N(0.21))
-    y += 0.5 * dsp.pad(old_shriek(rng, 1.2, [1100, 1250, 900], ["i", "e", "a"]), len(y)) * 0
-    dsp.place(y, old_shriek(rng, 1.2, [1050, 1250, 880], ["i", "e", "a"]), N(0.21), 0.6)
-    return tear(y, rng, bits=6, drive=3.6)
+    return tear(y, rng, bits=6, drive=2.8)
 
 
 def _mutter(rng, dur, words):
+    """Unintelligible old woman mumbling: mostly breathy whisper through mouth shapes, a weak trembling voice under it."""
     n = N(dur)
     out = np.zeros(n)
     t = 0.08
+    vw = ["a", "e", "o", "uh", "u", "ae"]
     for _ in range(words):
-        d = rng.uniform(0.14, 0.32)
+        d = rng.uniform(0.12, 0.3)
         m = N(d)
-        f0 = rng.uniform(175, 215) * np.linspace(1.04, 0.94, m)
-        g = sfx.glottal(f0, m, rng, jitter=0.05, shimmer=0.35)
-        vw = ["a", "e", "o", "uh", "u", "ae"]
         v = sfx.vowel_track(m, [(0, vw[rng.integers(len(vw))]), (d, vw[rng.integers(len(vw))])], rng, 0.05)
-        y = sfx.formant_filter(g, v, gains=(1.0, 0.7, 0.35, 0.15))
-        y = dsp.norm(y) * dsp.env([(0, 0), (d * 0.25, 1), (d, 0)], m)
-        y = shaky(y, rng, 6.0, 0.03)
+        breathy = sfx.formant_filter(dsp.pink(m, rng), v, gains=(1.0, 0.8, 0.5, 0.3))
+        f0 = rng.uniform(170, 210) * np.linspace(1.05, 0.92, m)
+        voiced = sfx.formant_filter(sfx.glottal(f0, m, rng, jitter=0.09, shimmer=0.5), v, gains=(1.0, 0.6, 0.3, 0.1))
+        y = dsp.norm(breathy) + 0.35 * dsp.norm(voiced)
+        y = dsp.norm(y) * dsp.env([(0, 0), (d * 0.3, 1), (d, 0)], m)
+        y = shaky(y, rng, 6.0, 0.04)
         dsp.place(out, y, N(t))
-        if rng.uniform() < 0.4:
-            sm = N(rng.uniform(0.05, 0.1))
-            dsp.place(out, dsp.bp(rng.standard_normal(sm), 3500, 8000) * np.hanning(sm), N(t + d), 0.25)
-        t += d + rng.uniform(0.03, 0.2)
-        if t > dur - 0.3:
+        if rng.uniform() < 0.35:  # lip smack / tongue click
+            dsp.place(out, dsp.click(N(0.02), rng.uniform(1800, 3200), 6, 0.003, rng), N(t + d + 0.02), 0.3)
+        t += d + rng.uniform(0.04, 0.24)
+        if t > dur - 0.35:
             break
-    out += 0.15 * sfx.breath(n, rng, [(dur - 0.5, 0.45, "out", 0.8)])
-    out = dsp.lp(out, 3200)
+    out += 0.2 * sfx.breath(n, rng, [(dur - 0.5, 0.45, "out", 0.8)])
+    out = rasp(dsp.lp(out, 3000), rng, 0.25)
     out = dsp.reverb(dsp.norm(out), rng, 0.6, 0.2, bright=3000, dark=800)
-    return dsp.vhs(out, rng, bits=9, drive=1.6, lp_hz=5500, hiss=0.03)
+    return dsp.vhs(out, rng, bits=9, drive=1.6, lp_hz=5000, hiss=0.03)
 
 
 @sound("Grandma/mutter_1", desc="mumbling at the TV", **ONE)
@@ -121,24 +138,24 @@ def mutter_3(rng):
     return _mutter(rng, 2.6, 10)
 
 
-@sound("Grandma/death", desc="shot: a cut-off scream, a wet rattle, the body slumps in the chair", **LOUD)
+@sound("Grandma/death", desc="shot: a cut-off scream, a wet gurgling rattle, the body slumps in the chair", **LOUD)
 def death(rng):
     n = N(2.6)
     y = np.zeros(n)
-    x = sfx.scream_fragment("scream_2", 0.1, 0.9, 1.35)
-    glide = np.interp(T(len(x)), [0, len(x) / SR], [1.0, 0.7])
-    x = dsp.pad(dsp.varispeed(dsp.norm(x), glide), len(x)) * dsp.env([(0, 1), (0.6, 0.8), (0.9, 0)], len(x))
-    dsp.place(y, x, 0, 1.0)
-    m = N(0.9)  # rattle: voiced fry gated, bubbles
-    g = sfx.glottal(np.linspace(90, 60, m), m, rng, 0.1, 0.6)
-    fry = g * (0.5 + 0.5 * np.sign(np.sin(TAU * dsp.phase(28, m))))
-    dsp.place(y, dsp.lp(dsp.norm(fry), 1200) * dsp.env([(0, 0), (0.1, 1), (0.9, 0)], m), N(0.85), 0.5)
-    for k in range(6):
-        dsp.place(y, sfx.bubble(rng.uniform(300, 700), rng), N(0.9 + 0.1 * k + rng.uniform(0, 0.05)), 0.25)
-    dsp.place(y, sfx.thud(N(0.6), rng, 70, 0.1, 0.6, noise=0.6), N(1.5), 0.7)   # slumps forward
+    x = sfx.scream_fragment("screams_long", 5.0, 0.85, 0.95)
+    glide = np.interp(T(len(x)), [0, len(x) / SR], [1.0, 0.72])
+    x = dsp.pad(dsp.varispeed(dsp.norm(x), glide), len(x)) * dsp.env([(0, 1), (0.55, 0.8), (0.85, 0)], len(x))
+    dsp.place(y, old_voice(x, rng, wobble=0.03), 0, 1.0)
+    m = N(1.0)  # wet rattle: gated low noise + bubbles, no tonal synth
+    gate = 0.5 + 0.5 * np.sign(np.sin(TAU * dsp.phase(18 + 6 * dsp.smooth_rand(m, rng, 3, False), m)))
+    gurgle = dsp.bp(rng.standard_normal(m), 180, 900) * gate
+    dsp.place(y, dsp.norm(gurgle) * dsp.env([(0, 0), (0.1, 1), (1.0, 0)], m), N(0.8), 0.45)
+    for k in range(7):
+        dsp.place(y, sfx.bubble(rng.uniform(260, 650), rng), N(0.85 + 0.12 * k + rng.uniform(0, 0.05)), 0.3)
+    dsp.place(y, sfx.thud(N(0.6), rng, 70, 0.1, 0.6, noise=0.6), N(1.55), 0.7)   # slumps forward
     dsp.place(y, sfx.creak(N(0.5), rng, np.full(N(0.5), 40.0), kind="metal", base=900,
-                            amp_env=dsp.env([(0, 0), (0.05, 1), (0.5, 0)], N(0.5))), N(1.52), 0.3)
-    return tear(y, rng, bits=7, drive=2.6)
+                            amp_env=dsp.env([(0, 0), (0.05, 1), (0.5, 0)], N(0.5))), N(1.57), 0.3)
+    return tear(y, rng, bits=7, drive=2.2)
 
 
 @sound("Grandma/wheelchair_loop", ch=1, loop=True, norm=("lufs", -17.0, -2.0), desc="wheelchair rolling over floorboards: squeaky wheel once per turn, rumble, rattles (loop)")

@@ -19,7 +19,7 @@ namespace PreviewHarness
                 case "items": Items(outDir); return true;
                 case "fparms": FpArms(args, outDir); return true;
                 case "perf": Perf(); return true;
-                case "grandma": Grandma(outDir); return true;
+                case "grandma": Grandma(args, outDir); return true;
             }
             return false;
         }
@@ -226,10 +226,11 @@ namespace PreviewHarness
         }
 
         /// <summary>grandma: the grandmother in every mode side by side.</summary>
-        static void Grandma(string outDir)
+        static void Grandma(List<string> a, string outDir)
         {
             var w = new SceneWriter();
-            var modes = new[] { GrandmaMode.WatchingTv, GrandmaMode.Roaming, GrandmaMode.Screaming, GrandmaMode.Dead };
+            var modes = a.Count > 0 ? new[] { (GrandmaMode)Enum.Parse(typeof(GrandmaMode), a[0]) }
+                : new[] { GrandmaMode.WatchingTv, GrandmaMode.Roaming, GrandmaMode.Screaming, GrandmaMode.Dead };
             for (int i = 0; i < modes.Length; i++)
             {
                 var rig = GrandmaRig.Create(null);

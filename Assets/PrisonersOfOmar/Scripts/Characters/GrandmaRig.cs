@@ -13,22 +13,25 @@ namespace PrisonersOfOmar.Characters
     }
 
     /// <summary>
-    /// (iteration 2) The grandmother in her wheelchair (see the "granny" references): white bob falling over one eye,
-    /// sallow skin, sunken eyes, a faded floral house dress, white socks; a black wheelchair with big wheels.
-    /// Low-poly boxes on one 128x128 atlas (Textures/Items/grandma, grandma_dead) + procedural animation.
-    /// Origin = floor under the wheelchair centre, facing +Z. No colliders (gameplay adds them).
+    /// (iteration 2) The grandmother in her wheelchair (see the "granny" references): a frail, stooped old woman with a
+    /// white bob, sallow liver-spotted skin, sunken dark eyes and a faded floral house dress, white socks and shoes; a
+    /// black wheelchair with big spoked wheels. Her body is a smooth skinned humanoid (the same generator as the
+    /// prisoners, <see cref="BodySpec.Grandma"/>, Textures/Characters/grandma[_dead]) posed procedurally in the chair;
+    /// the chair uses Textures/Items/grandma. Origin = floor under the wheelchair centre, facing +Z. No colliders.
     /// </summary>
     public sealed class GrandmaRig : MonoBehaviour
     {
         public GrandmaMode Mode { get; private set; }
         /// <summary>Head height in world space (eye line for line-of-sight tests).</summary>
-        public Vector3 EyePosition => _head != null ? _head.TransformPoint(new Vector3(0f, 0.1f, 0.09f)) : transform.position + transform.up * 1.15f + transform.forward * 0.1f;
+        public Vector3 EyePosition => _body != null && _body.EyePoint != null ? _body.EyePoint.position : transform.position + transform.up * 1.15f + transform.forward * 0.1f;
 
-        const string TexPath = "Textures/Items/grandma", DeadTexPath = "Textures/Items/grandma_dead";
+        const string TexPath = "Textures/Items/grandma";
         const float WheelR = 0.3f;
+        /// <summary>Where her hips sit in the chair (rig space).</summary>
+        static readonly Vector3 SeatHips = new Vector3(0f, 0.6f, -0.1f);
 
-        Transform _torso, _head, _jaw, _shL, _shR, _elL, _elR, _wheelL, _wheelR, _castL, _castR;
-        readonly System.Collections.Generic.List<Renderer> _bodyRenderers = new System.Collections.Generic.List<Renderer>();
+        HumanoidRig _body;
+        Transform _mouth, _wheelL, _wheelR, _castL, _castR;
         float _speed, _wheelAngle, _castAngle, _time, _seed;
         Vector3? _lookTarget;
         float _headYaw, _headPitch;
@@ -50,16 +53,12 @@ namespace PrisonersOfOmar.Characters
 
         // ============================================================================================ build
         static Rect R(float x, float y, float w, float h) => new Rect((x + 0.5f) / 128f, 1f - (y + h - 0.5f) / 128f, (w - 1f) / 128f, (h - 1f) / 128f);
-        static readonly Rect Dress = R(0, 0, 64, 64), Hem = R(0, 64, 64, 32), Face = R(64, 0, 32, 32), Skin = R(96, 0, 32, 32),
-            Hair = R(64, 32, 32, 32), HairBack = R(64, 64, 32, 32), Socks = R(96, 32, 32, 16), Shoes = R(96, 48, 32, 16),
-            Mouth = R(96, 64, 32, 32), Metal = R(0, 96, 32, 32), Tyre = R(32, 96, 32, 32), Vinyl = R(64, 96, 32, 32), Chrome = R(96, 96, 32, 32);
-
-        Material Mat(bool dead) => PsxMaterials.Get(dead ? DeadTexPath : TexPath, PsxSurface.Lit);
+        static readonly Rect Metal = R(0, 96, 32, 32), Tyre = R(32, 96, 32, 32), Vinyl = R(64, 96, 32, 32), Chrome = R(96, 96, 32, 32);
 
         void Build(int layer)
         {
             _seed = (_instances++ * 7.31f) % 50f + 3f;
-            var mat = Mat(false);
+            var mat = PsxMaterials.Get(TexPath, PsxSurface.Lit);
             Transform root = transform;
 
             // ---------------------------------------------------------------- wheelchair (static part)
@@ -90,74 +89,20 @@ namespace PrisonersOfOmar.Characters
             _castL = Wheel(root, layer, mat, -0.2f, 0.07f, new Vector3(0f, 0.07f, 0.31f), 0.03f, false);
             _castR = Wheel(root, layer, mat, 0.2f, 0.07f, new Vector3(0f, 0.07f, 0.31f), 0.03f, false);
 
-            // ---------------------------------------------------------------- legs (on the footrests, never move)
-            var legs = new MeshBuilder();
-            legs.SetMaterial(mat);
-            Box(legs, new Vector3(0f, 0.57f, 0.1f), new Vector3(0.36f, 0.14f, 0.46f), Dress);                  // lap
-            Box(legs, new Vector3(0f, 0.42f, 0.33f), new Vector3(0.36f, 0.26f, 0.06f), Hem);                    // skirt over the knees
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                Box(legs, new Vector3(sx * 0.08f, 0.22f, 0.35f), new Vector3(0.065f, 0.22f, 0.065f), Skin);     // shin
-                Box(legs, new Vector3(sx * 0.08f, 0.15f, 0.355f), new Vector3(0.072f, 0.09f, 0.072f), Socks);   // sock
-                Box(legs, new Vector3(sx * 0.08f, 0.135f, 0.4f), new Vector3(0.08f, 0.05f, 0.15f), Shoes);      // shoe
-            }
-            _bodyRenderers.Add(legs.Build("Legs", root, layer).GetComponent<Renderer>());
-
-            // ---------------------------------------------------------------- torso + head + arms (animated)
-            _torso = GeoUtil.CreateChild(root, "Torso", new Vector3(0f, 0.52f, -0.1f), Quaternion.identity, layer);
-            var tmb = new MeshBuilder();
-            tmb.SetMaterial(mat);
-            Box(tmb, new Vector3(0f, 0.12f, 0f), new Vector3(0.3f, 0.24f, 0.2f), Dress);                         // belly
-            Box(tmb, new Vector3(0f, 0.36f, 0.0f), new Vector3(0.31f, 0.24f, 0.19f), Dress);                     // chest
-            Box(tmb, new Vector3(0f, 0.36f, 0.075f), new Vector3(0.22f, 0.2f, 0.06f), Dress);                    // bosom
-            Box(tmb, new Vector3(0f, 0.5f, 0.0f), new Vector3(0.18f, 0.05f, 0.14f), Dress);                      // collar
-            Box(tmb, new Vector3(0f, 0.55f, 0.0f), new Vector3(0.07f, 0.07f, 0.07f), Skin);                      // neck
-            _bodyRenderers.Add(tmb.Build("Body", _torso, layer).GetComponent<Renderer>());
-
-            _head = GeoUtil.CreateChild(_torso, "Head", new Vector3(0f, 0.58f, 0.015f), Quaternion.identity, layer);
-            var hmb = new MeshBuilder();
-            hmb.SetMaterial(mat);
-            hmb.AddBox(new Vector3(0f, 0.1f, 0f), new Vector3(0.16f, 0.2f, 0.18f),
-                new BoxUVRects { PosZ = Face, NegZ = HairBack, PosX = Skin, NegX = Skin, PosY = Hair, NegY = Skin });
-            // white bob: cap + sides down to the jaw + back, a lock falling over one eye
-            Box(hmb, new Vector3(0f, 0.2f, -0.005f), new Vector3(0.19f, 0.06f, 0.2f), Hair);
-            Box(hmb, new Vector3(-0.088f, 0.1f, -0.01f), new Vector3(0.03f, 0.19f, 0.19f), Hair);
-            Box(hmb, new Vector3(0.088f, 0.1f, -0.01f), new Vector3(0.03f, 0.19f, 0.19f), Hair);
-            Box(hmb, new Vector3(0f, 0.1f, -0.095f), new Vector3(0.19f, 0.2f, 0.03f), HairBack);
-            hmb.Push(new Vector3(-0.035f, 0.15f, 0.093f), Quaternion.Euler(0f, 0f, -12f));
-            Box(hmb, Vector3.zero, new Vector3(0.075f, 0.09f, 0.012f), Hair);
-            hmb.Pop();
-            _bodyRenderers.Add(hmb.Build("HeadMesh", _head, layer).GetComponent<Renderer>());
-            _jaw = GeoUtil.CreateChild(_head, "Jaw", new Vector3(0f, 0.045f, 0.091f), Quaternion.identity, layer);
-            var jmb = new MeshBuilder();
-            jmb.SetMaterial(mat);
-            Box(jmb, new Vector3(0f, -0.015f, 0f), new Vector3(0.05f, 0.04f, 0.006f), Mouth);
-            _bodyRenderers.Add(jmb.Build("MouthOpen", _jaw, layer).GetComponent<Renderer>());
-            _jaw.localScale = new Vector3(1f, 0.01f, 1f);
-
-            _shL = Arm(-1f, layer, mat, out _elL);
-            _shR = Arm(1f, layer, mat, out _elR);
+            // ---------------------------------------------------------------- the old woman (smooth skinned body)
+            var spec = BodySpec.Grandma(false);
+            _body = HumanoidFactory.BuildRig("GrandmaBody", spec, root, layer);
+            // dark open mouth on the face, scaled open when she mumbles / screams
+            var mouthAt = BodyMeshGenerator.MouthPoint(spec) - _body.BindPositions[(int)BoneId.Head];
+            _mouth = GeoUtil.CreateChild(_body.Head, "Mouth", mouthAt + new Vector3(0f, 0f, 0.002f), Quaternion.identity, layer);
+            var mm = new MeshBuilder();
+            mm.SetMaterial(PsxMaterials.Get(null, PsxSurface.Unlit, new Color(0.05f, 0.02f, 0.02f)));
+            mm.AddBox(new Vector3(0f, -0.012f, 0f), new Vector3(0.034f, 0.026f, 0.006f), BoxUV.Local, 1f);
+            mm.Build("MouthOpen", _mouth, layer);
+            _mouth.localScale = new Vector3(1f, 0.01f, 1f);
 
             SetTargets(GrandmaMode.WatchingTv, 0f, out _torsoE, out _headE, out _shLE, out _shRE, out _elLE, out _elRE, out _jawOpen);
             ApplyPose();
-        }
-
-        Transform Arm(float side, int layer, Material mat, out Transform elbow)
-        {
-            var sh = GeoUtil.CreateChild(_torso, side < 0 ? "ShoulderL" : "ShoulderR", new Vector3(side * 0.175f, 0.45f, 0f), Quaternion.identity, layer);
-            var amb = new MeshBuilder();
-            amb.SetMaterial(mat);
-            Box(amb, new Vector3(0f, -0.06f, 0f), new Vector3(0.07f, 0.12f, 0.07f), Dress);                       // short sleeve
-            Box(amb, new Vector3(0f, -0.18f, 0f), new Vector3(0.05f, 0.14f, 0.05f), Skin);                        // thin upper arm
-            _bodyRenderers.Add(amb.Build("UpperArm", sh, layer).GetComponent<Renderer>());
-            elbow = GeoUtil.CreateChild(sh, "Elbow", new Vector3(0f, -0.26f, 0f), Quaternion.identity, layer);
-            var fmb = new MeshBuilder();
-            fmb.SetMaterial(mat);
-            Box(fmb, new Vector3(0f, -0.12f, 0f), new Vector3(0.042f, 0.24f, 0.042f), Skin);                      // forearm
-            Box(fmb, new Vector3(0f, -0.28f, 0.005f), new Vector3(0.045f, 0.09f, 0.025f), Skin);                  // bony hand
-            Box(fmb, new Vector3(0f, -0.335f, 0.008f), new Vector3(0.04f, 0.04f, 0.02f), Skin);                   // fingers
-            _bodyRenderers.Add(fmb.Build("Forearm", elbow, layer).GetComponent<Renderer>());
-            return sh;
         }
 
         Transform Wheel(Transform root, int layer, Material mat, float x, float radius, Vector3 centre, float width, bool spokes)
@@ -212,11 +157,11 @@ namespace PrisonersOfOmar.Characters
         public void SetMode(GrandmaMode mode)
         {
             Mode = mode;
-            if (mode == GrandmaMode.Dead && !_deadSkin)
+            if (mode == GrandmaMode.Dead && !_deadSkin && _body != null && _body.BodyRenderer != null)
             {
                 _deadSkin = true;
-                var m = Mat(true);
-                foreach (var r in _bodyRenderers) if (r != null) r.sharedMaterial = m;
+                var smr = _body.BodyRenderer;
+                smr.sharedMaterials = HumanoidFactory.MaterialsFor(BodySpec.Grandma(true).Texture, smr.sharedMesh != null ? smr.sharedMesh.subMeshCount : 1);
             }
         }
 
@@ -249,9 +194,9 @@ namespace PrisonersOfOmar.Characters
 
             // head turns towards what she looks at (within what an old neck allows)
             float wantYaw = 0f, wantPitch = 0f;
-            if (_lookTarget.HasValue && Mode != GrandmaMode.Dead && _torso != null)
+            if (_lookTarget.HasValue && Mode != GrandmaMode.Dead && _body != null)
             {
-                Vector3 local = _torso.InverseTransformPoint(_lookTarget.Value) - new Vector3(0f, 0.68f, 0f);
+                Vector3 local = transform.InverseTransformPoint(_lookTarget.Value) - new Vector3(0f, 1.15f, 0f);
                 wantYaw = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -75f, 75f);
                 wantPitch = Mathf.Clamp(-Mathf.Atan2(local.y, new Vector2(local.x, local.z).magnitude) * Mathf.Rad2Deg, -30f, 35f);
             }
@@ -262,12 +207,28 @@ namespace PrisonersOfOmar.Characters
 
         void ApplyPose()
         {
-            if (_torso == null) return;
-            _torso.localRotation = Quaternion.Euler(_torsoE);
-            _head.localRotation = Quaternion.Euler(_headE.x + _headPitch * 0.8f, _headE.y + _headYaw, _headE.z);
-            _shL.localRotation = Quaternion.Euler(_shLE); _shR.localRotation = Quaternion.Euler(_shRE);
-            _elL.localRotation = Quaternion.Euler(_elLE); _elR.localRotation = Quaternion.Euler(_elRE);
-            _jaw.localScale = new Vector3(1f, Mathf.Max(0.01f, _jawOpen), 1f);
+            if (_body == null) return;
+            // seated: pelvis on the seat, thighs forward, shins down to the footplates (legs never move)
+            _body.Hips.localPosition = SeatHips;
+            _body.Hips.localRotation = Quaternion.Euler(_torsoE.x * 0.15f, 0f, 0f);
+            _body.LeftUpperLeg.localRotation = Quaternion.Euler(-82f, -4f, -3f);
+            _body.RightUpperLeg.localRotation = Quaternion.Euler(-82f, 4f, 3f);
+            _body.LeftLowerLeg.localRotation = Quaternion.Euler(77f, 0f, 0f);
+            _body.RightLowerLeg.localRotation = Quaternion.Euler(77f, 0f, 0f);
+            _body.LeftFoot.localRotation = Quaternion.Euler(4f, -6f, 0f);
+            _body.RightFoot.localRotation = Quaternion.Euler(4f, 6f, 0f);
+            // stooped back
+            _body.Spine.localRotation = Quaternion.Euler(_torsoE.x * 0.45f, _torsoE.y * 0.5f, _torsoE.z * 0.5f);
+            _body.Chest.localRotation = Quaternion.Euler(_torsoE.x * 0.4f + 6f, _torsoE.y * 0.5f, _torsoE.z * 0.5f);
+            _body.Neck.localRotation = Quaternion.Euler((_headE.x + _headPitch * 0.8f) * 0.4f, (_headE.y + _headYaw) * 0.4f, _headE.z * 0.4f);
+            _body.Head.localRotation = Quaternion.Euler((_headE.x + _headPitch * 0.8f) * 0.6f, (_headE.y + _headYaw) * 0.6f, _headE.z * 0.6f);
+            _body.LeftUpperArm.localRotation = Quaternion.Euler(_shLE);
+            _body.RightUpperArm.localRotation = Quaternion.Euler(_shRE);
+            _body.LeftLowerArm.localRotation = Quaternion.Euler(_elLE);
+            _body.RightLowerArm.localRotation = Quaternion.Euler(_elRE);
+            _body.LeftHand.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            _body.RightHand.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            if (_mouth != null) _mouth.localScale = new Vector3(1f, Mathf.Max(0.01f, _jawOpen), 1f);
         }
 
         float Noise(float t, float salt) => Mathf.PerlinNoise(_seed + salt, t) * 2f - 1f;
@@ -287,8 +248,8 @@ namespace PrisonersOfOmar.Characters
                     torso = new Vector3(9f + Mathf.Sin(t * 0.6f) * 1.2f, 0f, 2f);
                     head = new Vector3(14f + nod, Noise(t * 0.2f, 3f) * 6f, 6f + Noise(t * 0.3f, 4f) * 4f);
                     // elbows on the armrests, forearms lying forward along them
-                    shL = new Vector3(-6f, 0f, -9f); shR = new Vector3(-6f + twitch * 0.2f, 0f, 9f);
-                    elL = new Vector3(-84f, 0f, 0f); elR = new Vector3(-84f - twitch * 0.5f, 0f, twitch * 0.3f);
+                    shL = new Vector3(-10f, 0f, -17f); shR = new Vector3(-10f + twitch * 0.2f, 0f, 17f);
+                    elL = new Vector3(-72f, 8f, 0f); elR = new Vector3(-72f - twitch * 0.5f, -8f, twitch * 0.3f);
                     jaw = Mathf.Max(0f, Noise(t * 1.3f, 9f) - 0.4f) * 0.8f; // mumbling
                     break;
                 }
@@ -319,8 +280,9 @@ namespace PrisonersOfOmar.Characters
                 case GrandmaMode.Dead:
                     torso = new Vector3(52f, 0f, 6f);
                     head = new Vector3(42f, 10f, 18f);
-                    shL = new Vector3(38f, 0f, -6f); shR = new Vector3(32f, 0f, 9f); // hanging straight down
-                    elL = new Vector3(-6f, 0f, 0f); elR = new Vector3(-12f, 0f, 0f);
+                    // the back is folded ~55 deg forward: undo it so the arms hang straight down past her knees
+                    shL = new Vector3(-48f, 0f, -7f); shR = new Vector3(-53f, 0f, 10f);
+                    elL = new Vector3(-8f, 0f, 0f); elR = new Vector3(-14f, 0f, 0f);
                     jaw = 0.5f;
                     break;
             }

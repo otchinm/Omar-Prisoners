@@ -47,6 +47,7 @@ namespace PrisonersOfOmar.Characters
         public GlassesStyle Glasses = GlassesStyle.None;
         public bool Apron, Noose, Skirt, Rags;
         public bool Barefoot;                    // feet use the skin / plastic texture for the sole too
+        public bool BobHair;                     // LongBangs cut short at the jaw / neck (the grandmother)
 
         public float Scale => Height / 1.8f;
 
@@ -235,6 +236,32 @@ namespace PrisonersOfOmar.Characters
             HandScale = 1.4f;
             FootLen = 0.30f; FootW = 0.11f; ShoeH = 0.17f;
             Apron = true; Noose = true; Skirt = true;
+        }
+
+        /// <summary>(iteration 2) The grandmother: small, frail and stooped, thin bony limbs, a white bob, floral dress.</summary>
+        public static BodySpec Grandma(bool dead)
+        {
+            var b = new BodySpec();
+            b.Texture = dead ? "Textures/Characters/grandma_dead" : "Textures/Characters/grandma";
+            b.Skeleton(1.52f, true);
+            float s = b.Scale;
+            b.Torso = Rings(s,
+                new Ring(0.150f, 0.090f, 0.100f), new Ring(0.168f, 0.100f, 0.112f), new Ring(0.158f, 0.104f, 0.096f),
+                new Ring(0.140f, 0.098f, 0.084f), new Ring(0.140f, 0.094f, 0.086f), new Ring(0.146f, 0.090f, 0.094f),
+                new Ring(0.150f, 0.084f, 0.100f), new Ring(0.172f, 0.064f, 0.080f), new Ring(0.046f, 0.040f, 0.046f, -0.01f));
+            b.TorsoSquare = 2.0f;
+            b.Bust = 0.018f * s;
+            b.Belly = 0.012f * s;
+            b.FemaleLimbs(s, 0.78f);
+            b.ShoulderX = 0.146f * s; b.ElbowX = 0.164f * s; b.WristX = 0.178f * s;
+            b.ShoulderSlope = 0.035f;
+            b.Hair = HairStyle.LongBangs;
+            b.BobHair = true;
+            b.HeadH = 0.142f * b.Height; // old, shrunken body: the head looks big
+            b.Nose = 0.085f;
+            b.HandScale = 0.86f;
+            b.FootLen = 0.22f; b.FootW = 0.08f; b.ShoeH = 0.07f;
+            return b;
         }
 
         // ------------------------------------------------------------------------------------------ figures
