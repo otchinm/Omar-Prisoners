@@ -124,7 +124,7 @@ namespace PrisonersOfOmar.Rendering
                         Tape = 1.1f, Tracking = 0.5f, Noise = 1.15f, Contrast = 1.35f, Saturation = 0.9f, Crush = 0.06f,
                         ShadowAmount = 0.3f, Lift = 0.012f, Vignette = 0.65f,
                         ChromaShift = 1.6f, ChromaBlur = 1.6f, Ghost = 0.12f, HeadSwitch = 1f, Barrel = 0.08f,
-                        Tint = new Color(1.15f, 0.86f, 0.8f), Shadow = new Color(1.6f, 0.8f, 0.75f),
+                        Tint = new Color(1.04f, 0.97f, 0.95f), Shadow = new Color(1.1f, 0.95f, 0.92f),
                     };
                 case VhsMode.Spectator:
                     return new Grade
@@ -140,16 +140,48 @@ namespace PrisonersOfOmar.Rendering
                         Tape = 1f, Tracking = 0.35f, Noise = 1f, Contrast = 1.08f, Saturation = 0.72f, Crush = 0.035f,
                         ShadowAmount = 0.5f, Lift = 0.022f, Vignette = 0.5f,
                         ChromaShift = 1.3f, ChromaBlur = 1.5f, Ghost = 0.1f, HeadSwitch = 0.85f, Barrel = 0.08f,
-                        Tint = new Color(0.95f, 1f, 0.97f), Shadow = Teal,
+                        Tint = new Color(0.97f, 0.99f, 0.98f), Shadow = new Color(0.92f, 1.01f, 1.03f),
                     };
             }
+        }
+
+        /// <summary>(iteration 2) The graphics-setting filter applied on top of the mode's grade.</summary>
+        static Grade ApplyPreset(Grade g, VhsPreset p)
+        {
+            switch (p)
+            {
+                case VhsPreset.Clean:
+                    g.Tape *= 0.35f; g.Tracking *= 0.2f; g.Noise *= 0.4f; g.ChromaShift *= 0.5f; g.ChromaBlur *= 0.6f;
+                    g.Ghost *= 0.3f; g.HeadSwitch *= 0.3f; g.Saturation = Mathf.Min(1f, g.Saturation * 1.12f); g.Vignette *= 0.6f;
+                    break;
+                case VhsPreset.Worn:
+                    g.Tape *= 1.8f; g.Tracking *= 2.2f; g.Noise *= 1.6f; g.ChromaShift *= 1.6f; g.ChromaBlur *= 1.5f;
+                    g.Ghost *= 2f; g.HeadSwitch *= 1.4f; g.Saturation *= 0.6f; g.Lift += 0.03f; g.Vignette *= 1.2f;
+                    break;
+                case VhsPreset.Camcorder:
+                    g.Tape *= 0.6f; g.Noise *= 0.8f; g.Contrast *= 1.12f; g.Saturation = Mathf.Min(1f, g.Saturation * 1.08f);
+                    g.Tint = new Color(1.06f, 1f, 0.92f); g.Ghost *= 0.5f; g.HeadSwitch *= 1.2f; g.Barrel *= 0.5f; g.ShadowAmount *= 0.5f;
+                    break;
+                case VhsPreset.BlackWhite:
+                    g.Saturation = 0f; g.Contrast *= 1.15f; g.Noise *= 1.2f; g.ShadowAmount = 0f; g.Tint = Color.white; g.Shadow = Color.white;
+                    break;
+                case VhsPreset.Sepia:
+                    g.Saturation = 0f; g.ShadowAmount = 0f; g.Tint = new Color(1.12f, 0.98f, 0.76f); g.Shadow = new Color(1.1f, 0.95f, 0.8f);
+                    break;
+                case VhsPreset.Off:
+                    g.Tape = 0f; g.Tracking = 0f; g.Noise = 0f; g.ChromaShift = 0f; g.ChromaBlur = 0.4f; g.Ghost = 0f; g.HeadSwitch = 0f;
+                    g.Barrel = 0f; g.Vignette *= 0.3f; g.Saturation = 1f; g.Contrast = 1f; g.Crush = 0f; g.ShadowAmount = 0f; g.Lift = 0f;
+                    g.Tint = Color.white;
+                    break;
+            }
+            return g;
         }
 
         static Grade _grade;
         static bool _gradeInit;
 
         /// <summary>CRT barrel amount currently used by the VHS pass (PsxCameraRig.ScreenToLowRes compensates for it).</summary>
-        internal static float CurrentBarrel => _gradeInit ? _grade.Barrel : GradeFor(Mode).Barrel;
+        internal static float CurrentBarrel => _gradeInit ? _grade.Barrel : ApplyPreset(GradeFor(Mode), Preset).Barrel;
         static float _roll;
         static int _lastApplyFrame = -1;
 
@@ -161,7 +193,7 @@ namespace PrisonersOfOmar.Rendering
             _lastApplyFrame = Time.frameCount;
 
             // smooth mode transitions
-            Grade target = GradeFor(Mode);
+            Grade target = ApplyPreset(GradeFor(Mode), Preset);
             if (!_gradeInit) { _grade = target; _gradeInit = true; }
             else if (newFrame) _grade = Grade.Lerp(_grade, target, 1f - Mathf.Exp(-dt * 6f));
             var g = _grade;
@@ -191,7 +223,7 @@ namespace PrisonersOfOmar.Rendering
             float hb = (float)((ut * (1.1 + damage * 0.9)) % 1.0);
             float pulse = Mathf.Exp(-hb * 9f) + (hb > 0.2f ? 0.65f * Mathf.Exp(-(hb - 0.2f) * 9f) : 0f);
 
-            float sat = g.Saturation * (1f - Mathf.Clamp01(Desaturate)) * (1f - interference * 0.85f);
+            float sat = g.Saturation * (1f - Mathf.Clamp01(Desaturate)) * (1f - interference * 0.3f);
 
             m.SetVector(PsxShaderIds.VhsScreen, new Vector4(sw, sh, sw / sh, scan));
             m.SetVector(PsxShaderIds.VhsTime, new Vector4(t, field, _roll, Time.frameCount & 1));

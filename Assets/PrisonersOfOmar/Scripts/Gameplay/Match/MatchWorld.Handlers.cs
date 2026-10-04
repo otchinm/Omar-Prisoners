@@ -319,8 +319,7 @@ namespace PrisonersOfOmar.Gameplay
             AnomalySystem.Pulse(0.35f, 2.5f);
             if (LocalAvatar != null && oa != null && !LocalIsOmar && Vector3.Distance(oa.Position, LocalAvatar.Position) < 26f)
             {
-                VhsEffect.TriggerGlitch(0.7f, 0.8f);
-                VhsEffect.TriggerRoll(0.4f);
+                VhsEffect.TriggerGlitch(0.3f, 0.35f);
                 LocalPrisoner?.Terrify();
             }
         }

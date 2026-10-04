@@ -187,12 +187,13 @@ Shader "PrisonersOfOmar/VHS"
                 hs = hs * hs * _VhsTape2.w;
                 dx += hs * (6.0 + Hash12(float2(lineIdx, field + 5.0)) * 10.0);
 
-                // Omar interference: horizontal tearing bands + strong line jitter
-                float tearTick = floor(t * 12.0);
-                float tearBand = floor(suv.y * 14.0 + Hash11(tearTick + 3.0) * 14.0);
-                float tearOn = (Hash12(float2(tearBand, tearTick)) < interference * 0.5) ? 1.0 : 0.0;
-                dx += tearOn * (Hash12(float2(tearBand + 7.0, tearTick)) - 0.5) * 60.0 * interference;
-                dx += (Hash12(float2(lineIdx, field + 21.0)) - 0.5) * 4.0 * interference;
+                // Omar interference: the picture only DEGRADES (it must stay readable): a little line jitter and
+                // now and then a thin band that slips a few pixels sideways
+                float tearTick = floor(t * 9.0);
+                float tearBand = floor(suv.y * 22.0 + Hash11(tearTick + 3.0) * 22.0);
+                float tearOn = (Hash12(float2(tearBand, tearTick)) < interference * 0.14) ? 1.0 : 0.0;
+                dx += tearOn * (Hash12(float2(tearBand + 7.0, tearTick)) - 0.5) * 7.0 * interference;
+                dx += (Hash12(float2(lineIdx, field + 21.0)) - 0.5) * 1.4 * interference;
 
                 // glitch burst: big block displacement
                 dx += gOn * (Hash12(float2(gBlock + 3.0, gTick)) - 0.5) * 90.0 * glitch;
@@ -200,7 +201,7 @@ Shader "PrisonersOfOmar/VHS"
                 float2 uvS = float2(suv.x + dx * px, suv.y);
 
                 // ---------------------------------------------------------------- tape signal (YIQ)
-                float blur = 1.0 + damage * 2.5 + interference * 1.5;
+                float blur = 1.0 + damage * 1.6 + interference * 0.6;
                 float lumaR = 0.5 * blur * px;
                 float3 sC = SampleSrc(uvS);
                 float3 sL = SampleSrc(uvS - float2(lumaR, 0.0));
@@ -223,10 +224,10 @@ Shader "PrisonersOfOmar/VHS"
                 float3 col = YiqToRgb(float3(Y, IQ));
 
                 // color channel split (glitch bursts, interference)
-                float split = (glitch * 4.0 + interference * 2.0) * px;
+                float split = (glitch * 4.0 + interference * 1.2) * px;
                 float3 sSplitR = SampleSrc(uvS + float2(split, 0.0));
                 float3 sSplitB = SampleSrc(uvS - float2(split, 0.0));
-                float splitAmt = saturate(glitch * 1.5 + interference) * 0.7;
+                float splitAmt = saturate(glitch * 1.5 + interference * 0.4) * 0.6;
                 col.r = lerp(col.r, sSplitR.r, splitAmt);
                 col.b = lerp(col.b, sSplitB.b, splitAmt);
 
@@ -244,27 +245,23 @@ Shader "PrisonersOfOmar/VHS"
                 // ---------------------------------------------------------------- noise
                 float2 nCell = float2(floor(suv.x * lowW * 1.5), lineIdx);
                 float grain = Hash12(nCell + float2(field * 7.0, field * 3.0)) - 0.5;
-                float grainAmt = 0.04 * _VhsTape.w + band * 0.15 + hs * 0.35 + interference * 0.45;
+                float grainAmt = 0.04 * _VhsTape.w + band * 0.15 + hs * 0.35 + interference * 0.1;
                 col += grain * grainAmt;
 
                 // snow: short bright horizontal dashes (sparse when the tape is clean)
                 float sCell = floor(suv.x * lowW * 0.3 + Hash11(lineIdx + field) * 8.0);
                 float sn = Hash12(float2(sCell, lineIdx) + float2(field * 1.7, field * 5.3));
-                float snowDensity = 0.0005 * _VhsTape.w + band * 0.05 + hs * 0.12 + interference * interference * 0.12;
-                float snowLevel = 0.3 + 0.3 * saturate(band * 2.0 + hs + interference);
+                float snowDensity = 0.0005 * _VhsTape.w + band * 0.05 + hs * 0.12 + interference * 0.008;
+                float snowLevel = 0.3 + 0.3 * saturate(band * 2.0 + hs + interference * 0.3);
                 col += step(1.0 - snowDensity, sn) * snowLevel;
 
-                // signal dropouts: part of a line turns into noise (interference)
-                float dropH = Hash12(float2(lineIdx, field + 31.0));
-                float dropStart = Hash12(float2(lineIdx + 17.0, field));
-                float drop = (dropH < interference * interference * 0.3) ? step(dropStart, suv.x) : 0.0;
-                float dropNoise = Hash12(float2(floor(suv.x * lowW * 2.0), lineIdx + field * 3.0));
-                col = lerp(col, float3(dropNoise, dropNoise, dropNoise) * 0.8, drop);
-
-                // rolling bars (interference)
-                float bars = smoothstep(0.55, 1.0, sin(suv.y * 4.0 - t * 2.2) * 0.5 + 0.5);
-                col *= 1.0 - bars * interference * 0.35;
-                col += bars * interference * 0.04;
+                // interference: a few thin bright tracking lines + a faint slow hum bar (never hides the picture)
+                float tlH = Hash12(float2(lineIdx, floor(t * 15.0) + 31.0));
+                float tl = (tlH < interference * 0.012) ? 1.0 : 0.0;
+                float tlStart = Hash12(float2(lineIdx + 17.0, floor(t * 15.0)));
+                col += tl * step(tlStart, suv.x) * step(suv.x, tlStart + 0.35) * 0.22;
+                float bars = smoothstep(0.6, 1.0, sin(suv.y * 3.0 - t * 1.6) * 0.5 + 0.5);
+                col *= 1.0 - bars * interference * 0.08;
 
                 // ---------------------------------------------------------------- full static override
                 float sNoise = Hash12(float2(floor(crt.x * lowW * 1.5), floor(crt.y * lowH)) + float2(field * 3.1, field * 1.3));
@@ -290,12 +287,10 @@ Shader "PrisonersOfOmar/VHS"
                 col = lerp(col, col * 0.4 + float3(0.24, 0.0, 0.01), saturate(edge * damage * pulse * 1.2));
                 col *= 1.0 - damage * 0.25;
 
-                // ---------------------------------------------------------------- hiding: wardrobe slats
-                float hv = 1.0 - smoothstep(0.18, 0.62, length(cc * float2(1.0, 1.35)));
-                float slat = 0.5 + 0.5 * cos((crt.x + sin(t * 0.25) * 0.004) * TAU * 6.0);
-                float gap = smoothstep(0.55, 0.85, slat);
-                float hideMask = hv * lerp(0.06, 1.0, gap);
-                col *= lerp(1.0, hideMask, saturate(hiding));
+                // ---------------------------------------------------------------- hiding: soft dark vignette only
+                // (the view through the wardrobe slats comes from the geometry; the HUD must stay readable)
+                float hv = 1.0 - smoothstep(0.35, 0.9, length(cc * float2(1.0, 1.35)));
+                col *= lerp(1.0, lerp(0.55, 1.0, hv), saturate(hiding));
 
                 // ---------------------------------------------------------------- CRT vignette + rounded dark corners
                 float vig = 1.0 - _VhsLens.y * pow(saturate(r2 * 2.0), 1.5);
