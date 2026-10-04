@@ -35,6 +35,8 @@ namespace PrisonersOfOmar.Characters
         public float[] ArmR;                     // 7 rings at CharacterAtlas.ArmT
         public Ring[] HeadRings;                 // 10 rings in head units (x HeadH)
         public float HeadSquare = 2.2f;          // superellipse exponent of head rings
+        public float TorsoSquare = 2.2f;         // superellipse exponent of torso rings (2 = round, higher = boxy)
+        public float ShoulderSlope = 0.022f;     // how much the shoulder line drops towards the arms (x Scale)
         public float Nose = 0.07f;               // nose protrusion (head units)
         public float HandScale = 1f;
         public float FootLen = 0.26f, FootW = 0.095f, ShoeH = 0.11f;
@@ -206,23 +208,28 @@ namespace PrisonersOfOmar.Characters
 
         void Omar()
         {
-            // big, broad and heavy like the reference: a head taller than everyone, wide shoulders and gut,
-            // long arms that hang down past the hips, huge hands
-            Skeleton(2.05f, false);
+            // a real giant: ~2.3 m, so he has to stoop under door frames (the avatar bends him, HumanoidAnimator.Duck);
+            // round and massive rather than boxy - deep barrel chest, a heavy gut, thick limbs, huge hands,
+            // long arms hanging out past the belly
+            Skeleton(2.3f, false);
             Heavy = true;
             float s = Scale;
             Torso = Rings(s,
-                new Ring(0.182f, 0.104f, 0.115f), new Ring(0.214f, 0.128f, 0.138f), new Ring(0.220f, 0.152f, 0.124f),
-                new Ring(0.220f, 0.162f, 0.118f), new Ring(0.224f, 0.158f, 0.120f), new Ring(0.240f, 0.146f, 0.128f),
-                new Ring(0.252f, 0.132f, 0.132f), new Ring(0.282f, 0.100f, 0.100f), new Ring(0.080f, 0.072f, 0.078f, -0.01f));
-            Belly = 0.014f * s;
-            MaleLimbs(s, 1.34f);
-            ShoulderX = 0.226f * s; ElbowX = 0.252f * s; WristX = 0.262f * s;
-            ElbowY = ShoulderY - 0.182f * Height;
-            WristY = ElbowY - 0.158f * Height;
+                new Ring(0.200f, 0.130f, 0.140f), new Ring(0.236f, 0.168f, 0.160f), new Ring(0.244f, 0.214f, 0.150f),
+                new Ring(0.246f, 0.226f, 0.142f), new Ring(0.244f, 0.206f, 0.146f), new Ring(0.254f, 0.180f, 0.158f),
+                new Ring(0.262f, 0.160f, 0.160f), new Ring(0.268f, 0.122f, 0.128f), new Ring(0.092f, 0.084f, 0.090f, -0.01f));
+            TorsoSquare = 2.0f;
+            Belly = 0.045f * s;
+            MaleLimbs(s, 1.55f);
+            ArmR = Arr(s, 0.040f, 0.050f, 0.058f, 0.057f, 0.067f, 0.074f, 0.080f);
+            ShoulderX = 0.236f * s; ElbowX = 0.284f * s; WristX = 0.296f * s;
+            ShoulderY = NeckY - 0.052f * Height; // massive sloping shoulders, no square pads
+            ShoulderSlope = 0.06f;
+            ElbowY = ShoulderY - 0.176f * Height;
+            WristY = ElbowY - 0.156f * Height;
             HeadShape = HeadShape.Sack;
             HeadRings = SackHead;
-            HeadSquare = 3.2f;
+            HeadSquare = 2.5f;
             Nose = 0.02f;
             HeadH = 0.148f * Height;
             HandScale = 1.4f;

@@ -45,7 +45,10 @@ namespace PrisonersOfOmar.Gameplay
         public const float InterpDelay = 0.1f;
 
         public Vector3 Position => transform.position;
-        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight : ((State.Flags & AvatarFlags.Crouch) != 0 ? Tuning.CrouchEyeHeight : Tuning.EyeHeight);
+        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight - Tuning.OmarDuckDrop * DuckAmount : ((State.Flags & AvatarFlags.Crouch) != 0 ? Tuning.CrouchEyeHeight : Tuning.EyeHeight);
+        /// <summary>0..1 how far the giant Omar stoops right now (low door frame / ceiling over or just ahead of him).</summary>
+        public float DuckAmount { get; private set; }
+        float _duckTarget, _duckProbeAt;
         public Vector3 EyePosition => transform.position + Vector3.up * EyeHeight;
         public Vector3 ChestPosition => transform.position + Vector3.up * (EyeHeight * 0.72f);
         public bool LighterOn => (State.Flags & AvatarFlags.LighterOn) != 0;
@@ -81,7 +84,7 @@ namespace PrisonersOfOmar.Gameplay
             if (!simulated)
             {
                 a.Hitbox = go.AddComponent<CapsuleCollider>();
-                float h = a.IsOmar ? 1.95f : 1.75f;
+                float h = a.IsOmar ? 2.1f : 1.75f;
                 a.Hitbox.height = h;
                 a.Hitbox.radius = 0.32f;
                 a.Hitbox.center = new Vector3(0, h * 0.5f, 0);
@@ -193,11 +196,33 @@ namespace PrisonersOfOmar.Gameplay
                 var st = MatchWorld.Instance != null ? MatchWorld.Instance.StatusOf(Id) : null;
                 Anim.Injured = st != null && st.Injured;
                 Anim.Pose = _statusPose;
-                if (IsOmar) Anim.Hold = HoldPose.Cleaver;
+                if (IsOmar) { Anim.Hold = HoldPose.Cleaver; Anim.Duck = DuckAmount; }
                 else Anim.Hold = State.Held == ItemType.None ? HoldPose.None : ItemMeshFactory.HoldPoseFor(State.Held);
             }
 
-            if (!IsOmar) UpdateHeldItem();
+            if (IsOmar) UpdateDuck(vel, dt);
+            else UpdateHeldItem();
+        }
+
+        /// <summary>Omar is taller than the door frames: probe the clearance above and just ahead of him and stoop.</summary>
+        void UpdateDuck(Vector3 vel, float dt)
+        {
+            if (Time.time >= _duckProbeAt)
+            {
+                _duckProbeAt = Time.time + 0.06f;
+                Vector3 flat = new Vector3(vel.x, 0f, vel.z);
+                Vector3 dir = flat.sqrMagnitude > 0.04f ? flat.normalized : Forward;
+                float top = Rig != null ? Rig.Height : 2.3f;
+                float clearance = float.MaxValue;
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector3 o = transform.position + dir * (i * 0.35f) + Vector3.up * 1.2f;
+                    if (Physics.Raycast(o, Vector3.up, out var hit, top, Layers.Solid & ~(1 << Layers.Door), QueryTriggerInteraction.Ignore))
+                        clearance = Mathf.Min(clearance, 1.2f + hit.distance);
+                }
+                _duckTarget = clearance == float.MaxValue ? 0f : Mathf.Clamp01((top + 0.06f - clearance) / Tuning.OmarDuckDrop);
+            }
+            DuckAmount = Mathf.MoveTowards(DuckAmount, _duckTarget, dt * (_duckTarget > DuckAmount ? 4.5f : 2.2f));
         }
 
         // ------------------------------------------------------------------ held item & lights (third person)

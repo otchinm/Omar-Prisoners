@@ -22,6 +22,9 @@ namespace PrisonersOfOmar.Characters
         public bool Injured;
         /// <summary>Camera pitch in degrees (+ = looking down); bends spine / neck / head.</summary>
         public float LookPitch;
+        /// <summary>0..1 stoop under a low lintel / ceiling (the giant Omar ducking through doorways): bends the back and
+        /// bows the head, knees give a little. Smoothed internally.</summary>
+        public float Duck;
         public HoldPose Hold = HoldPose.None;
         public CharacterPose Pose = CharacterPose.Normal;
 
@@ -146,7 +149,7 @@ namespace PrisonersOfOmar.Characters
         float _speed, _speedVel;
         Vector3 _moveDir = Vector3.forward;
         float _phase, _prevPhase;
-        float _moveW, _runW, _crouchW, _sprintW, _injW, _airW, _exert;
+        float _moveW, _runW, _crouchW, _sprintW, _injW, _airW, _exert, _duckW;
         readonly float[] _holdW = new float[8];
         readonly float[] _poseW = new float[7];
         bool _hiddenApplied;
@@ -316,6 +319,7 @@ namespace PrisonersOfOmar.Characters
         {
             _moveW = Approach(_moveW, Smooth01((_speed - 0.12f) / 0.45f), dt, 0.08f);
             _crouchW = Approach(_crouchW, Crouching && Grounded ? 1f : 0f, dt, 0.2f);
+            _duckW = Approach(_duckW, Mathf.Clamp01(Duck), dt, 0.14f);
             _sprintW = Approach(_sprintW, !_heavy && Sprinting && _speed > WalkSpeed * 1.2f ? 1f : 0f, dt, 0.25f);
             _injW = Approach(_injW, Injured ? 1f : 0f, dt, 0.4f);
             _airW = Approach(_airW, Grounded ? 0f : 1f, dt, Grounded ? 0.08f : 0.15f);
@@ -375,8 +379,8 @@ namespace PrisonersOfOmar.Characters
             float sway = -swayAmp * Mathf.Sin(2f * Mathf.PI * (_phase + 0.25f - D * 0.5f));
             float limpDip = _injW * _moveW * 0.035f * s * Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * (_phase / Mathf.Max(0.1f, D * 2f))));
             p.HipsPos = new Vector3(sway * _moveW + shift * 0.025f * s * idleW,
-                -drop + bob * _moveW - limpDip + breath * 0.002f * idleW,
-                -0.06f * s * _crouchW);
+                -drop + bob * _moveW - limpDip + breath * 0.002f * idleW - 0.075f * s * _duckW,
+                -0.06f * s * _crouchW - 0.05f * s * _duckW);
             float yawAmp = Mathf.Lerp(Mathf.Lerp(6f, 11f, _runW), 3f, _crouchW) * _moveW;
             float pelvisYaw = yawAmp * Mathf.Cos(2f * Mathf.PI * _phase);
             float rollAmp = Mathf.Lerp(4f, 3f, _runW) * _moveW * (_heavy ? 1.15f : 1f);
@@ -385,15 +389,16 @@ namespace PrisonersOfOmar.Characters
             float lean = _heavy ? 2.5f + 1.5f * _moveW
                 : Mathf.Lerp(Mathf.Lerp(3f, 11f, _runW) * _moveW, 20f, _crouchW) + 9f * _sprintW;
             lean += _injW * 6f * _moveW;
-            p.Rot[(int)BoneId.Hips] = new Vector3(lean * 0.35f, pelvisYaw, pelvisRoll);
-            p.Rot[(int)BoneId.Spine] = new Vector3(lean * 0.3f + (_heavy ? 4f : 0f), -pelvisYaw * 0.45f, -pelvisRoll * 0.5f);
+            p.Rot[(int)BoneId.Hips] = new Vector3(lean * 0.35f + 9f * _duckW, pelvisYaw, pelvisRoll);
+            p.Rot[(int)BoneId.Spine] = new Vector3(lean * 0.3f + (_heavy ? 4f : 0f) + 13f * _duckW, -pelvisYaw * 0.45f, -pelvisRoll * 0.5f);
             float chestRoll = -pelvisRoll * 0.4f + _injW * _moveW * 5f;
-            p.Rot[(int)BoneId.Chest] = new Vector3(lean * 0.35f - breath * breathAmp * idleW - breath * breathAmp * 0.5f * _moveW * _exert,
+            p.Rot[(int)BoneId.Chest] = new Vector3(lean * 0.35f - breath * breathAmp * idleW - breath * breathAmp * 0.5f * _moveW * _exert + 11f * _duckW,
                 -pelvisYaw * 0.9f, chestRoll);
             // head stabilization
             float headCounter = -(lean * 1.0f);
-            p.Rot[(int)BoneId.Neck] = new Vector3(headCounter * 0.35f + (_heavy ? -4f : 0f), pelvisYaw * 0.3f, 0f);
-            p.Rot[(int)BoneId.Head] = new Vector3(headCounter * 0.55f + breath * 0.8f * idleW, pelvisYaw * 0.45f, -chestRoll * 0.6f);
+            // ducking: the head is bowed with the back, not stabilised level
+            p.Rot[(int)BoneId.Neck] = new Vector3(headCounter * 0.35f + (_heavy ? -4f : 0f) + 6f * _duckW, pelvisYaw * 0.3f, 0f);
+            p.Rot[(int)BoneId.Head] = new Vector3(headCounter * 0.55f + breath * 0.8f * idleW + 4f * _duckW, pelvisYaw * 0.45f, -chestRoll * 0.6f);
 
             // ---------------------------------------------------------------- arms (FK)
             float swing = Mathf.Lerp(Mathf.Lerp(15f, 44f, _runW) * Mathf.Clamp01(_speed / Mathf.Max(0.5f, WalkSpeed) + 0.2f), 8f, _crouchW) * _moveW;

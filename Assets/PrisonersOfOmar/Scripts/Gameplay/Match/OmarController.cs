@@ -147,7 +147,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             var rig = PsxCameraRig.Instance;
             if (rig == null) return;
-            Vector3 pos = _avatar.transform.position + Vector3.up * Tuning.OmarEyeHeight;
+            Vector3 pos = _avatar.transform.position + Vector3.up * _avatar.EyeHeight;
             float amp = _sprintingNow ? 0.07f : 0.045f;
             pos += Vector3.up * (Mathf.Abs(Mathf.Sin(_bobPhase)) * amp);
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, Mathf.Sin(_bobPhase * 0.5f) * (_sprintingNow ? 2.5f : 1.2f));

@@ -87,6 +87,8 @@ namespace PreviewHarness
                     case "air": an.Grounded = false; break;
                     case "lookdown": an.LookPitch = 45f; break;
                     case "lookup": an.LookPitch = -45f; break;
+                    case "duck": an.Duck = 1f; break;
+                    case "duckwalk": an.Duck = 1f; vel = new Vector3(0, 0, walk); break;
                     default:
                         if (part.StartsWith("hold:"))
                         {

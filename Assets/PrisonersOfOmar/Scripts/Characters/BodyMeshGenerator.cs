@@ -141,7 +141,7 @@ namespace PrisonersOfOmar.Characters
                 for (int i = 0; i <= N; i++)
                 {
                     float th = Theta(i, N);
-                    Vector2 q = RingPoint(r, th, k == 7 ? 2.4f : 2.2f);
+                    Vector2 q = RingPoint(r, th, k == 7 ? b.TorsoSquare + 0.2f : b.TorsoSquare);
                     float z = q.y;
                     float ath = Mathf.Abs(th);
                     // bust / belly / buttocks
@@ -151,7 +151,7 @@ namespace PrisonersOfOmar.Characters
                     if ((k == 2 || k == 3) && b.Belly > 0) z += b.Belly * Bump(ath, 0f, 45f);
                     if (k == 1) z -= 0.012f * b.Scale * Bump(ath, 150f, 25f);
                     float vy = y;
-                    if (k == 7) vy -= 0.022f * b.Scale * Mathf.Pow(Mathf.Abs(Mathf.Sin(th * Mathf.Deg2Rad)), 4f); // sloping shoulders
+                    if (k == 7) vy -= b.ShoulderSlope * b.Scale * Mathf.Pow(Mathf.Abs(Mathf.Sin(th * Mathf.Deg2Rad)), 4f); // sloping shoulders
                     Vector3 p = new Vector3(q.x, vy, z);
                     mb.Add(p, reg.UV((float)i / N, T[k]), TorsoWeight(k, th));
                 }
