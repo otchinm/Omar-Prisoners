@@ -713,6 +713,7 @@ namespace PrisonersOfOmar.Gameplay
                 _w.SendAction(_prompt.UsesItem == ItemType.BoltCutters ? CharacterAction.Cut : _prompt.UsesItem == ItemType.GasCan || _prompt.UsesItem == ItemType.LighterFuel ? CharacterAction.Pour : CharacterAction.Interact);
                 if (_prompt.UsesItem == ItemType.Lockpick) AudioManager.Play2D(Snd.Lockpick, 0.6f);
                 if (_prompt.UsesItem == ItemType.Crowbar) AudioManager.Play2D(Snd.CrowbarPry, 0.7f);
+                if (_prompt.UsesItem == ItemType.Screwdriver) AudioManager.Play2D(AudioManager.Variant(Snd.VentScrew, 3), 0.55f);
                 if (_prompt.UsesItem == ItemType.GasCan) AudioManager.Play2D(Snd.GasPour, 0.6f);
                 if (_prompt.UsesItem == ItemType.LighterFuel) AudioManager.Play2D(Snd.FuelPour, 0.6f);
             }

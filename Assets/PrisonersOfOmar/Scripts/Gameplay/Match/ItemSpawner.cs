@@ -34,11 +34,23 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        /// <summary>Areas a key item has to spawn in (null = anywhere): the cage key and the screwdriver lie somewhere in
+        /// the house so the prisoners waking up in the cage room can find them without crossing the whole farm.</summary>
+        static string Required(ItemType t)
+        {
+            switch (t)
+            {
+                case ItemType.CageKey: return "House.";
+                case ItemType.Screwdriver: return "House.";
+                default: return null;
+            }
+        }
+
         public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f)
         {
             var rng = DeterministicRandom.For(seed, "items");
             var result = new List<Placement>();
-            var keyList = new List<ItemType> { ItemType.BoltCutters, ItemType.CarKeys, ItemType.GasCan, ItemType.Fuse, ItemType.CageKey, ItemType.Crowbar };
+            var keyList = new List<ItemType> { ItemType.BoltCutters, ItemType.CarKeys, ItemType.GasCan, ItemType.Fuse, ItemType.CageKey, ItemType.Crowbar, ItemType.Screwdriver };
             if (needBattery) keyList.Add(ItemType.CarBattery);
             var common = new List<ItemType>();
             void AddN(ItemType t, int n) { n = Mathf.Max(1, Mathf.RoundToInt(n * supplyMul)); for (int i = 0; i < n; i++) common.Add(t); }
@@ -67,6 +79,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 ItemSpawnInfo pick = null;
                 string forb = Forbidden(t);
+                string req = Required(t);
                 // the cage key never lies in a room with cages (any cell room can hold prisoners)
                 if (t == ItemType.CageKey) foreach (var room in map.CellRooms) if (!string.IsNullOrEmpty(room.Area)) forb += "|" + room.Area;
                 for (int pass = 0; pass < 3 && pick == null; pass++)
@@ -77,6 +90,7 @@ namespace PrisonersOfOmar.Gameplay
                         if (pass == 0 && s.Tier == ItemSpawnTier.Common) continue;
                         if (pass < 2 && usedAreasForKeys.Contains(s.Area)) continue;
                         if (forb != null && pass < 2 && s.Area != null && MatchesAny(s.Area, forb)) continue;
+                        if (req != null && pass < 2 && (s.Area == null || !s.Area.StartsWith(req))) continue;
                         pick = s; break;
                     }
                 }

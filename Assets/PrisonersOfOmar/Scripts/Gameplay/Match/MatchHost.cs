@@ -88,7 +88,7 @@ namespace PrisonersOfOmar.Gameplay
                 GateCut = o.GateCut, CarFueled = o.CarFueled, CarBatteryOk = o.CarBatteryOk, CarStarted = o.CarStarted, CarDriver = o.CarDriver,
                 CarGone = o.CarGone, ShelterOpen = o.ShelterOpen, FuseIn = o.FuseIn, RadioCalled = o.RadioCalled, RescueAt = o.RescueAt,
                 RescuePresent = o.RescuePresent, RescueLeaveAt = o.RescueLeaveAt, RescueGone = o.RescueGone, BarrelsPoured = o.BarrelsPoured,
-                IgniteAt = o.IgniteAt, Exploded = o.Exploded,
+                IgniteAt = o.IgniteAt, Exploded = o.Exploded, VentScrews = o.VentScrews, VentHatchOpen = o.VentHatchOpen,
             };
         }
 
@@ -492,6 +492,8 @@ namespace PrisonersOfOmar.Gameplay
                 case UseTarget.Barrels: UseBarrels(sender, itemId); break;
                 case UseTarget.Ignite: UseIgnite(sender, itemId, charge); break;
                 case UseTarget.Trap: UseTrap(sender, tid); break;
+                case UseTarget.VentCover: UseVentCover(sender, itemId); break;
+                case UseTarget.VentHatch: UseVentHatch(sender); break;
             }
         }
 

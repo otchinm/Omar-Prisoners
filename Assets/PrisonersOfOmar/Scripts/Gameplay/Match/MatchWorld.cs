@@ -187,6 +187,7 @@ namespace PrisonersOfOmar.Gameplay
             BuildCages();
             try { BuildGrandma(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildKitchen(); } catch (Exception e) { Debug.LogException(e); }
+            try { BuildVent(); } catch (Exception e) { Debug.LogException(e); }
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();

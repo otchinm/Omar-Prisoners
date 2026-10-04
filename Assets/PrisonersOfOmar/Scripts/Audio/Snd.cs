@@ -71,7 +71,10 @@ namespace PrisonersOfOmar.Audio
             KeyUnlock = "Audio/Items/key_unlock", LockedRattle = "Audio/Items/locked_rattle",
             Lockpick = "Audio/Items/lockpick", CrowbarPry = "Audio/Items/crowbar_pry", WoodBreak = "Audio/Items/wood_break",
             BoltCut = "Audio/Items/bolt_cut", ChainDrop = "Audio/Items/chain_drop", SoundMeterTick = "Audio/Items/soundmeter_tick",
-            Pills = "Audio/Items/pills";
+            Pills = "Audio/Items/pills",
+            VentScrew = "Audio/Items/vent_screw", // 3: turning a rusty screw out (while holding E)
+            VentScrewDrop = "Audio/Items/vent_screw_drop", VentCoverOff = "Audio/Items/vent_cover_off",
+            VentGrateFall = "Audio/Items/vent_grate_fall"; // the kitchen ceiling grate: pops, hisses down, dull heavy clang at 0.84 s
 
         // world
         public const string DoorOpen = "Audio/World/door_open", // 2

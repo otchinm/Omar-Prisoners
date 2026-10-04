@@ -147,6 +147,8 @@ static class Program
         yield return ("int_upperhall", V(0, 5.6f, -7.3f), V(0, 4.6f, 6), false);
         yield return ("int_cageroom", V(-3.6f, 6.1f, 1.6f), V(-9.8f, 4.6f, -3), false);
         yield return ("int_cageroom_lit", V(-3.6f, 6.1f, 1.6f), V(-9.8f, 4.6f, -3), true);
+        yield return ("int_vent_cover", V(-8.2f, 5.0f, -0.6f), V(-5.2f, 4.2f, 1.45f), false);
+        yield return ("int_kitchen_vent", V(-6.2f, 1.7f, 4.0f), V(-3.5f, 3.4f, 1.45f), false);
         yield return ("int_storage", V(-3.6f, 5.6f, 7.5f), V(-10, 4.0f, 3), false);
         yield return ("int_radio", V(3.6f, 5.6f, -1.6f), V(10.5f, 4.4f, -5), false);
         yield return ("int_study", V(3.6f, 5.8f, 7.6f), V(9, 4.2f, 4), false);

@@ -129,6 +129,8 @@ namespace PrisonersOfOmar.Gameplay
         Ignite,        // light the poured drums
         Trap,          // id = trap index (disarm / free a trapped friend)
         Hiding,        // id = spot (enter / leave)
+        VentCover,     // take one screw out of the cage room vent cover (screwdriver)
+        VentHatch,     // push the kitchen ceiling grate out from inside the duct
     }
 
     public enum WorldEventKind : byte
@@ -196,6 +198,10 @@ namespace PrisonersOfOmar.Gameplay
         public bool BarrelsPoured;
         public float IgniteAt = -1f;
         public bool Exploded;
+        /// <summary>Screws taken out of the cage room vent cover (4 = the cover is off).</summary>
+        public int VentScrews;
+        /// <summary>The kitchen ceiling grate has been pushed out (the duct is open into the kitchen).</summary>
+        public bool VentHatchOpen;
 
         public void Write(NetWriter w)
         {
@@ -212,11 +218,13 @@ namespace PrisonersOfOmar.Gameplay
             if (RescueGone) bits |= 512;
             if (BarrelsPoured) bits |= 1024;
             if (Exploded) bits |= 2048;
+            if (VentHatchOpen) bits |= 4096;
             w.WriteInt(bits);
             w.WriteShort((short)CarDriver);
             w.WriteFloat(RescueAt);
             w.WriteFloat(RescueLeaveAt);
             w.WriteFloat(IgniteAt);
+            w.WriteByte((byte)VentScrews);
         }
 
         public void Read(NetReader r)
@@ -225,10 +233,12 @@ namespace PrisonersOfOmar.Gameplay
             GateCut = (b & 1) != 0; CarFueled = (b & 2) != 0; CarBatteryOk = (b & 4) != 0; CarStarted = (b & 8) != 0;
             CarGone = (b & 16) != 0; ShelterOpen = (b & 32) != 0; FuseIn = (b & 64) != 0; RadioCalled = (b & 128) != 0;
             RescuePresent = (b & 256) != 0; RescueGone = (b & 512) != 0; BarrelsPoured = (b & 1024) != 0; Exploded = (b & 2048) != 0;
+            VentHatchOpen = (b & 4096) != 0;
             CarDriver = r.ReadShort();
             RescueAt = r.ReadFloat();
             RescueLeaveAt = r.ReadFloat();
             IgniteAt = r.ReadFloat();
+            VentScrews = r.ReadByte();
         }
     }
 

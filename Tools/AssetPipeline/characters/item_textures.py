@@ -608,6 +608,20 @@ def _grandma(bloody):
     return c.done()
 
 
+def screwdriver():
+    """screwdriver.png 32x32: handle (0,0,16,32) amber plastic with dark grip flutes, shaft (16,0,16,32) worn steel."""
+    c = Canvas(32, 32, 27)
+    r = c.rng
+    h = plastic(32 * S, 16 * S, "#a8481a", r, dirt=0.45)
+    u, v = uv_grid(32 * S, 16 * S)
+    flutes = (np.sin(u * np.pi * 2 * 4) > 0.55).astype(np.float32)   # 4 grooves around the handle
+    h = mix(h, rgb("#4a1a08"), flutes * 0.7)
+    h = mix(h, rgb("#d88a48"), smoothstep(0.85, 1.0, np.sin(u * np.pi * 2 * 4 + 1.2)) * 0.35)  # glossy ridge
+    c.put(0, 0, grime(h, r, 0.35, (0.1, 0.07, 0.05)))
+    c.put(16, 0, metal(32 * S, 16 * S, "#8e9094", r, scratches=0.4, rust=0.35))
+    return c.done()
+
+
 def grandma():
     return _grandma(False)
 
@@ -634,6 +648,7 @@ ITEMS = {
     "bottle": bottle,
     "pills": pills,
     "revolver": revolver,
+    "screwdriver": screwdriver,
     "grandma": grandma,
     "grandma_dead": grandma_dead,
     "cleaver": cleaver,

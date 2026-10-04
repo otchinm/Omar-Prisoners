@@ -445,8 +445,9 @@ namespace PrisonersOfOmar.Map
             Props.Table(ctx, mb, V(-3.5f, F, -0.5f), 90f, 1.4f, 0.7f, Props.TableTop, Tex.TableWood, 0.6f);
             Props.Toolbox(mb, V(-3.5f, F + Props.TableTop, 0.0f), 80f);
             Props.Bottles(mb, V(-3.45f, F + Props.TableTop, -0.9f), 501, 2, 0.1f);
-            Props.Bucket(mb, V(-6.0f, F, 1.35f), 0f, false, 0.6f, false);
-            Props.FloorMattress(mb, V(-5.6f, F, 0.9f), 90f, true);
+            Props.Bucket(mb, V(-4.35f, F, 0.65f), 0f, false, 0.6f, false);
+            Props.FloorMattress(mb, V(-5.6f, F, 0.0f), 90f, true);
+            CeilingVent(ctx, mb);
             Arch.FloorDecal(mb, Mat.Decal("blood_pool"), V(-6.4f, F, -2.5f), 1.6f, 1.3f, 20f);
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(-7.0f, F, -5.0f), 3.0f, 2.6f, 0f);
             Arch.Decal(mb, Mat.Decal("writing_let_me_out"), V(-3.08f, F + 1.6f, -2.4f), Vector3.left, 1.4f, 0.7f, 4f);
@@ -461,6 +462,145 @@ namespace PrisonersOfOmar.Map
             ctx.Nav.Add(V(-5.0f, F, -6.0f), A);
             ctx.Nav.Add(V(-5.0f, F, -1.3f), A);
             ctx.Tripwire("House.UpperHall", V(-2.92f, F + 0.12f, -5.46f), V(-2.92f, F + 0.12f, -4.54f));
+        }
+
+        /// <summary>Hole through the cage room floor / kitchen ceiling at the far end of the ceiling vent duct (x, z).</summary>
+        internal static readonly Rect VentShaft = Rect.MinMaxRect(-3.9f, 1.08f, -3.15f, 1.83f);
+
+        /// <summary>
+        /// The crawl duct boxed in along the cage room's north wall (inside 3.3 x 0.9 x 1.15 m: prisoners crouch through it,
+        /// Omar does not fit). Its entrance at the west end is closed by a cover held with four screws; at the east end, in
+        /// the corner, a shaft drops through the floor slab to a grate in the kitchen ceiling right by the wall.
+        /// </summary>
+        static void CeilingVent(MapContext ctx, MeshBuilder mb)
+        {
+            float F = FU;
+            float x0 = -6.4f, x1 = -3.07f, z0 = 0.98f, z1 = 1.93f, top = F + 1.15f, t = 0.05f;
+            float zc = (z0 + z1) * 0.5f;
+            Rect h = VentShaft;
+            var sheet = Mat.Lit(Tex.Galvanized, new Color(0.62f, 0.62f, 0.6f));
+            var dark = Mat.Lit(Tex.MetalDark);
+            mb.Color = Shade.Gray(0.7f);
+            mb.Material = sheet;
+            // south side + lid (the north side is the wall, the east end the corner)
+            mb.AddBox(V((x0 + x1) * 0.5f, (F + top) * 0.5f, z0 + t * 0.5f), V(x1 - x0, top - F, t), BoxUV.Local, 0.9f);
+            mb.AddBox(V((x0 + x1) * 0.5f, top + t * 0.5f, zc + 0.01f), V(x1 - x0, t, z1 - z0 + 0.02f), BoxUV.Local, 0.9f);
+            // the frame round the entrance the cover is screwed onto
+            mb.Color = Shade.Gray(0.55f);
+            mb.AddBox(V(x0 - 0.01f, top - 0.03f, zc + 0.01f), V(0.04f, 0.06f, z1 - z0 + 0.02f), BoxUV.Local, 0.5f);
+            mb.AddBox(V(x0 - 0.01f, (F + top) * 0.5f, z1 - 0.03f), V(0.04f, top - F, 0.06f), BoxUV.Local, 0.5f);
+            mb.AddBox(V(x0 - 0.01f, (F + top) * 0.5f, z0 + 0.03f), V(0.04f, top - F, 0.06f), BoxUV.Local, 0.5f);
+            for (float x = x0 + 0.6f; x < x1 - 0.1f; x += 0.6f)
+            {
+                mb.AddBox(V(x, (F + top) * 0.5f, z0 - 0.004f), V(0.03f, top - F, 0.012f), BoxUV.Local, 0.5f);
+                mb.AddBox(V(x, top + t + 0.004f, zc), V(0.03f, 0.012f, z1 - z0), BoxUV.Local, 0.5f);
+            }
+            // dented duct floor around the shaft
+            mb.Material = dark;
+            mb.Color = Shade.Gray(0.45f);
+            float iz0 = z0 + t;
+            void Floor(float ax, float az, float bx, float bz)
+            {
+                if (bx - ax > 0.01f && bz - az > 0.01f) mb.AddBox(V((ax + bx) * 0.5f, F + 0.012f, (az + bz) * 0.5f), V(bx - ax, 0.024f, bz - az), BoxUV.Local, 0.9f);
+            }
+            Floor(x0, iz0, h.xMin, z1);
+            Floor(h.xMax, iz0, x1, z1);
+            Floor(h.xMin, iz0, h.xMax, h.yMin);
+            Floor(h.xMin, h.yMax, h.xMax, z1);
+            // shaft lining through the slab (kitchen ceiling .. cage room floor)
+            mb.Material = sheet;
+            mb.Color = Shade.Gray(0.35f);
+            float sy = (CG + FU) * 0.5f + 0.012f, sh = FU - CG + 0.03f;
+            mb.AddBox(V(h.center.x, sy, h.yMin - 0.005f), V(h.width, sh, 0.01f), BoxUV.Local, 0.5f);
+            mb.AddBox(V(h.center.x, sy, h.yMax + 0.005f), V(h.width, sh, 0.01f), BoxUV.Local, 0.5f);
+            mb.AddBox(V(h.xMin - 0.005f, sy, h.center.y), V(0.01f, sh, h.height), BoxUV.Local, 0.5f);
+            mb.AddBox(V(h.xMax + 0.005f, sy, h.center.y), V(0.01f, sh, h.height), BoxUV.Local, 0.5f);
+            mb.Color = Shade.Gray(1f);
+            Arch.Decal(mb, Mat.Decal("nail_scratches"), V(x0 + 0.45f, F + 0.5f, z0 - 0.012f), Vector3.back, 0.6f, 0.6f, 15f); // somebody tried with their nails
+            ctx.Solid(V((x0 + x1) * 0.5f, (F + top) * 0.5f, z0 + t * 0.5f), V(x1 - x0, top - F, t), SurfaceType.Metal, "CeilingVentSide");
+            ctx.Solid(V((x0 + x1) * 0.5f, top + 0.15f, zc), V(x1 - x0, 0.3f, z1 - z0 + 0.06f), SurfaceType.Metal, "CeilingVentLid");
+
+            var info = new CeilingVentInfo { Inside = MapMath.MinMax(V(x0, F, z0), V(x1, top, z1)) };
+
+            // ---- the cover: louvred sheet metal on the entrance, pivot on its bottom outer edge (tips over to -X)
+            var coverRoot = GeoUtil.CreateChild(ctx.Dynamic, "CeilingVentCover", V(x0 - 0.03f, F + 0.005f, zc), Quaternion.identity, Layers.World);
+            float cw = z1 - z0 - 0.01f, ch = top - F - 0.01f;
+            var cmb = new MeshBuilder();
+            cmb.Material = Mat.Lit(Tex.Galvanized, new Color(0.55f, 0.55f, 0.52f));
+            cmb.Color = Shade.Gray(0.75f);
+            cmb.AddBox(new Vector3(0.0125f, ch - 0.03f, 0f), new Vector3(0.025f, 0.06f, cw), BoxUV.Local, 0.5f);
+            cmb.AddBox(new Vector3(0.0125f, 0.03f, 0f), new Vector3(0.025f, 0.06f, cw), BoxUV.Local, 0.5f);
+            cmb.AddBox(new Vector3(0.0125f, ch * 0.5f, cw * 0.5f - 0.03f), new Vector3(0.025f, ch, 0.06f), BoxUV.Local, 0.5f);
+            cmb.AddBox(new Vector3(0.0125f, ch * 0.5f, -cw * 0.5f + 0.03f), new Vector3(0.025f, ch, 0.06f), BoxUV.Local, 0.5f);
+            cmb.Color = Shade.Gray(0.6f);
+            for (float y = 0.1f; y < ch - 0.07f; y += 0.07f)
+            {
+                cmb.Push(new Vector3(0.0125f, y, 0f), Quaternion.Euler(0f, 0f, -38f)); // slats slant down towards the room
+                cmb.AddBox(Vector3.zero, new Vector3(0.05f, 0.005f, cw - 0.1f), BoxUV.Local, 0.4f);
+                cmb.Pop();
+            }
+            var leaf = cmb.Build("Leaf", coverRoot, Layers.World);
+            ctx.CountRenderer(cmb);
+            var cc = leaf.AddComponent<BoxCollider>();
+            cc.center = new Vector3(0.015f, ch * 0.5f, 0f);
+            cc.size = new Vector3(0.05f, ch, cw);
+            leaf.AddComponent<SurfaceTag>().Surface = SurfaceType.Metal;
+            info.Cover = coverRoot;
+            info.CoverCollider = cc;
+            info.CoverTipAxis = Vector3.forward;   // +90 about +Z: the top swings over to -X, the cover lands flat in front of the duct
+            info.CoverTipAngle = 90f;
+            info.Screws = new Transform[4];
+            var rusty = Mat.Lit(Tex.MetalRusty);
+            int si = 0;
+            foreach (float syy in new[] { 0.07f, ch - 0.07f })
+                foreach (float sz in new[] { -cw * 0.5f + 0.06f, cw * 0.5f - 0.06f })
+                {
+                    var smb = new MeshBuilder();
+                    smb.Material = rusty;
+                    smb.Color = Shade.Gray(0.85f);
+                    smb.AddBox(Vector3.zero, new Vector3(0.008f, 0.022f, 0.022f), BoxUV.Local, 0.2f);
+                    smb.Color = Shade.Gray(0.2f);
+                    smb.AddBox(new Vector3(-0.0042f, 0f, 0f), new Vector3(0.002f, 0.004f, 0.018f), BoxUV.Local, 0.2f);  // the slot
+                    var sgo = smb.Build("Screw_" + si, coverRoot, Layers.World);
+                    sgo.transform.localPosition = new Vector3(-0.004f, syy, sz);
+                    sgo.transform.localRotation = Quaternion.Euler(30f * si + 10f, 0f, 0f);
+                    ctx.CountRenderer(smb);
+                    info.Screws[si++] = sgo.transform;
+                }
+            info.CoverInteract = GeoUtil.AddBox(ctx.Dynamic, V(x0 - 0.22f, F + 0.6f, zc), V(0.4f, 1.1f, z1 - z0), Quaternion.identity,
+                Layers.Interactable, SurfaceType.Default, true, "CeilingVentCoverInteract");
+
+            // ---- the kitchen ceiling grate (flush under the ceiling, slightly bigger than the hole)
+            var hatchRoot = GeoUtil.CreateChild(ctx.Dynamic, "CeilingVentGrate", V(h.center.x, CG - 0.013f, h.center.y), Quaternion.identity, Layers.World);
+            float gw = h.width + 0.09f, gd = h.height + 0.09f;
+            var hmb = new MeshBuilder();
+            hmb.Material = Mat.Lit(Tex.Galvanized, new Color(0.78f, 0.74f, 0.66f));  // painted like the ceiling once, gone yellow
+            hmb.Color = Shade.Gray(0.7f);
+            hmb.AddBox(new Vector3(0f, 0f, gd * 0.5f - 0.03f), new Vector3(gw, 0.024f, 0.06f), BoxUV.Local, 0.5f);
+            hmb.AddBox(new Vector3(0f, 0f, -gd * 0.5f + 0.03f), new Vector3(gw, 0.024f, 0.06f), BoxUV.Local, 0.5f);
+            hmb.AddBox(new Vector3(gw * 0.5f - 0.03f, 0f, 0f), new Vector3(0.06f, 0.024f, gd), BoxUV.Local, 0.5f);
+            hmb.AddBox(new Vector3(-gw * 0.5f + 0.03f, 0f, 0f), new Vector3(0.06f, 0.024f, gd), BoxUV.Local, 0.5f);
+            hmb.Color = Shade.Gray(0.55f);
+            for (float z = -gd * 0.5f + 0.09f; z < gd * 0.5f - 0.07f; z += 0.06f)
+            {
+                hmb.Push(new Vector3(0f, 0f, z), Quaternion.Euler(40f, 0f, 0f));
+                hmb.AddBox(Vector3.zero, new Vector3(gw - 0.1f, 0.004f, 0.045f), BoxUV.Local, 0.3f);
+                hmb.Pop();
+            }
+            var grate = hmb.Build("Grate", hatchRoot, Layers.World);
+            ctx.CountRenderer(hmb);
+            var hcol = grate.AddComponent<BoxCollider>();
+            hcol.center = Vector3.zero;
+            hcol.size = new Vector3(h.width + 0.04f, 0.05f, h.height + 0.04f);
+            grate.AddComponent<SurfaceTag>().Surface = SurfaceType.Metal;
+            info.Hatch = hatchRoot;
+            info.HatchCollider = hcol;
+            info.HatchInteract = GeoUtil.AddBox(ctx.Dynamic, V(h.center.x, F + 0.3f, h.center.y), V(h.width, 0.6f, h.height), Quaternion.identity,
+                Layers.Interactable, SurfaceType.Default, true, "CeilingVentGrateInteract");
+            info.HatchRest = new Pose(V(h.center.x - 0.32f, FG + 0.013f, h.center.y + 0.22f), Quaternion.Euler(180f, 24f, 0f));
+
+            ctx.Data.CeilingVent = info;
+            ctx.Data.CrawlSpaces.Add(info.Inside);
         }
 
         static void Storage(MapContext ctx, MeshBuilder mb)

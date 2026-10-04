@@ -69,6 +69,7 @@ namespace PrisonersOfOmar
         Bottle,       // throw to make noise somewhere else
         Pills,        // painkillers: stamina + ignore limp for a while
         Revolver,     // (iteration 2) 2 rounds: kills the grandmother, stuns Omar for a few seconds. Very loud.
+        Screwdriver,  // unscrews the vent cover in the cage room (crawl through the ceiling duct down into the kitchen)
     }
 
     public enum DoorKind : byte

@@ -30,8 +30,8 @@ Ambience/metal_scrape_2.ogg,generated,3.72,1,44100,-0.9,-8.0,2108,,,39,metal on 
 Ambience/omar_breath_loop.ogg,generated,8.00,1,44100,-1.2,-15.9,890,yes,0.01,59,Omar's heavy wet breathing through the sack (~0.25 Hz)
 Ambience/phone_ring.ogg,generated,7.06,1,44100,-0.9,-9.2,1683,,,63,old bell telephone ringing twice in another room
 Ambience/radio_static_loop.ogg,generated,6.00,1,22050,-6.5,-17.5,1882,yes,1.00,35,AM/shortwave radio static with heterodyne whistles
-Ambience/static_heavy_loop.ogg,generated,6.00,2,44100,-5.9,-13.1,1168,yes,1.38,96,harsh broken-VHS static
-Ambience/static_loop.ogg,generated,8.00,2,44100,-5.9,-17.3,3301,yes,0.93,126,low quality analog static (Omar proximity)
+Ambience/static_heavy_loop.ogg,generated,6.00,2,44100,-20.3,-25.0,93,yes,0.96,91,"denser, crackling tape interference when Omar is very close"
+Ambience/static_loop.ogg,generated,8.00,2,44100,-17.9,-29.1,143,yes,0.56,121,quiet dirty-tape interference while Omar is in sight
 Ambience/thump_1.ogg,generated,1.33,1,44100,-0.9,-16.9,109,,,13,heavy thud upstairs
 Ambience/thump_2.ogg,generated,1.57,1,44100,-0.8,-14.3,101,,,15,something heavy falls (double thud)
 Ambience/thump_3.ogg,generated,2.15,1,44100,-0.8,-11.9,133,,,20,three bangs on a door somewhere in the house
@@ -42,46 +42,77 @@ Ambience/whisper_1.ogg,generated,2.77,1,44100,-0.9,-11.1,1802,,,28,close breathy
 Ambience/whisper_2.ogg,generated,3.94,1,44100,-1.4,-15.9,1615,,,37,reversed ghostly whisper
 Ambience/wind_gust_loop.ogg,generated,12.00,2,44100,-2.8,-17.2,1210,yes,0.18,173,gusty whistling wind
 Ambience/windmill_creak_loop.ogg,generated,6.00,1,44100,-0.9,-16.1,1017,yes,0.10,71,"farm windmill: bearing squeal, vane clank, pump rod"
-Items/bandage_rip.ogg,generated,1.39,1,44100,-0.6,-13.7,2914,,,17,tearing a strip of cloth bandage
-Items/battery_insert.ogg,generated,1.27,1,44100,-1.0,-17.9,2444,,,16,"batteries slide into the flashlight, cap screwed on"
-Items/bolt_cut.ogg,generated,0.86,1,44100,-0.7,-17.6,3643,,,12,"bolt cutters: squeeze, violent snap, ring"
-Items/bottle_throw.ogg,generated,0.54,1,44100,-0.9,-14.1,2620,,,8,bottle whooshing through the air
-Items/chain_drop.ogg,generated,1.23,1,44100,-0.9,-16.8,2534,,,16,heavy chain slides off and drops
-Items/crowbar_pry.ogg,generated,2.53,1,44100,-0.8,-15.2,2350,,,31,"crowbar wedged in, wood strains and nails squeal"
-Items/flashlight_click.ogg,generated,0.21,1,44100,-1.8,-18.4,3170,,,5,plastic flashlight switch click
-Items/fuel_pour.ogg,generated,1.25,1,44100,-0.7,-14.9,2430,,,14,lighter fluid squirts
-Items/glass_break.ogg,generated,0.84,1,44100,-1.1,-17.7,5097,,,12,glass bottle shattering
-Items/item_drop.ogg,generated,0.66,1,44100,-1.0,-22.3,354,,,9,"object dropped on the floor, small bounce"
-Items/item_equip.ogg,generated,0.58,1,44100,-0.9,-15.4,2553,,,9,cloth rustle + grip click
-Items/item_pickup.ogg,generated,0.56,1,44100,-0.7,-17.2,1294,,,9,grab: cloth rustle + small knock
-Items/key_unlock.ogg,generated,1.11,1,44100,-0.9,-19.3,1627,,,14,"key slides in over the pins, turns, bolt retracts"
-Items/lighter_close.ogg,generated,0.33,1,44100,-0.9,-14.6,2045,,,6,zippo lid snapped shut
-Items/lighter_flick.ogg,generated,1.03,1,44100,-0.8,-18.8,1210,,,12,flint wheel scrape + ignition whoosh
-Items/lighter_open.ogg,generated,0.72,1,44100,-0.7,-13.1,4420,,,9,zippo lid flick open: bright clink
-Items/locked_rattle.ogg,generated,0.92,1,44100,-1.1,-16.2,824,,,12,handle jiggles on a locked door
-Items/lockpick.ogg,generated,1.74,1,44100,-0.9,-18.9,4326,,,20,"picking a lock: scratches, tension ticks, pins setting"
-Items/pills.ogg,generated,1.10,1,44100,-1.2,-15.6,3491,,,17,pill bottle rattle + cap pop
+Grandma/death.ogg,generated,3.47,1,44100,-0.8,-10.4,704,,,34,"shot: a cut-off scream, a wet gurgling rattle, the body slumps in the chair"
+Grandma/mutter_1.ogg,generated,2.55,1,44100,-0.5,-14.4,864,,,25,mumbling at the TV
+Grandma/mutter_2.ogg,generated,2.05,1,44100,-0.6,-13.9,880,,,21,short grumble and a sigh
+Grandma/mutter_3.ogg,generated,3.35,1,44100,-1.0,-14.6,838,,,32,"longer muttering, as if talking to someone who isn't there"
+Grandma/scream_1.ogg,generated,2.82,1,44100,-0.8,-7.8,2176,,,30,"the old woman screams for Omar: shrill, shaky, blown-out like Omar's tapes"
+Grandma/scream_2.ogg,generated,2.53,1,44100,-0.2,-6.4,1854,,,28,"second scream variant: higher, cracking"
+Grandma/scream_3.ogg,generated,3.06,1,44100,-0.1,-6.7,1516,,,32,third scream variant: long wail into a sob
+Grandma/spot.ogg,generated,1.97,1,44100,-0.8,-7.1,1722,,,22,sudden shriek when she first sees someone (the tape catches on the attack)
+Grandma/tv_loop.ogg,generated,9.00,1,44100,-5.4,-18.1,1295,yes,1.14,80,"her TV: snow, line buzz, a garbled old programme drifting in and out (loop)"
+Grandma/wheelchair_loop.ogg,generated,3.80,1,44100,-2.0,-17.4,2034,yes,0.08,43,"wheelchair rolling over floorboards: squeaky wheel once per turn, rumble, rattles (loop)"
+Items/bandage_rip.ogg,generated,1.84,1,44100,-1.5,-14.0,2281,,,21,tearing a strip of cloth bandage
+Items/battery_insert.ogg,generated,1.79,1,44100,-0.8,-16.1,1885,,,20,"batteries slide into the flashlight, cap screwed on"
+Items/bolt_cut.ogg,generated,1.59,1,44100,-1.2,-15.3,2224,,,19,"bolt cutters: squeeze, violent snap, ring"
+Items/bottle_throw.ogg,generated,1.02,1,44100,-0.7,-13.1,2353,,,12,bottle whooshing through the air
+Items/chain_drop.ogg,generated,2.15,1,44100,-1.0,-13.1,2249,,,24,heavy chain slides off and drops
+Items/crowbar_pry.ogg,generated,3.07,1,44100,-1.1,-16.0,1816,,,35,"crowbar wedged in, wood strains and nails squeal"
+Items/flashlight_click.ogg,generated,0.63,1,44100,-1.6,-19.9,2836,,,9,plastic flashlight switch click
+Items/fuel_pour.ogg,generated,1.82,1,44100,-0.6,-13.6,2133,,,19,lighter fluid squirts
+Items/glass_break.ogg,generated,2.25,1,44100,-0.6,-16.0,4123,,,24,glass bottle shattering
+Items/gun_cock.ogg,generated,1.18,1,44100,-0.7,-14.0,1925,,,14,"hammer pulled back, cylinder ratchets round"
+Items/gun_empty.ogg,generated,0.98,1,44100,-0.9,-16.6,1387,,,12,revolver dry fire: hammer falls on a spent chamber
+Items/gun_shot.ogg,generated,4.30,1,44100,-0.4,-14.3,507,,,40,"old revolver shot indoors: huge distorted crack, room boom, ringing tail"
+Items/item_drop.ogg,generated,1.40,1,44100,-1.2,-22.2,527,,,16,"object dropped on the floor, small bounce"
+Items/item_equip.ogg,generated,1.06,1,44100,-0.9,-16.6,2157,,,13,cloth rustle + grip click
+Items/item_pickup.ogg,generated,1.04,1,44100,-0.6,-17.8,1110,,,13,grab: cloth rustle + small knock
+Items/key_unlock.ogg,generated,1.70,1,44100,-1.0,-17.1,1232,,,19,"key slides in over the pins, turns, bolt retracts"
+Items/lighter_close.ogg,generated,0.82,1,44100,-0.8,-16.4,1825,,,11,zippo lid snapped shut
+Items/lighter_flick.ogg,generated,1.42,1,44100,-0.9,-14.9,981,,,16,flint wheel scrape + ignition whoosh
+Items/lighter_open.ogg,generated,1.12,1,44100,-1.2,-13.6,4259,,,13,zippo lid flick open: bright clink
+Items/locked_rattle.ogg,generated,1.60,1,44100,-0.8,-14.4,849,,,18,handle jiggles on a locked door
+Items/lockpick.ogg,generated,2.22,1,44100,-1.0,-17.0,3171,,,24,"picking a lock: scratches, tension ticks, pins setting"
+Items/pills.ogg,generated,1.58,1,44100,-1.2,-17.1,3033,,,19,pill bottle rattle + cap pop
 Items/soundmeter_tick.ogg,generated,0.06,1,44100,-1.5,-15.1,2412,,,4,sound meter needle tick + tiny blip
-Items/wood_break.ogg,generated,1.21,1,44100,-1.0,-15.0,2008,,,15,boards cracking and splintering
+Items/vent_cover_off.ogg,generated,2.55,1,44100,-1.1,-17.1,745,,,26,the unscrewed vent cover tips off its frame and claps flat on the floorboards (muffled)
+Items/vent_grate_fall.ogg,generated,4.04,1,44100,-0.6,-12.6,1576,,,40,"kitchen ceiling vent grate pushed out: pops loose, hisses down in a cloud of dust, hits the floor with a dull heavy clang and rattles (impact at 0.84 s)"
+Items/vent_screw_1.ogg,generated,1.98,1,44100,-1.1,-15.7,2657,,,23,screwdriver turning a rusty vent screw out (squeaky quarter turns)
+Items/vent_screw_2.ogg,generated,1.98,1,44100,-0.8,-16.5,2491,,,22,screwdriver turning a rusty vent screw out (squeaky quarter turns)
+Items/vent_screw_3.ogg,generated,1.98,1,44100,-1.0,-16.0,2988,,,23,screwdriver turning a rusty vent screw out (squeaky quarter turns)
+Items/vent_screw_drop.ogg,generated,1.17,1,44100,-1.1,-20.8,3319,,,14,"a small screw drops onto floorboards: tink, bounce, roll"
+Items/wood_break.ogg,generated,2.37,1,44100,-0.9,-14.6,1784,,,25,boards cracking and splintering
 Music/menu_theme.mp3,user (verbatim copy),114.91,2,44100,0.3,-11.3,174,,,2693,copied verbatim from SourceAssets/sound/menu sound/Stay Out Of The House - Menu Theme.mp3
 Omar/alarm.mp3,user (verbatim copy),4.95,2,44100,0.7,-3.5,640,,,117,copied verbatim from SourceAssets/sound/sfx/alarm.mp3
+Omar/bed_lift.ogg,generated,2.02,1,44100,-0.2,-8.3,502,,,21,"Omar heaves a whole bed up: frame screech, springs, mattress slump, grunt"
+Omar/chop_1.ogg,generated,1.64,1,44100,-0.5,-16.3,509,,,18,cleaver chops through raw meat into the wooden butcher block
+Omar/chop_2.ogg,generated,1.64,1,44100,-0.9,-17.9,696,,,18,"cleaver chop, heavier"
+Omar/chop_3.ogg,generated,1.64,1,44100,-0.2,-17.5,561,,,18,cleaver chop splitting a bone
 Omar/cleaver_hit_1.ogg,generated,0.66,1,44100,-0.2,-14.3,196,,,9,cleaver into flesh: thick wet impact
 Omar/cleaver_hit_2.ogg,generated,0.72,1,44100,-0.2,-14.5,328,,,9,cleaver into flesh and bone: wet chop + crunch
 Omar/cleaver_hit_wall.ogg,generated,0.89,1,44100,-0.7,-14.5,1490,,,11,cleaver thwacks into a wooden wall and quivers
 Omar/cleaver_swing_1.ogg,generated,0.59,1,44100,-0.7,-14.4,3028,,,8,fast cleaver whoosh
 Omar/cleaver_swing_2.ogg,generated,0.69,1,44100,-1.7,-13.4,1857,,,9,heavy cleaver swing with a grunt
+Omar/door_push.ogg,generated,1.57,1,44100,-0.3,-14.8,217,,,19,"Omar's shoulder slams a door open: body thud, leaf bang, hinge shriek"
 Omar/find.mp3,user (verbatim copy),1.89,2,44100,3.4,-1.0,778,,,45,copied verbatim from SourceAssets/sound/sfx/find.mp3
 Omar/grab.ogg,generated,1.01,1,44100,-0.9,-13.7,471,,,13,"Omar seizes a prisoner: cloth, body thump, gasp, grunt"
 Omar/growl_1.ogg,generated,2.38,1,44100,-0.9,-8.2,423,,,24,"low muffled growl through the sack (from scream_2, ~an octave down)"
 Omar/growl_2.ogg,generated,2.97,1,44100,-0.7,-9.0,271,,,27,long menacing growl / snarl (from the long scream bed)
 Omar/hiding_rip.ogg,generated,1.27,1,44100,-1.2,-14.4,1532,,,15,wardrobe / locker doors torn open violently
+Omar/meat_squelch_1.ogg,generated,1.12,1,44100,-0.6,-13.8,743,,,13,raw meat slapped down and pushed around on the block
+Omar/meat_squelch_2.ogg,generated,1.42,1,44100,-0.8,-13.6,751,,,16,longer: meat pushed and slapped about
 Omar/scream_1.mp3,user (verbatim copy),2.99,2,44100,2.0,-2.0,810,,,71,copied verbatim from SourceAssets/sound/sfx/scream_1.mp3
 Omar/scream_2.mp3,user (verbatim copy),2.31,2,44100,1.3,-3.2,989,,,55,copied verbatim from SourceAssets/sound/sfx/scream_2.mp3
 Omar/scream_3.mp3,user (verbatim copy),2.31,2,44100,-0.3,-7.0,1206,,,55,copied verbatim from SourceAssets/sound/sfx/scream_3.mp3
 Omar/scream_4.mp3,user (verbatim copy),1.61,2,44100,-2.1,-5.9,1009,,,39,copied verbatim from SourceAssets/sound/sfx/scream_4.mp3
-Omar/trap_place.ogg,generated,1.79,1,44100,-0.8,-24.1,1229,,,22,"bear trap set on the ground, spring creaks, chain"
-Omar/trap_snap.ogg,generated,1.23,1,44100,-0.2,-15.2,1339,,,14,bear trap jaws slam shut: violent snap
-Omar/tripwire_snap.ogg,generated,0.62,1,44100,-0.9,-15.5,1296,,,9,taut wire snaps: twang + whip
+Omar/stunned.ogg,generated,3.30,1,44100,-0.2,-8.2,603,,,32,"Omar hit by a bullet / blast: pained roar through the sack, staggering breath"
+Omar/trap_place.ogg,generated,2.47,1,44100,-0.8,-19.6,1299,,,29,"bear trap set on the ground, spring creaks, chain"
+Omar/trap_snap.ogg,generated,2.18,1,44100,-0.3,-12.2,947,,,23,bear trap jaws slam shut: violent snap
+Omar/tripwire_snap.ogg,generated,1.34,1,44100,-0.7,-14.3,1204,,,15,taut wire snaps: twang + whip
+Omar/windup_1.ogg,generated,1.44,1,44100,-0.6,-8.1,425,,,16,heavy grunt through the sack as he raises the cleaver
+Omar/windup_2.ogg,generated,1.54,1,44100,-0.1,-9.3,529,,,17,strained inhale-grunt before the swing
+Player/bed_crawl_in.ogg,generated,1.48,1,44100,-2.1,-18.5,1066,,,16,"dropping to the floor and sliding under a bed: cloth on boards, knee knocks, held breath"
+Player/bed_crawl_out.ogg,generated,1.39,1,44100,-1.0,-16.0,1557,,,17,sliding out from under a bed and getting up
 Player/body_fall.ogg,generated,1.07,1,44100,-0.8,-16.5,224,,,14,body hits the floor
 Player/breath_heavy_1.ogg,generated,2.52,1,44100,-0.9,-14.2,2157,,,25,exhausted panting after running
 Player/breath_heavy_2.ogg,generated,2.35,1,44100,-1.1,-15.4,2272,,,23,deep scared trembling breath
@@ -121,10 +152,10 @@ Steps/metal_1.ogg,generated,0.92,1,44100,-1.2,-20.0,1078,,,12,footstep on metal
 Steps/metal_2.ogg,generated,0.85,1,44100,-0.8,-17.8,1184,,,12,footstep on metal
 Steps/metal_3.ogg,generated,0.94,1,44100,-1.2,-20.1,1719,,,12,footstep on metal
 Steps/metal_4.ogg,generated,0.83,1,44100,-1.1,-18.5,2387,,,11,footstep on metal
-Steps/omar_1.ogg,generated,0.90,1,44100,-1.1,-16.5,136,,,11,Omar heavy boot step
-Steps/omar_2.ogg,generated,0.96,1,44100,-1.0,-16.2,144,,,11,Omar heavy boot step
-Steps/omar_3.ogg,generated,0.92,1,44100,-1.0,-16.1,138,,,11,Omar heavy boot step
-Steps/omar_4.ogg,generated,0.96,1,44100,-0.9,-15.7,131,,,12,Omar heavy boot step
+Steps/omar_1.ogg,generated,1.17,1,44100,-0.1,-13.4,116,,,10,"Omar heavy boot step (loud, muffled)"
+Steps/omar_2.ogg,generated,1.16,1,44100,-0.2,-14.0,143,,,10,"Omar heavy boot step (loud, muffled)"
+Steps/omar_3.ogg,generated,1.18,1,44100,-0.4,-14.2,103,,,10,"Omar heavy boot step (loud, muffled)"
+Steps/omar_4.ogg,generated,1.13,1,44100,-0.4,-12.8,113,,,10,"Omar heavy boot step (loud, muffled)"
 Steps/tile_1.ogg,generated,0.69,1,44100,-0.9,-18.4,1772,,,10,footstep on tile
 Steps/tile_2.ogg,generated,0.71,1,44100,-1.4,-22.1,1838,,,10,footstep on tile
 Steps/tile_3.ogg,generated,0.71,1,44100,-1.2,-21.2,2053,,,10,footstep on tile
@@ -137,9 +168,9 @@ Stingers/drone_hit_1.ogg,generated,7.64,2,44100,-0.3,-10.6,91,,,141,deep impact 
 Stingers/drone_hit_2.ogg,generated,6.48,2,44100,-0.3,-10.3,152,,,126,distorted low brass 'braam' with closing filter
 Stingers/heartbeat_fast.ogg,generated,3.20,2,44100,-0.9,-10.1,64,yes,0.29,16,"panicked heartbeat, 150 bpm (seamless, may be looped)"
 Stingers/screams_long.mp3,user (verbatim copy),22.75,2,44100,3.4,-3.6,802,,,533,copied verbatim from SourceAssets/sound/stay out of the house screams _edited_.mp3
-Stingers/static_burst_1.ogg,generated,0.39,2,44100,-0.3,-8.0,1098,,,12,short harsh static burst
-Stingers/static_burst_2.ogg,generated,0.66,2,44100,-0.3,-9.0,725,,,21,stuttering static burst
-Stingers/static_burst_3.ogg,generated,0.96,2,44100,-0.2,-8.3,1374,,,23,swelling static burst with a buried scream
+Stingers/static_burst_1.ogg,generated,0.39,2,44100,-13.6,-22.2,1128,,,12,short harsh static burst
+Stingers/static_burst_2.ogg,generated,0.66,2,44100,-12.2,-22.1,717,,,20,stuttering static burst
+Stingers/static_burst_3.ogg,generated,0.96,2,44100,-13.0,-22.2,1372,,,22,swelling static burst with a buried scream
 Stingers/sting_anomaly_1.ogg,generated,6.98,2,44100,-0.8,-10.6,749,,,149,reversed scream swell into warbling glassy dissonance
 Stingers/sting_anomaly_2.ogg,generated,5.89,2,44100,-1.1,-10.1,189,,,106,"tape slowdown drone, frozen scream grains, whisper stutters"
 Stingers/sting_capture.ogg,generated,5.93,2,44100,-0.2,-9.4,272,,,118,brutal hit + scream + static when Omar catches a prisoner
@@ -165,17 +196,115 @@ UI/ui_error.ogg,generated,0.48,2,44100,-1.9,-9.5,203,,,11,low harsh double buzz
 UI/ui_move.ogg,generated,0.17,2,44100,-1.8,-16.4,5464,,,6,tiny tape-counter tick
 UI/ui_select.ogg,generated,0.27,2,44100,-1.1,-10.3,1314,,,8,VCR button clunk + bleep
 UI/ui_type.ogg,generated,0.20,2,44100,-0.7,-16.8,1441,,,7,key / typewriter click
+Voices/prisoner1/breath_1.ogg,generated,2.94,1,44100,-0.8,-12.1,1495,,,29,prisoner1: heavy breathing
+Voices/prisoner1/breath_2.ogg,generated,2.76,1,44100,-1.1,-12.7,1457,,,27,prisoner1: heavy breathing
+Voices/prisoner1/breath_3.ogg,generated,2.33,1,44100,-0.5,-12.3,1510,,,24,prisoner1: heavy breathing
+Voices/prisoner1/death_1.ogg,generated,2.47,1,44100,-0.8,-11.3,404,,,24,prisoner1: last capture
+Voices/prisoner1/gasp_1.ogg,generated,1.22,1,44100,-0.9,-13.5,1500,,,14,prisoner1: gasp when spotted
+Voices/prisoner1/gasp_2.ogg,generated,1.21,1,44100,-0.6,-10.8,1338,,,14,prisoner1: gasp when spotted
+Voices/prisoner1/hurt_1.ogg,generated,1.16,1,44100,-1.0,-13.6,467,,,13,prisoner1: pained cry
+Voices/prisoner1/hurt_2.ogg,generated,1.32,1,44100,-1.1,-12.7,581,,,15,prisoner1: pained cry
+Voices/prisoner1/hurt_3.ogg,generated,1.43,1,44100,-0.5,-12.5,612,,,16,prisoner1: pained cry
+Voices/prisoner1/scream_1.ogg,generated,2.27,1,44100,-0.7,-8.6,596,,,22,prisoner1: terrified scream
+Voices/prisoner1/scream_2.ogg,generated,2.87,1,44100,-0.9,-8.7,625,,,28,prisoner1: terrified scream
+Voices/prisoner1/struggle_1.ogg,generated,1.74,1,44100,-0.8,-16.0,529,,,18,prisoner1: straining against a lock / trap
+Voices/prisoner1/struggle_2.ogg,generated,2.17,1,44100,-1.2,-14.9,477,,,22,prisoner1: straining against a lock / trap
+Voices/prisoner2/breath_1.ogg,generated,2.96,1,44100,-1.2,-12.7,1657,,,29,prisoner2: heavy breathing
+Voices/prisoner2/breath_2.ogg,generated,2.76,1,44100,-0.5,-13.1,1674,,,27,prisoner2: heavy breathing
+Voices/prisoner2/breath_3.ogg,generated,2.36,1,44100,-1.3,-13.6,1722,,,24,prisoner2: heavy breathing
+Voices/prisoner2/death_1.ogg,generated,2.47,1,44100,-0.6,-12.2,907,,,25,prisoner2: last capture
+Voices/prisoner2/gasp_1.ogg,generated,1.22,1,44100,-0.6,-13.0,1567,,,14,prisoner2: gasp when spotted
+Voices/prisoner2/gasp_2.ogg,generated,1.21,1,44100,-1.1,-13.7,1500,,,14,prisoner2: gasp when spotted
+Voices/prisoner2/hurt_1.ogg,generated,1.16,1,44100,-0.7,-13.7,559,,,13,prisoner2: pained cry
+Voices/prisoner2/hurt_2.ogg,generated,1.32,1,44100,-0.9,-13.6,1077,,,15,prisoner2: pained cry
+Voices/prisoner2/hurt_3.ogg,generated,1.44,1,44100,-0.7,-11.0,1094,,,16,prisoner2: pained cry
+Voices/prisoner2/scream_1.ogg,generated,2.27,1,44100,-0.5,-8.0,953,,,23,prisoner2: terrified scream
+Voices/prisoner2/scream_2.ogg,generated,2.87,1,44100,-0.7,-8.1,1054,,,28,prisoner2: terrified scream
+Voices/prisoner2/struggle_1.ogg,generated,1.74,1,44100,-0.9,-15.3,612,,,18,prisoner2: straining against a lock / trap
+Voices/prisoner2/struggle_2.ogg,generated,2.17,1,44100,-1.0,-14.0,658,,,22,prisoner2: straining against a lock / trap
+Voices/prisoner3/breath_1.ogg,generated,2.87,1,44100,-0.5,-12.2,1724,,,28,prisoner3: heavy breathing
+Voices/prisoner3/breath_2.ogg,generated,2.76,1,44100,-0.9,-11.6,1703,,,27,prisoner3: heavy breathing
+Voices/prisoner3/breath_3.ogg,generated,2.28,1,44100,-1.1,-13.8,1769,,,23,prisoner3: heavy breathing
+Voices/prisoner3/death_1.ogg,generated,2.47,1,44100,-0.7,-11.2,1069,,,25,prisoner3: last capture
+Voices/prisoner3/gasp_1.ogg,generated,1.21,1,44100,-0.5,-11.8,1477,,,14,prisoner3: gasp when spotted
+Voices/prisoner3/gasp_2.ogg,generated,1.22,1,44100,-0.9,-10.9,1486,,,14,prisoner3: gasp when spotted
+Voices/prisoner3/hurt_1.ogg,generated,1.15,1,44100,-0.5,-13.1,760,,,13,prisoner3: pained cry
+Voices/prisoner3/hurt_2.ogg,generated,1.32,1,44100,-1.0,-14.5,1069,,,15,prisoner3: pained cry
+Voices/prisoner3/hurt_3.ogg,generated,1.44,1,44100,-1.2,-10.3,1197,,,16,prisoner3: pained cry
+Voices/prisoner3/scream_1.ogg,generated,2.27,1,44100,-1.0,-8.6,857,,,23,prisoner3: terrified scream
+Voices/prisoner3/scream_2.ogg,generated,2.86,1,44100,-0.8,-8.9,1200,,,28,prisoner3: terrified scream
+Voices/prisoner3/struggle_1.ogg,generated,1.76,1,44100,-0.5,-13.8,737,,,19,prisoner3: straining against a lock / trap
+Voices/prisoner3/struggle_2.ogg,generated,2.13,1,44100,-0.5,-13.2,724,,,22,prisoner3: straining against a lock / trap
+Voices/prisoner4/breath_1.ogg,generated,2.88,1,44100,-0.6,-12.1,1530,,,28,prisoner4: heavy breathing
+Voices/prisoner4/breath_2.ogg,generated,2.76,1,44100,-0.7,-11.9,1565,,,27,prisoner4: heavy breathing
+Voices/prisoner4/breath_3.ogg,generated,2.44,1,44100,-0.8,-14.4,1603,,,25,prisoner4: heavy breathing
+Voices/prisoner4/death_1.ogg,generated,2.47,1,44100,-0.8,-11.2,669,,,24,prisoner4: last capture
+Voices/prisoner4/gasp_1.ogg,generated,1.22,1,44100,-0.8,-11.9,1323,,,14,prisoner4: gasp when spotted
+Voices/prisoner4/gasp_2.ogg,generated,1.22,1,44100,-0.6,-12.2,1004,,,14,prisoner4: gasp when spotted
+Voices/prisoner4/hurt_1.ogg,generated,1.16,1,44100,-0.6,-13.8,600,,,13,prisoner4: pained cry
+Voices/prisoner4/hurt_2.ogg,generated,1.32,1,44100,-0.6,-12.7,956,,,15,prisoner4: pained cry
+Voices/prisoner4/hurt_3.ogg,generated,1.44,1,44100,-0.7,-10.9,763,,,16,prisoner4: pained cry
+Voices/prisoner4/scream_1.ogg,generated,2.27,1,44100,-0.9,-9.3,731,,,23,prisoner4: terrified scream
+Voices/prisoner4/scream_2.ogg,generated,2.87,1,44100,-1.2,-8.7,819,,,28,prisoner4: terrified scream
+Voices/prisoner4/struggle_1.ogg,generated,1.77,1,44100,-0.6,-15.8,553,,,19,prisoner4: straining against a lock / trap
+Voices/prisoner4/struggle_2.ogg,generated,2.14,1,44100,-0.8,-14.4,493,,,22,prisoner4: straining against a lock / trap
+Voices/prisoner5/breath_1.ogg,generated,2.86,1,44100,-1.2,-13.0,1611,,,28,prisoner5: heavy breathing
+Voices/prisoner5/breath_2.ogg,generated,2.76,1,44100,-0.5,-12.8,1658,,,27,prisoner5: heavy breathing
+Voices/prisoner5/breath_3.ogg,generated,2.32,1,44100,-1.1,-12.6,1703,,,23,prisoner5: heavy breathing
+Voices/prisoner5/death_1.ogg,generated,2.47,1,44100,-0.7,-11.8,518,,,24,prisoner5: last capture
+Voices/prisoner5/gasp_1.ogg,generated,1.22,1,44100,-0.7,-12.2,1349,,,14,prisoner5: gasp when spotted
+Voices/prisoner5/gasp_2.ogg,generated,1.22,1,44100,-1.3,-11.7,1635,,,14,prisoner5: gasp when spotted
+Voices/prisoner5/hurt_1.ogg,generated,1.16,1,44100,-1.1,-13.8,599,,,13,prisoner5: pained cry
+Voices/prisoner5/hurt_2.ogg,generated,1.32,1,44100,-0.8,-15.6,815,,,15,prisoner5: pained cry
+Voices/prisoner5/hurt_3.ogg,generated,1.44,1,44100,-0.8,-10.4,957,,,16,prisoner5: pained cry
+Voices/prisoner5/scream_1.ogg,generated,2.27,1,44100,-0.5,-8.8,868,,,23,prisoner5: terrified scream
+Voices/prisoner5/scream_2.ogg,generated,2.87,1,44100,-0.8,-8.7,956,,,28,prisoner5: terrified scream
+Voices/prisoner5/struggle_1.ogg,generated,1.74,1,44100,-0.7,-14.4,615,,,18,prisoner5: straining against a lock / trap
+Voices/prisoner5/struggle_2.ogg,generated,2.17,1,44100,-0.7,-14.9,591,,,22,prisoner5: straining against a lock / trap
+Voices/prisoner6/breath_1.ogg,generated,2.92,1,44100,-0.6,-12.6,1612,,,28,prisoner6: heavy breathing
+Voices/prisoner6/breath_2.ogg,generated,2.76,1,44100,-0.7,-13.3,1644,,,27,prisoner6: heavy breathing
+Voices/prisoner6/breath_3.ogg,generated,2.25,1,44100,-0.6,-13.4,1628,,,23,prisoner6: heavy breathing
+Voices/prisoner6/death_1.ogg,generated,2.47,1,44100,-0.5,-10.3,787,,,24,prisoner6: last capture
+Voices/prisoner6/gasp_1.ogg,generated,1.21,1,44100,-0.6,-12.5,1411,,,14,prisoner6: gasp when spotted
+Voices/prisoner6/gasp_2.ogg,generated,1.22,1,44100,-0.6,-10.6,1308,,,14,prisoner6: gasp when spotted
+Voices/prisoner6/hurt_1.ogg,generated,1.15,1,44100,-0.7,-13.5,624,,,13,prisoner6: pained cry
+Voices/prisoner6/hurt_2.ogg,generated,1.32,1,44100,-0.8,-13.7,990,,,15,prisoner6: pained cry
+Voices/prisoner6/hurt_3.ogg,generated,1.44,1,44100,-0.8,-10.9,908,,,16,prisoner6: pained cry
+Voices/prisoner6/scream_1.ogg,generated,2.27,1,44100,-0.6,-8.3,671,,,23,prisoner6: terrified scream
+Voices/prisoner6/scream_2.ogg,generated,2.87,1,44100,-0.8,-8.6,922,,,28,prisoner6: terrified scream
+Voices/prisoner6/struggle_1.ogg,generated,1.77,1,44100,-0.9,-14.6,577,,,19,prisoner6: straining against a lock / trap
+Voices/prisoner6/struggle_2.ogg,generated,2.16,1,44100,-0.6,-14.5,624,,,22,prisoner6: straining against a lock / trap
+Voices/prisoner7/breath_1.ogg,generated,2.97,1,44100,-1.1,-13.0,1416,,,29,prisoner7: heavy breathing
+Voices/prisoner7/breath_2.ogg,generated,2.76,1,44100,-1.4,-13.6,1441,,,27,prisoner7: heavy breathing
+Voices/prisoner7/breath_3.ogg,generated,2.32,1,44100,-0.6,-13.4,1537,,,24,prisoner7: heavy breathing
+Voices/prisoner7/death_1.ogg,generated,2.47,1,44100,-1.0,-12.4,429,,,24,prisoner7: last capture
+Voices/prisoner7/gasp_1.ogg,generated,1.22,1,44100,-0.6,-11.2,1086,,,14,prisoner7: gasp when spotted
+Voices/prisoner7/gasp_2.ogg,generated,1.21,1,44100,-0.9,-10.7,929,,,14,prisoner7: gasp when spotted
+Voices/prisoner7/hurt_1.ogg,generated,1.16,1,44100,-0.6,-13.5,435,,,13,prisoner7: pained cry
+Voices/prisoner7/hurt_2.ogg,generated,1.32,1,44100,-1.0,-14.6,534,,,15,prisoner7: pained cry
+Voices/prisoner7/hurt_3.ogg,generated,1.44,1,44100,-1.0,-11.3,452,,,16,prisoner7: pained cry
+Voices/prisoner7/scream_1.ogg,generated,2.27,1,44100,-1.1,-10.6,445,,,23,prisoner7: terrified scream
+Voices/prisoner7/scream_2.ogg,generated,2.87,1,44100,-0.8,-8.6,499,,,28,prisoner7: terrified scream
+Voices/prisoner7/struggle_1.ogg,generated,1.74,1,44100,-1.1,-16.5,408,,,18,prisoner7: straining against a lock / trap
+Voices/prisoner7/struggle_2.ogg,generated,2.14,1,44100,-1.0,-14.5,428,,,22,prisoner7: straining against a lock / trap
 World/cage_close.ogg,generated,1.37,1,44100,-0.7,-14.7,1675,,,17,cage door slammed + latch
 World/cage_open.ogg,generated,1.15,1,44100,-1.1,-15.5,1602,,,15,"cage latch unhooked, hinge squeak, mesh rattle"
 World/car_crank_fail.ogg,generated,2.96,1,44100,-0.6,-8.3,277,,,29,starter cranks on a weak battery and dies
 World/car_door.ogg,generated,1.00,1,44100,-0.7,-15.3,550,,,12,car door opened and slammed
 World/car_drive_away.ogg,generated,8.23,1,44100,-0.9,-16.9,133,,,69,"engine revs through gears, car drives off over gravel into the distance"
 World/car_start.ogg,generated,4.36,1,44100,-0.7,-9.2,208,,,38,"crank, engine catches, revs and settles to idle"
+World/door_bump_1.ogg,generated,0.93,1,44100,-1.1,-16.4,155,,,11,door leaf knocks against its stop / the wall
+World/door_bump_2.ogg,generated,0.87,1,44100,-1.1,-19.4,129,,,11,dull knock of a swinging door hitting something
 World/door_close_1.ogg,generated,1.19,1,44100,-0.6,-17.0,481,,,15,"short creak, latch catches, door settles in frame"
 World/door_close_2.ogg,generated,0.90,1,44100,-1.0,-19.6,227,,,11,soft door close + latch
+World/door_creak_loop_1.ogg,generated,2.60,1,44100,-3.2,-17.2,1591,yes,0.42,40,wooden hinge creak while the leaf swings (loop)
+World/door_creak_loop_2.ogg,generated,2.20,1,44100,-1.5,-17.1,982,yes,0.18,32,low wooden groan while the leaf swings (loop)
+World/door_latch_1.ogg,generated,0.64,1,44100,-0.8,-20.5,651,,,9,latch bolt clicks into the strike plate
+World/door_latch_2.ogg,generated,0.65,1,44100,-0.9,-20.0,335,,,9,"soft latch click, the leaf settles in its frame"
 World/door_open_1.ogg,generated,2.27,1,44100,-1.0,-13.0,1897,,,29,door handle + long squeaky creak
 World/door_open_2.ogg,generated,1.80,1,44100,-0.8,-18.5,1209,,,24,door handle + low short groan
 World/door_slam.ogg,generated,1.32,1,44100,-1.1,-18.0,290,,,15,door slammed hard
+World/door_unlock.ogg,generated,0.84,1,44100,-1.2,-18.8,2648,,,12,"lock bolt shot back, handle rattles"
 World/explosion.ogg,generated,7.49,1,44100,-0.1,-14.7,294,,,63,"car / gas explosion: crack, sub boom, rumble, debris"
 World/fence_breach.ogg,generated,2.19,1,44100,-0.7,-12.1,1603,,,27,"chain-link fence torn open: wire snap, mesh crash, post clank"
 World/fire_whoosh.ogg,generated,3.15,1,44100,-1.0,-17.9,401,,,30,fuel ignites: FWOOMP + roar + crackle
@@ -188,6 +317,7 @@ World/keypad_beep.ogg,generated,0.13,1,44100,-0.8,-7.7,1570,,,5,keypad button pr
 World/keypad_ok.ogg,generated,0.94,1,44100,-0.9,-11.7,1230,,,12,three rising beeps + solenoid release
 World/keypad_wrong.ogg,generated,0.47,1,44100,-1.0,-5.5,509,,,8,harsh low double buzz: wrong code
 World/metal_door_close.ogg,generated,3.34,1,44100,-0.8,-17.3,230,,,34,heavy metal door slams: huge clank + boom
+World/metal_door_creak_loop.ogg,generated,2.40,1,44100,-4.1,-17.1,764,yes,2.21,32,rusty metal hinge squeal while the door swings (loop)
 World/metal_door_open.ogg,generated,3.99,1,44100,-0.8,-13.7,1093,,,40,"heavy metal door: lever clank, scrape, hinge groan"
 World/power_off.ogg,generated,2.21,1,44100,-1.1,-24.9,408,,,21,"relay clunk, pop, hum dies down"
 World/power_on.ogg,generated,3.43,1,44100,-1.0,-16.8,449,,,33,"breaker clunk, mains hum swells, tubes ping and flicker on"
@@ -197,4 +327,6 @@ World/radio_voice.ogg,generated,4.21,1,22050,-0.6,-10.8,730,,,27,garbled distort
 World/shelter_door_open.ogg,generated,6.81,1,44100,-1.0,-17.5,695,,,68,"fallout shelter hatch: wheel turns, bolts retract, massive hinge groan"
 World/tv_on.ogg,generated,2.27,1,44100,-1.1,-18.7,2049,,,24,"CRT TV switched on: click, degauss thunk, whine, snow"
 World/wardrobe_close.ogg,generated,0.64,1,44100,-0.7,-19.1,601,,,9,wardrobe doors clack shut
+World/wardrobe_enter.ogg,generated,1.71,1,44100,-1.3,-15.2,1938,,,22,"wardrobe door eased open, hangers knocked aside, door pulled shut from inside"
+World/wardrobe_exit.ogg,generated,1.22,1,44100,-1.5,-16.0,1544,,,17,"wardrobe doors pushed open from inside, stepping out"
 World/wardrobe_open.ogg,generated,1.03,1,44100,-1.2,-12.4,2635,,,14,"wardrobe doors creak open, hangers jingle"

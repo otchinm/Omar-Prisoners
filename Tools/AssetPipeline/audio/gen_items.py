@@ -287,6 +287,105 @@ def chain_drop(rng):
     return fin(y, rng, 0.5, 0.12)
 
 
+# --------------------------------------------------------------------------------------------- the ceiling vent
+def _screw_turns(rng, y, t0, turns, f_squeak):
+    """Screwdriver turns on a rusty screw: each quarter turn a short squeaky stick-slip burst + a grit tick."""
+    t = t0
+    for k in range(turns):
+        d = rng.uniform(0.11, 0.17)
+        m = N(d)
+        sq = sfx.creak(m, rng, np.linspace(rng.uniform(55, 80), rng.uniform(110, 160), m), kind="metal",
+                       base=f_squeak * rng.uniform(0.92, 1.08), amp_env=dsp.env([(0, 0), (0.02, 1), (d * 0.7, 0.8), (d, 0)], m),
+                       jitter=0.3, roughness=0.5)
+        dsp.place(y, sq, N(t), rng.uniform(0.35, 0.6) * (1.0 - 0.12 * k))
+        dsp.place(y, dsp.click(N(0.015), rng.uniform(2500, 4200), 5, 0.002, rng), N(t + d * 0.9), 0.35)
+        t += d + rng.uniform(0.06, 0.12)   # re-grips the handle
+    return t
+
+
+def _screw(rng, f_squeak):
+    """The turning part (played while the prisoner holds E): tip seats, 3-4 squeaky quarter turns, the thread spins free."""
+    n = N(1.4)
+    y = np.zeros(n)
+    dsp.place(y, small_metal(rng, N(0.12), 2600, (0.01, 0.04), 6, 0.9), 0, 0.5)   # tip seats in the slot
+    t = _screw_turns(rng, y, 0.08, int(rng.integers(3, 5)), f_squeak)
+    m = N(0.25)  # the last turns spin free: a dry thread rasp
+    dsp.place(y, sfx.scrape(m, rng, dsp.env([(0, 0), (0.03, 1), (0.25, 0)], m), 2500, 8000, 1500), N(min(t, 1.1)), 0.25)
+    return fin(y, rng, 0.35, 0.08)
+
+
+for _k, _f in enumerate((1900, 2300, 1650)):
+    sound("Items/vent_screw_%d" % (_k + 1), desc="screwdriver turning a rusty vent screw out (squeaky quarter turns)", **ONE)(
+        (lambda f: lambda rng: _screw(rng, f))(_f))
+
+
+@sound("Items/vent_screw_drop", desc="a small screw drops onto floorboards: tink, bounce, roll", **ONE)
+def vent_screw_drop(rng):
+    n = N(0.6)
+    y = np.zeros(n)
+    for dt, g in ((0.0, 1.0), (0.09, 0.45), (0.15, 0.22), (0.19, 0.1)):
+        dsp.place(y, small_metal(rng, N(0.12), rng.uniform(3800, 5200), (0.008, 0.03), 5, 1.0), N(0.01 + dt), 0.5 * g)
+        dsp.place(y, dsp.lp(sfx.strike(N(0.08), rng, sfx.wood_modes(rng, 420, 6, 0.02), 0.9), 3000), N(0.01 + dt), 0.25 * g)
+    return fin(y, rng, 0.35, 0.08)
+
+
+@sound("Items/vent_cover_off", desc="the unscrewed vent cover tips off its frame and claps flat on the floorboards (muffled)", **ONE)
+def vent_cover_off(rng):
+    n = N(1.8)
+    y = np.zeros(n)
+    m = N(0.3)  # scrapes off the frame
+    dsp.place(y, sfx.scrape(m, rng, dsp.env([(0, 0), (0.05, 1), (0.3, 0.3)], m), 600, 4500, 700,
+                            res=[(1150, 18, 1.0), (2380, 22, 0.6)]), 0, 0.4)
+    # sheet metal slaps the boards: low wobbly panel modes + a wooden thump, then a short rattle as it settles
+    t0 = 0.42
+    panel = sfx.strike(N(1.1), rng, dsp.metal_modes(140, 14, rng, spread=0.6, tau=(0.08, 0.5)), 0.6, noise_mix=0.3)
+    wob = 1.0 + 0.5 * np.sin(2 * np.pi * dsp.phase(7.0, N(1.1))) * np.exp(-T(N(1.1)) / 0.3)
+    dsp.place(y, dsp.norm(panel * wob), N(t0), 0.75)
+    dsp.place(y, sfx.thud(N(0.4), rng, 95, 0.06, 0.4, noise=0.5), N(t0), 0.9)
+    for dt, g in ((0.11, 0.45), (0.19, 0.25), (0.25, 0.12)):
+        dsp.place(y, sfx.strike(N(0.25), rng, dsp.metal_modes(320, 8, rng, tau=(0.03, 0.12)), 0.7, noise_mix=0.3), N(t0 + dt), g)
+    y = dsp.lp(y, 3800)   # not too bright: muffled by the room
+    return fin(y, rng, 0.5, 0.12)
+
+
+@sound("Items/vent_grate_fall", desc="kitchen ceiling vent grate pushed out: pops loose, hisses down in a cloud of dust, "
+       "hits the floor with a dull heavy clang and rattles (impact at 0.84 s)", ch=1, norm=("loud", -0.5))
+def vent_grate_fall(rng):
+    n = N(3.0)
+    y = np.zeros(n)
+    hit = 0.84
+    # 1) pops loose: plaster cracks, rusty sheet metal tears out of the frame
+    crack = sfx.strike(N(0.3), rng, sfx.wood_modes(rng, 260, 8, 0.03), 1.0, noise_mix=0.7)
+    dsp.place(y, dsp.norm(crack), 0, 0.6)
+    m = N(0.16)
+    tear = sfx.creak(m, rng, np.linspace(160, 60, m), kind="metal", base=1350,
+                     amp_env=dsp.env([(0, 0), (0.01, 1), (0.16, 0)], m), jitter=0.4, roughness=0.6)
+    dsp.place(y, tear, N(0.01), 0.55)
+    dsp.place(y, sfx.grains(N(0.5), rng, 2500 * np.exp(-T(N(0.5)) / 0.15), 900, 6000, (0.001, 0.004)), N(0.02), 0.4)
+    # 2) hiss: dust and plaster streaming down with it, air rushing - grows until the impact
+    m = N(hit + 0.1)
+    hiss = dsp.band_noise(m, rng, 1800, 9000) * dsp.env([(0, 0.15), (0.15, 0.55), (hit - 0.05, 1.0), (hit + 0.1, 0.2)], m)
+    hiss *= np.exp(0.5 * dsp.smooth_rand(m, rng, 18, False))
+    dsp.place(y, dsp.norm(hiss), N(0.03), 0.32)
+    dsp.place(y, sfx.whoosh(N(0.6), rng, 300, 1400, 0.75, 1.0, 0.3), N(hit - 0.5), 0.35)
+    # 3) the impact: a dull heavy thump through the floor + a low, choked sheet-metal clang
+    dsp.place(y, sfx.thud(N(0.8), rng, 58, 0.14, 0.7, noise=0.7, noise_lp=700), N(hit), 1.0)
+    clang = sfx.strike(N(1.6), rng, dsp.metal_modes(118, 18, rng, spread=0.7, tau=(0.12, 0.8)), 0.55, noise_mix=0.35)
+    wob = 1.0 + 0.45 * np.sin(2 * np.pi * dsp.phase(5.5, N(1.6))) * np.exp(-T(N(1.6)) / 0.5)
+    dsp.place(y, dsp.lp(dsp.norm(clang * wob), 2600), N(hit), 0.8)
+    # it bounces on its corner and rattles flat
+    for dt, f, g in ((0.16, 260, 0.5), (0.27, 300, 0.32), (0.34, 340, 0.2), (0.39, 380, 0.12)):
+        b = sfx.strike(N(0.4), rng, dsp.metal_modes(f, 10, rng, tau=(0.04, 0.2)), 0.7, noise_mix=0.3)
+        dsp.place(y, dsp.lp(dsp.norm(b), 3500) + 0.5 * sfx.thud(N(0.4), rng, 90, 0.04, 0.3), N(hit + dt), g)
+    # 4) the dust settles: a long soft hiss + bits of plaster ticking down after it
+    m = N(1.8)
+    tail = dsp.band_noise(m, rng, 1200, 7000) * dsp.env([(0, 1.0), (0.3, 0.55), (1.8, 0)], m) ** 1.5
+    dsp.place(y, dsp.norm(tail), N(hit + 0.02), 0.28)
+    dsp.place(y, sfx.grains(N(1.4), rng, 260 * np.exp(-T(N(1.4)) / 0.5), 1500, 6000, (0.001, 0.003)), N(hit + 0.05), 0.35)
+    y = dsp.sat(dsp.norm(y), 1.6)
+    return fin(y, rng, 0.75, 0.18, bits=9)
+
+
 @sound("Items/soundmeter_tick", desc="sound meter needle tick + tiny blip", **ONE)
 def soundmeter_tick(rng):
     n = N(0.09)

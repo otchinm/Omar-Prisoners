@@ -41,6 +41,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Bottle: Bottle(mb); break;
                 case ItemType.Pills: Pills(mb); break;
                 case ItemType.Revolver: Revolver(mb, go.transform); break;
+                case ItemType.Screwdriver: Screwdriver(mb); break;
                 default:
                     mb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.5f, 0.5f)));
                     mb.AddBox(Vector3.zero, new Vector3(0.06f, 0.06f, 0.06f), BoxUV.PerFace);
@@ -91,6 +92,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Bottle: return new Vector3(0, 0.245f, 0);
                 case ItemType.Pills: return new Vector3(0, 0.0445f, 0);
                 case ItemType.Revolver: return new Vector3(0f, 0.0175f, -0.05f);
+                case ItemType.Screwdriver: return new Vector3(0f, 0.0145f, -0.04f);
                 default: return new Vector3(0, 0.03f, 0);
             }
         }
@@ -486,6 +488,22 @@ namespace PrisonersOfOmar.Characters
             for (int i = 0; i < 4; i++)
                 mb.AddBox(new Vector3(xs[i], 0.001f, 0.0575f + ls[i] * 0.5f), new Vector3(0.0025f, 0.0012f, ls[i]), BoxUVRects.All(steel));
             mb.AddBox(new Vector3(0.006f, 0.001f, 0.0575f + 0.055f), new Vector3(0.007f, 0.0012f, 0.003f), BoxUVRects.All(steel));
+        }
+
+        // screwdriver.png 32x32: handle (0,0,16,32) shaft (16,0,16,32). Pivot = middle of the handle, tip towards +Z.
+        static void Screwdriver(MeshBuilder mb)
+        {
+            const float W = 32, H = 32;
+            mb.SetMaterial(Mat("screwdriver"));
+            Rect handle = R(0, 0, 16, 32, W, H), steel = R(16, 0, 16, 32, W, H);
+            // fluted handle, a bit fatter towards the back, rounded butt
+            Cyl(mb, new Vector3(0, 0, -0.052f), new Vector3(0, 0, 0.038f), 0.0135f, 0.0125f, 8, handle, handle, null, false);
+            Cyl(mb, new Vector3(0, 0, 0.038f), new Vector3(0, 0, 0.05f), 0.0125f, 0.007f, 8, handle, null, null, false);
+            Cyl(mb, new Vector3(0, 0, -0.058f), new Vector3(0, 0, -0.052f), 0.011f, 0.0135f, 8, handle, handle, null, false);
+            // ferrule + shaft + flat blade
+            Cyl(mb, new Vector3(0, 0, 0.05f), new Vector3(0, 0, 0.058f), 0.0055f, 0.0045f, 6, steel, steel, null);
+            Cyl(mb, new Vector3(0, 0, 0.058f), new Vector3(0, 0, 0.152f), 0.0032f, 0.0032f, 6, steel, null, null);
+            mb.AddBox(new Vector3(0, 0, 0.158f), new Vector3(0.0075f, 0.0016f, 0.014f), BoxUVRects.All(steel));
         }
 
         // crowbar.png 32x64: paint (0,0,16,64) bare steel (16,0,16,64)

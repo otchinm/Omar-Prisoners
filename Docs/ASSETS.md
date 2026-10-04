@@ -186,12 +186,14 @@ Generated (Tools/AssetPipeline/audio):
   `metal_scrape_1`, `metal_scrape_2`, `whisper_1`, `whisper_2`, `thunder_1`, `thunder_2`, `drip_1`…`drip_3`, `phone_ring`, `dog_howl`.
 * Footsteps: `Audio/Steps/<surface>_<1..4>` for surface ∈ {wood, concrete, dirt, grass, metal, asphalt, tile, carpet, gravel}; `Audio/Steps/omar_<1..4>` (muffled, heavy body thumps that carry through walls).
 * Player: `Audio/Player/heartbeat`, `breath_heavy_1`…`3`, `hurt_1`…`3`, `body_fall`, `cage_rattle`, `struggle`, `gasp`, `bed_crawl_in`, `bed_crawl_out`.
-* Character voices (gen_voices.py): `Audio/Voices/prisoner1`…`prisoner7/` each with `hurt_1`…`3`, `scream_1`, `scream_2`, `breath_1`…`3`,
-  `gasp_1`, `gasp_2`, `struggle_1`, `struggle_2`, `death_1` — seven distinct degraded VHS voices cut from the human screams in
+* Character voices (gen_voices.py): folders Audio/Voices/prisoner1 … prisoner7, each with hurt_1..3, scream_1, scream_2, breath_1..3,
+  gasp_1, gasp_2, struggle_1, struggle_2, death_1 — seven distinct degraded VHS voices cut from the human screams in
   the user's recording (never Omar's), re-pitched / coloured per character (`Snd.Voice(skin, line)`).
 * Items: `Audio/Items/lighter_open`, `lighter_flick`, `lighter_close`, `fuel_pour`, `bandage_rip`, `flashlight_click`, `battery_insert`,
   `item_pickup`, `item_drop`, `item_equip`, `bottle_throw`, `glass_break`, `key_unlock`, `locked_rattle`, `lockpick`, `crowbar_pry`,
-  `wood_break`, `bolt_cut`, `chain_drop`, `soundmeter_tick`, `pills`, `gun_shot`, `gun_empty`, `gun_cock` (the revolver).
+  `wood_break`, `bolt_cut`, `chain_drop`, `soundmeter_tick`, `pills`, `gun_shot`, `gun_empty`, `gun_cock` (the revolver),
+  `vent_screw_1`…`3` (screwdriver turning a rusty screw), `vent_screw_drop`, `vent_cover_off` (the cage room vent cover tips over),
+  `vent_grate_fall` (the kitchen ceiling grate: pops loose, hisses down in dust, dull heavy clang at 0.84 s, rattles).
 * World: `Audio/World/door_open_1`, `door_open_2`, `door_close_1`, `door_close_2`, `door_slam`, `metal_door_open`, `metal_door_close`,
   `wardrobe_open`, `wardrobe_close`, `gate_creak`, `cage_open`, `cage_close`, `keypad_beep`, `keypad_wrong`, `keypad_ok`,
   `shelter_door_open`, `fuse_insert`, `power_on`, `power_off`, `radio_tune`, `radio_sos`, `radio_voice`, `car_door`, `car_crank_fail`,

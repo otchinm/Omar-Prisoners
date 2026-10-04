@@ -426,6 +426,7 @@ namespace PrisonersOfOmar.Gameplay
                 AddMessage("THE FUEL IS BURNING - GET AWAY FROM THE DRUMS!", 4f);
             }
             if (!prev.Exploded && o.Exploded) Explode();
+            OnVentState(prev, o);
         }
 
         static void CopyObjectives(ObjectiveData a, ObjectiveData b)
@@ -434,6 +435,7 @@ namespace PrisonersOfOmar.Gameplay
             b.CarDriver = a.CarDriver; b.CarGone = a.CarGone; b.ShelterOpen = a.ShelterOpen; b.FuseIn = a.FuseIn;
             b.RadioCalled = a.RadioCalled; b.RescueAt = a.RescueAt; b.RescuePresent = a.RescuePresent; b.RescueLeaveAt = a.RescueLeaveAt;
             b.RescueGone = a.RescueGone; b.BarrelsPoured = a.BarrelsPoured; b.IgniteAt = a.IgniteAt; b.Exploded = a.Exploded;
+            b.VentScrews = a.VentScrews; b.VentHatchOpen = a.VentHatchOpen;
         }
 
         System.Collections.IEnumerator SwingGate()

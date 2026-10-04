@@ -73,8 +73,9 @@ namespace PrisonersOfOmar.Map
             var hall = R("House.Hall", 1, -3, -8, 3, 8, WallSkin.Of(green, wains, 1.0f, trim), Tex.FloorDark, SurfaceType.Wood);
             hall.FloorHoles.Add(DownStairHole); hall.CeilHoles.Add(UpStairHole);
             R("House.Dining", 1, -11, -8, -3, 0, WallSkin.Of(Mat.Lit(Tex.WallpaperGreen, new Color(0.85f, 0.9f, 0.8f)), Mat.Lit(Tex.WoodDarkWall), 1.1f, trim), Tex.FloorPlanks, SurfaceType.Wood);
-            R("House.Kitchen", 1, -11, 0, -3, 8, WallSkin.Of(Mat.Lit(Tex.PlasterDirty, new Color(0.8f, 0.75f, 0.65f)), Mat.Lit(Tex.TileWhiteDirty), 1.4f, null), Tex.Linoleum, SurfaceType.Tile)
-                .Skin.LowerTileU = 1.4f;
+            var kitchen = R("House.Kitchen", 1, -11, 0, -3, 8, WallSkin.Of(Mat.Lit(Tex.PlasterDirty, new Color(0.8f, 0.75f, 0.65f)), Mat.Lit(Tex.TileWhiteDirty), 1.4f, null), Tex.Linoleum, SurfaceType.Tile);
+            kitchen.Skin.LowerTileU = 1.4f;
+            kitchen.CeilHoles.Add(VentShaft);   // the grate of the cage room duct
             R("House.Living", 1, 3, -8, 11, -1, WallSkin.Of(Mat.Lit(Tex.WallpaperRose, new Color(0.9f, 0.85f, 0.8f)), wains, 0.9f, trim), Tex.Carpet, SurfaceType.Carpet);
             var bath = R("House.Bathroom", 1, 3, -1, 11, 3, WallSkin.Of(Mat.Lit(Tex.PlasterDirty, new Color(0.85f, 0.85f, 0.8f)), Mat.Lit(Tex.TileWhiteDirty), 1.6f, null), Tex.FloorTile, SurfaceType.Tile);
             bath.Skin.LowerTileU = 1.6f; bath.FloorTile = 1.0f;
@@ -84,6 +85,7 @@ namespace PrisonersOfOmar.Map
             uhall.FloorHoles.Add(UpStairHole);
             var cage = R("House.CageRoom", 2, -11, -8, -3, 2, WallSkin.Of(Mat.Lit(Tex.WallpaperYellow), null, 0f, null, 1.4f), Tex.FloorPlanks, SurfaceType.Wood);
             cage.FloorTint = new Color(0.7f, 0.62f, 0.52f);
+            cage.FloorHoles.Add(VentShaft);
             R("House.Storage", 2, -11, 2, -3, 8, WallSkin.Of(Mat.Lit(Tex.PlasterDirty, new Color(0.75f, 0.7f, 0.65f)), Mat.Lit(Tex.WoodDarkWall), 1.0f, trim), Tex.FloorPlanks, SurfaceType.Wood);
             R("House.RadioRoom", 2, 3, -8, 11, -1, WallSkin.Of(Mat.Lit(Tex.WoodDarkWall), null, 0f, null, 1.6f), Tex.Carpet, SurfaceType.Carpet).FloorTint = new Color(0.6f, 0.65f, 0.6f);
             R("House.Closet", 2, 3, -1, 11, 3, WallSkin.Of(Mat.Lit(Tex.WoodPlanksWall), null, 0f, null, 1.6f), Tex.FloorPlanks, SurfaceType.Wood, Tex.CeilingWood);

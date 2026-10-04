@@ -41,6 +41,7 @@ namespace PrisonersOfOmar.Gameplay
             Add(ItemType.Crowbar, "CROWBAR", HoldPose.TwoHanded, "A crowbar. It can pry boards off a door. If he grabs me, I can hit him with it. Once.", dropNoise: 8f);
             Add(ItemType.Bottle, "BOTTLE", HoldPose.Bottle, "An empty glass bottle. If I throw it, the noise might draw him away.");
             Add(ItemType.Pills, "PAINKILLERS", HoldPose.OneHandSmall, "Prescription painkillers. For a while I won't feel my wounds and I can run longer.");
+            Add(ItemType.Screwdriver, "SCREWDRIVER", HoldPose.OneHandSmall, "A flathead screwdriver with a cracked amber handle. The vent cover in the cage room is held by four rusty screws...", key: true);
             Add(ItemType.Revolver, "REVOLVER", HoldPose.Pistol, "An old revolver with two rounds left. It won't stop him for long... but the old woman is a different story.", charge: true, key: true, dropNoise: 6f);
         }
 

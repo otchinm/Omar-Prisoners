@@ -68,6 +68,8 @@ namespace PrisonersOfOmar.Map
         public GrandmaInfo Grandma;
         /// <summary>Omar's butcher table routine and the vent that overlooks it (null if the map has none).</summary>
         public KitchenInfo Kitchen;
+        /// <summary>The crawl duct from the cage room down through the kitchen ceiling (null if not built).</summary>
+        public CeilingVentInfo CeilingVent;
         /// <summary>Candidate spots for the revolver (one is used per match).</summary>
         public readonly List<ItemSpawnInfo> GunSpots = new List<ItemSpawnInfo>();
         /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
@@ -198,6 +200,36 @@ namespace PrisonersOfOmar.Map
         public Vector3 TvSoundPosition;
         /// <summary>Nav node indices (ground floor of the house, no stairs) she can roll between once she starts roaming.</summary>
         public readonly List<int> RoamNodes = new List<int>();
+    }
+
+    /// <summary>
+    /// The crawl duct boxed in along the cage room's north wall. Its entrance is closed by a cover held with four screws
+    /// (a screwdriver takes them out one by one, then the cover tips over onto the floor); at the far end a shaft drops
+    /// through the floor slab to a grate in the kitchen ceiling right by the wall, which can only be pushed out from inside
+    /// the duct. It falls onto the kitchen floor and the prisoners drop down after it (one way).
+    /// </summary>
+    public sealed class CeilingVentInfo
+    {
+        /// <summary>The cover leaf: pivot on its bottom outer edge; it tips over around <see cref="CoverTipAxis"/> (world).</summary>
+        public Transform Cover;
+        public Vector3 CoverTipAxis = Vector3.forward;
+        public float CoverTipAngle = 90f;
+        /// <summary>The four screw heads on the cover (hidden one by one as they are taken out).</summary>
+        public Transform[] Screws;
+        /// <summary>Solid collider of the cover (blocks the duct while it is on).</summary>
+        public Collider CoverCollider;
+        /// <summary>Trigger (Layers.Interactable) in front of the cover.</summary>
+        public Collider CoverInteract;
+        /// <summary>The kitchen ceiling grate (pivot = its centre).</summary>
+        public Transform Hatch;
+        /// <summary>Solid collider of the grate (you stand on it inside the shaft while it is closed).</summary>
+        public Collider HatchCollider;
+        /// <summary>Trigger (Layers.Interactable) above the grate, inside the duct.</summary>
+        public Collider HatchInteract;
+        /// <summary>Where the grate comes to rest on the kitchen floor.</summary>
+        public Pose HatchRest;
+        /// <summary>Inside of the duct (only from here can the grate be pushed out).</summary>
+        public Bounds Inside;
     }
 
     /// <summary>(iteration 2) The butcher table where Omar chops meat, and the vent that overlooks it.</summary>

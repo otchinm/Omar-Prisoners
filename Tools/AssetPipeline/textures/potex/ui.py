@@ -576,6 +576,27 @@ def _lockpick(ctx):
     return img, clamp01(a + grip)
 
 
+@icon("screwdriver")
+def _screwdriver(ctx):
+    W = H = 256
+    # diagonal: fat fluted amber handle bottom-left, steel shaft up to a flat tip top-right
+    handle = rrect(W, H, 14, 104, 152, 152, 20, -0.785)
+    im, d = canvas(W, H)
+    d.line([(136, 120), (224, 32)], fill=255, width=15)
+    d.polygon([(214, 30), (234, 20), (240, 38), (226, 44)], fill=255)
+    shaft = clamp01(to_mask(im) - handle)
+    img = solid(H, W, "#b0501c") * tex_noise(ctx, H, W, 0.1)[..., None]
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    across = (xx + yy)                        # flutes run along the handle (constant along x - y)
+    along = (xx - yy)
+    flutes = (np.sin(along * 0.2) > 0.4).astype(np.float32) * handle
+    img = mix(img, "#4a1a08", flutes * 0.75)
+    img = mix(img, "#e09a58", (np.sin(along * 0.2 + 1.5) > 0.92).astype(np.float32) * handle * 0.5)
+    img = mix(img, "#a8aaae", shaft)
+    img = mix(img, "#e6e6e8", (np.abs(along + 0.0 * across - 8) < 3).astype(np.float32) * shaft * 0.7)  # glint
+    return img, clamp01(handle + shaft)
+
+
 @icon("crowbar")
 def _crowbar(ctx):
     W = H = 256
