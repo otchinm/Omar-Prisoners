@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Offline QA harness for the runtime map (Scripts/Map). Compiles the map code + the Core / Rendering / Characters
-    contracts it uses against a small managed UnityEngine stand-in (UnityStub/), runs MapBuilder.Build and exports
+    sources it uses against a small managed UnityEngine stand-in (UnityStub/), runs MapBuilder.Build and exports
     MapData + colliders + nav (map.json) and preview renders. Unity never compiles this folder.
       usage: dotnet run -c Release (from this folder) then pass: outDir [seed] [no-render flag]
+    Real game sources are listed below; the few game types whose sources would drag in the camera / VHS / gameplay
+    stack are replaced by stand-ins in UnityStub/GameStandIns.cs (currently PsxRenderDriver only). When the game code
+    starts using a new type, add its source here first; write a stand-in only if that source pulls in too much.
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -20,8 +23,14 @@
     <Compile Include="UnityStub/*.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="$(Scripts)Core/*.cs" />
-    <Compile Include="$(Scripts)Rendering/PsxLight.cs;$(Scripts)Rendering/PsxMaterials.cs;$(Scripts)Rendering/PsxFx.cs" />
+    <!-- rendering: lights / materials / FX helpers (PsxFx needs the sprite, emitter, decal, debris, blob shadow, sky helpers) -->
+    <Compile Include="$(Scripts)Rendering/PsxLight.cs;$(Scripts)Rendering/PsxMaterials.cs;$(Scripts)Rendering/PsxFx.cs;$(Scripts)Rendering/PsxFxAssets.cs;$(Scripts)Rendering/PsxShaderIds.cs" />
+    <Compile Include="$(Scripts)Rendering/PsxSprite.cs;$(Scripts)Rendering/PsxBillboard.cs;$(Scripts)Rendering/PsxEmitter.cs;$(Scripts)Rendering/PsxDecalFade.cs;$(Scripts)Rendering/PsxFlame.cs" />
+    <Compile Include="$(Scripts)Rendering/PsxTimedLight.cs;$(Scripts)Rendering/PsxDebris.cs;$(Scripts)Rendering/PsxBlobShadow.cs;$(Scripts)Rendering/AnomalySystem.cs" />
+    <!-- characters: HumanoidFactory.BuildFigure (mannequins / corpses) = skeleton + skinned body + pose, baked to a static mesh -->
     <Compile Include="$(Scripts)Characters/HumanoidFactory.cs;$(Scripts)Characters/HumanoidRig.cs;$(Scripts)Characters/HumanoidAnimator.cs;$(Scripts)Characters/CharacterTypes.cs" />
+    <Compile Include="$(Scripts)Characters/BodySpec.cs;$(Scripts)Characters/BodyMeshGenerator.cs;$(Scripts)Characters/SkinMeshBuilder.cs;$(Scripts)Characters/PoseBuffer.cs;$(Scripts)Characters/HumanoidPoses.cs" />
+    <Compile Include="$(Scripts)Characters/CharacterAtlas.cs;$(Scripts)Characters/ItemMeshFactory.cs" />
     <Compile Include="$(Scripts)Map/*.cs" />
   </ItemGroup>
 </Project>

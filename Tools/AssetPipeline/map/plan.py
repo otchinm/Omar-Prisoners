@@ -12,7 +12,12 @@ Each plan slices the colliders at walking height of one level (basement / ground
 doors (closed leaf + swing arc), item spawns (red = Key tier, yellow = Common), tripwires (magenta lines),
 bear traps (magenta X), hiding spots (blue, cyan arrow = exit pose), cages, spawns (green = prisoners, red = Omar),
 notes (white), lights (small rings), nav nodes/edges (blue; orange = through a door, red = through a gate).
-Also prints sanity checks (items inside solid geometry, tripwire spans, door clearance, unreachable areas).
+Iteration 2 overlays: colliders that start inactive (cage slots enabled per match) as dashed-looking outlines,
+cell rooms (green label + cage count), revolver spots (orange triangles), crawlspaces / vents (yellow box),
+tippable beds (pink: lifter pose, cyan: crawl start), grandma (pink chair + TV), kitchen routine (red chop pose,
+cyan vent view).
+Also prints sanity checks (items inside solid geometry, tripwire spans, door clearance, unreachable areas, blocked
+character poses).
 Requires Pillow only.
 """
 import json
@@ -134,6 +139,10 @@ def render(d, view, out_dir):
         if len(poly) < 3:
             continue
         pts = [P(x, z) for x, z in poly]
+        if not c.get("a", 1):
+            # inactive at build time (e.g. cage slots the match enables): outline only
+            dr.polygon(pts, fill=None, outline=(150, 210, 150, 170))
+            continue
         if c["t"]:
             col, fill = (80, 220, 120, 255), None
         elif c["l"] == LAYER_DOOR:
@@ -210,6 +219,11 @@ def render(d, view, out_dir):
             dr.ellipse([*[v - 5 for v in P(i[0], i[2])], *[v + 5 for v in P(i[0], i[2])]], fill=(80, 230, 80))
             ox, oy = P(o[0], o[2])
             dr.ellipse([ox - 3, oy - 3, ox + 3, oy + 3], outline=(80, 230, 80))
+    for k, r in enumerate(d.get("cellRooms", [])):
+        c = r["c"]
+        if inside_y(c[1] + 0.3) or inside_y(c[1] + 1.0):
+            x, y = P(c[0], c[2])
+            dr.text((x - 20, y - 6), "CELL %d (%d)" % (k, len(r["cages"])), fill=(80, 230, 80), font=font)
     om = d["omar"]["pos"]
     if inside_y(om[1] + 0.3):
         x, y = P(om[0], om[2])
@@ -226,6 +240,62 @@ def render(d, view, out_dir):
             dr.polygon([(x, y - 5), (x + 5, y), (x, y + 5), (x - 5, y)], fill=(255, 60, 60), outline=(0, 0, 0))
         else:
             dr.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(255, 230, 60), outline=(0, 0, 0))
+    # revolver spots
+    for g in d.get("guns", []):
+        p = g["p"]
+        if not inside_y(p[1]):
+            continue
+        x, y = P(p[0], p[2])
+        dr.polygon([(x, y - 6), (x + 6, y + 5), (x - 6, y + 5)], fill=(255, 150, 30), outline=(0, 0, 0))
+    # iteration 2: crawlspaces, tippable beds, grandma, kitchen routine
+    for b in d.get("crawl", []):
+        if b["max"][1] < py0 or b["min"][1] > py1:
+            continue
+        mn, mx = b["min"], b["max"]
+        dr.rectangle([P(mn[0], mx[2]), P(mx[0], mn[2])], outline=(240, 220, 60), width=2)
+        if font:
+            tx, ty = P(mn[0], mx[2])
+            dr.text((tx + 2, ty + 2), "CRAWL", fill=(240, 220, 60), font=font)
+    for h in d["hiding"]:
+        if not h.get("lift") or not inside_y(h["root"][1] + 0.3):
+            continue
+        for key, col in (("lifter", (255, 110, 200)), ("crawl", (80, 255, 255))):
+            pp = h[key]
+            x, y = P(pp["pos"][0], pp["pos"][2])
+            dr.ellipse([x - 3, y - 3, x + 3, y + 3], outline=col, width=2)
+            dr.line([(x, y), P(pp["pos"][0] + pp["fwd"][0] * 0.5, pp["pos"][2] + pp["fwd"][2] * 0.5)], fill=col, width=1)
+    gm = d.get("grandma")
+    if gm and inside_y(gm["chair"]["pos"][1] + 0.3):
+        c = gm["chair"]
+        x, y = P(c["pos"][0], c["pos"][2])
+        dr.ellipse([x - 6, y - 6, x + 6, y + 6], fill=(255, 110, 200), outline=(0, 0, 0))
+        dr.line([(x, y), P(c["pos"][0] + c["fwd"][0] * 0.9, c["pos"][2] + c["fwd"][2] * 0.9)], fill=(255, 110, 200), width=2)
+        tv = gm["tv"]
+        tx, ty = P(tv[0], tv[2])
+        dr.rectangle([tx - 4, ty - 4, tx + 4, ty + 4], outline=(255, 110, 200), width=2)
+        if font:
+            dr.text((x + 7, y + 2), "GRANDMA", fill=(255, 110, 200), font=font)
+        for ni in gm.get("roam", []):
+            p = nodes[ni]
+            nx, ny = P(p[0], p[2])
+            dr.ellipse([nx - 4, ny - 4, nx + 4, ny + 4], outline=(255, 110, 200), width=1)
+    kt = d.get("kitchen")
+    if kt and inside_y(kt["chop"]["pos"][1] + 0.3):
+        c = kt["chop"]
+        x, y = P(c["pos"][0], c["pos"][2])
+        dr.ellipse([x - 5, y - 5, x + 5, y + 5], fill=(220, 40, 40), outline=(0, 0, 0))
+        dr.line([(x, y), P(c["pos"][0] + c["fwd"][0] * 0.8, c["pos"][2] + c["fwd"][2] * 0.8)], fill=(220, 40, 40), width=2)
+        bx, by = P(kt["block"][0], kt["block"][2])
+        dr.line([(bx - 4, by - 4), (bx + 4, by + 4)], fill=(220, 40, 40), width=2)
+        dr.line([(bx - 4, by + 4), (bx + 4, by - 4)], fill=(220, 40, 40), width=2)
+        if font:
+            dr.text((x + 6, y + 2), "CHOP", fill=(255, 120, 120), font=font)
+    if kt:
+        v = kt["view"]
+        if inside_y(v["pos"][1]) or inside_y(v["pos"][1] - 0.6):
+            x, y = P(v["pos"][0], v["pos"][2])
+            dr.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(80, 255, 255))
+            dr.line([(x, y), P(v["pos"][0] + v["fwd"][0] * 1.0, v["pos"][2] + v["fwd"][2] * 1.0)], fill=(80, 255, 255), width=2)
     # traps
     for t in d["traps"]:
         a = t["a"]
@@ -279,14 +349,15 @@ def checks(d):
     issues = []
     solid = [c for c in d["colliders"] if not c["t"] and c["l"] in (LAYER_WORLD, LAYER_DEFAULT)]
     # items must not be buried in solid geometry and must have a surface just below
-    for it in d["items"]:
+    spots = [("item", it) for it in d["items"]] + [("gun spot", g) for g in d.get("guns", [])]
+    for label, it in spots:
         p = it["p"]
         probe = (p[0], p[1] + 0.06, p[2])
         if any(point_in_box(c, probe, 0.005) for c in solid):
-            issues.append("item inside geometry at %s (%s)" % (p, it["area"]))
+            issues.append("%s inside geometry at %s (%s)" % (label, p, it["area"]))
         below = (p[0], p[1] - 0.04, p[2])
         if not any(point_in_box(c, below, -0.03) for c in solid) and p[1] > 0.05:
-            issues.append("item floating at %s (%s)" % (p, it["area"]))
+            issues.append("%s floating at %s (%s)" % (label, p, it["area"]))
     for t in d["traps"]:
         if t["kind"] == "Tripwire":
             a, b = t["a"], t["b"]
@@ -314,6 +385,11 @@ def checks(d):
     poses += [("cage outside %d" % i, c["outside"]["pos"]) for i, c in enumerate(d["cages"])]
     poses += [("omar spawn", d["omar"]["pos"])]
     poses += [("spectator %d" % i, (s["pos"][0], s["pos"][1] - 1.6, s["pos"][2])) for i, s in enumerate(d["spectators"])]
+    for h in d["hiding"]:
+        if h.get("lift"):
+            poses += [("lifter " + h["name"], h["lifter"]["pos"]), ("crawl start " + h["name"], h["crawl"]["pos"])]
+    if d.get("kitchen"):
+        poses += [("kitchen chop pose", d["kitchen"]["chop"]["pos"])]
     for i, m in enumerate(d["mannequins"]):
         poses += [("mannequin %d alt %d" % (i, k), a["pos"]) for k, a in enumerate(m["alts"])]
     for label, p in poses:

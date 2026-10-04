@@ -49,6 +49,30 @@ namespace UnityEngine
         public static float MoveTowards(float c, float t, float d) => Math.Abs(t - c) <= d ? t : c + Sign(t - c) * d;
         public static float DeltaAngle(float c, float t) { float d = Repeat(t - c, 360f); if (d > 180f) d -= 360f; return d; }
         public static float PerlinNoise(float x, float y) => 0.5f;
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime) => SmoothDamp(current, target, ref currentVelocity, smoothTime, Infinity, Time.deltaTime);
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed) => SmoothDamp(current, target, ref currentVelocity, smoothTime, maxSpeed, Time.deltaTime);
+        public static float SmoothDamp(float current, float target, ref float currentVelocity, float smoothTime, float maxSpeed, float deltaTime)
+        {
+            // Unity's critically damped spring (UnityCsReference Mathf.SmoothDamp)
+            smoothTime = Max(0.0001f, smoothTime);
+            float omega = 2f / smoothTime;
+            float x = omega * deltaTime;
+            float exp = 1f / (1f + x + 0.48f * x * x + 0.235f * x * x * x);
+            float change = current - target;
+            float originalTo = target;
+            float maxChange = maxSpeed * smoothTime;
+            change = Clamp(change, -maxChange, maxChange);
+            target = current - change;
+            float temp = (currentVelocity + omega * change) * deltaTime;
+            currentVelocity = (currentVelocity - omega * temp) * exp;
+            float output = target + (change + temp) * exp;
+            if (originalTo - current > 0f == output > originalTo)
+            {
+                output = originalTo;
+                currentVelocity = (output - originalTo) / deltaTime;
+            }
+            return output;
+        }
     }
 
     public struct Vector2 : IEquatable<Vector2>
@@ -118,8 +142,29 @@ namespace UnityEngine
         public static Vector3 Scale(Vector3 a, Vector3 b) => new Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
         public static Vector3 Project(Vector3 v, Vector3 n) { float s = Dot(n, n); return s < 1e-12f ? zero : n * (Dot(v, n) / s); }
         public static Vector3 ProjectOnPlane(Vector3 v, Vector3 n) => v - Project(v, n);
+        public static Vector3 Reflect(Vector3 d, Vector3 n) => d - 2f * Dot(n, d) * n;
         public static float Angle(Vector3 a, Vector3 b) { float d = Mathf.Sqrt(a.sqrMagnitude * b.sqrMagnitude); return d < 1e-15f ? 0f : Mathf.Acos(Mathf.Clamp(Dot(a, b) / d, -1f, 1f)) * Mathf.Rad2Deg; }
         public static Vector3 MoveTowards(Vector3 c, Vector3 t, float d) { var v = t - c; float m = v.magnitude; return m <= d || m == 0f ? t : c + v / m * d; }
+        /// <summary>Unity semantics: direction interpolated on the sphere, magnitude linearly.</summary>
+        public static Vector3 Slerp(Vector3 a, Vector3 b, float t) => SlerpUnclamped(a, b, Mathf.Clamp01(t));
+        public static Vector3 SlerpUnclamped(Vector3 a, Vector3 b, float t)
+        {
+            float la = a.magnitude, lb = b.magnitude;
+            if (la < 1e-6f || lb < 1e-6f) return LerpUnclamped(a, b, t);
+            Vector3 da = a / la, db = b / lb;
+            float d = Mathf.Clamp(Dot(da, db), -1f, 1f);
+            float len = la + (lb - la) * t;
+            if (d > 0.9999f) return LerpUnclamped(da, db, t).normalized * len;
+            Vector3 rel = db - da * d;
+            if (rel.sqrMagnitude < 1e-10f)
+            {
+                rel = Cross(da, Vector3.right);
+                if (rel.sqrMagnitude < 1e-6f) rel = Cross(da, Vector3.up);
+            }
+            rel = rel.normalized;
+            float th = Mathf.Acos(d) * t;
+            return (da * Mathf.Cos(th) + rel * Mathf.Sin(th)) * len;
+        }
         public bool Equals(Vector3 o) => x == o.x && y == o.y && z == o.z;
         public override bool Equals(object o) => o is Vector3 v && Equals(v);
         public override int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2) ^ (z.GetHashCode() >> 2);

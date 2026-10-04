@@ -69,6 +69,9 @@ static class Program
         UnityEngine.Object.ResetWorld();
         var data3 = MapBuilder.Build(seed + 1, null);
         Console.WriteLine("other seed differs: " + (ExportData(data3, false) != json1));
+        Console.WriteLine("iteration 2: cell rooms " + data.CellRooms.Count + " (cage slots " + data.Cages.Count + ", active at build " + data.Cages.Count(c => c.Root != null && c.Root.gameObject.activeSelf)
+            + "), gun spots " + data.GunSpots.Count + ", crawlspaces " + data.CrawlSpaces.Count + ", lift beds " + data.HidingSpots.Count(h => h.LiftPivot != null)
+            + ", grandma " + (data.Grandma != null ? data.Grandma.Area + " (" + data.Grandma.RoamNodes.Count + " roam nodes)" : "none") + ", kitchen " + (data.Kitchen != null ? data.Kitchen.Area : "none"));
         UnityEngine.Object.ResetWorld();
         var menu = MenuSceneBuilder.Build(null, out var camPose);
         Console.WriteLine("menu room: " + UnityEngine.Object.AllGameObjects.Count + " objects, camera " + camPose.position.ToString("F2"));
@@ -207,7 +210,11 @@ static class Program
             var h = d.HidingSpots[i];
             if (i > 0) j.Raw(",");
             j.Raw("{").K("name").S(h.Name).Raw(",").K("kind").S(h.Kind.ToString()).Raw(",").K("root").V(Pos(h.Root)).Raw(",").K("interact").V(ColCenter(h.Interact))
-                .Raw(",").K("view").P(h.HiddenView).Raw(",").K("exit").P(h.ExitPose).Raw(",").K("doors").Raw(h.Doors.Length.ToString(IC)).Raw("}");
+                .Raw(",").K("view").P(h.HiddenView).Raw(",").K("exit").P(h.ExitPose).Raw(",").K("doors").Raw(h.Doors.Length.ToString(IC));
+            // iteration 2: beds Omar can tip up (lift hinge + where Omar / the prisoner stand)
+            j.Raw(",").K("lift").Raw(h.LiftPivot != null ? "true" : "false");
+            if (h.LiftPivot != null) j.Raw(",").K("liftPivot").V(Pos(h.LiftPivot)).Raw(",").K("liftAngle").F(h.LiftAngle).Raw(",").K("lifter").P(h.LifterPose).Raw(",").K("crawl").P(h.CrawlStart);
+            j.Raw("}");
         }
         j.Raw("],").K("items").Raw("[");
         for (int i = 0; i < d.ItemSpawns.Count; i++)
@@ -229,7 +236,8 @@ static class Program
             var c = d.Cages[i];
             if (i > 0) j.Raw(",");
             j.Raw("{").K("root").V(Pos(c.Root)).Raw(",").K("door").V(Pos(c.DoorPivot)).Raw(",").K("doorDir").V(c.DoorPivot != null ? c.DoorPivot.right : Vector3.zero).Raw(",").K("open").F(c.OpenAngle)
-                .Raw(",").K("inside").P(c.Inside).Raw(",").K("outside").P(c.Outside).Raw(",").K("interact").V(ColCenter(c.Interact)).Raw("}");
+                .Raw(",").K("inside").P(c.Inside).Raw(",").K("outside").P(c.Outside).Raw(",").K("interact").V(ColCenter(c.Interact))
+                .Raw(",").K("room").Raw(c.RoomIndex.ToString(IC)).Raw(",").K("active").Raw(c.Root != null && c.Root.gameObject.activeSelf ? "true" : "false").Raw("}");
         }
         j.Raw("],").K("spawns").Raw("[");
         for (int i = 0; i < d.PrisonerSpawns.Count; i++) { if (i > 0) j.Raw(","); j.P(d.PrisonerSpawns[i]); }
@@ -281,6 +289,36 @@ static class Program
         j.Raw(",").K("fire").Raw("{").K("barrels").V(ColCenter(d.FuelDepot.Barrels)).Raw(",").K("center").V(d.FuelDepot.ExplosionCenter).Raw(",").K("breach").Raw(d.FuelDepot.BreachFence != null ? "true" : "false")
             .Raw(",").K("blockers").Raw(d.FuelDepot.BreachBlockers.Length.ToString(IC)).Raw(",").K("exit").B(d.FuelDepot.BreachExitZone).Raw("}");
         j.Raw(",").K("bounds").B(d.PlayableBounds);
+        // ---- iteration 2: cell rooms, revolver spots, crawlspaces, grandma, kitchen routine
+        j.Raw(",").K("cellRooms").Raw("[");
+        for (int i = 0; i < d.CellRooms.Count; i++)
+        {
+            var r = d.CellRooms[i];
+            if (i > 0) j.Raw(",");
+            j.Raw("{").K("name").S(r.Name).Raw(",").K("area").S(r.Area).Raw(",").K("c").V(r.Center).Raw(",").K("cages").Raw("[" + string.Join(",", r.CageIndices.Select(x => x.ToString(IC))) + "]}");
+        }
+        j.Raw("],").K("guns").Raw("[");
+        for (int i = 0; i < d.GunSpots.Count; i++)
+        {
+            var g = d.GunSpots[i];
+            if (i > 0) j.Raw(",");
+            j.Raw("{").K("p").V(g.Position).Raw(",").K("yaw").F(g.Yaw).Raw(",").K("area").S(g.Area).Raw("}");
+        }
+        j.Raw("],").K("crawl").Raw("[");
+        for (int i = 0; i < d.CrawlSpaces.Count; i++) { if (i > 0) j.Raw(","); j.B(d.CrawlSpaces[i]); }
+        j.Raw("]");
+        var gm = d.Grandma;
+        j.Raw(",").K("grandma");
+        if (gm == null) j.Raw("null");
+        else
+            j.Raw("{").K("area").S(gm.Area).Raw(",").K("room").B(gm.Room).Raw(",").K("chair").P(gm.ChairPose).Raw(",").K("tv").V(Pos(gm.TvScreen)).Raw(",").K("tvSound").V(gm.TvSoundPosition)
+                .Raw(",").K("roam").Raw("[" + string.Join(",", gm.RoamNodes.Select(x => x.ToString(IC))) + "]}");
+        var kt = d.Kitchen;
+        j.Raw(",").K("kitchen");
+        if (kt == null) j.Raw("null");
+        else
+            j.Raw("{").K("area").S(kt.Area).Raw(",").K("chop").P(kt.ChopPose).Raw(",").K("block").V(kt.BlockTop).Raw(",").K("meat").V(Pos(kt.Meat)).Raw(",").K("interact").V(ColCenter(kt.ChopInteract))
+                .Raw(",").K("vent").B(kt.VentArea).Raw(",").K("view").P(kt.VentView).Raw("}");
         j.Raw(",").K("power").Raw(d.PowerLights.Count.ToString(IC)).Raw(",").K("radioLights").Raw(d.RadioRoomLights.Count.ToString(IC));
         var nav = d.Nav;
         j.Raw(",").K("nav").Raw("{").K("nodes").Raw("[");
@@ -314,8 +352,9 @@ static class Program
                 b.WorldBox(out var cc, out var rot, out var half);
                 if (ci++ > 0) j.Raw(",");
                 var tag = b.GetComponent<SurfaceTag>();
+                // a = 0: the collider's GameObject is inactive at build time (e.g. the cage slots gameplay enables per match)
                 j.Raw("{").K("n").S(b.gameObject.name).Raw(",").K("l").Raw(b.gameObject.layer.ToString(IC)).Raw(",").K("t").Raw(b.isTrigger ? "1" : "0").Raw(",").K("c").V(cc).Raw(",").K("h").V(half).Raw(",").K("q").Q(rot)
-                    .Raw(",").K("s").S(tag != null ? tag.Surface.ToString() : "").Raw("}");
+                    .Raw(",").K("s").S(tag != null ? tag.Surface.ToString() : "").Raw(",").K("a").Raw(b.gameObject.activeInHierarchy ? "1" : "0").Raw("}");
             }
             j.Raw("],").K("renderers").Raw("[");
             int ri = 0;

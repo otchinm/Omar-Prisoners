@@ -27,11 +27,16 @@ namespace UnityEngine
         public static void Log(object m) { if (!Quiet) Console.WriteLine("[log] " + m); }
         public static void LogWarning(object m) { Warnings++; if (!Quiet) Console.WriteLine("[warn] " + m); }
         public static void LogError(object m) { Errors++; ErrorLog.Add(m?.ToString()); Console.WriteLine("[ERROR] " + m); }
+        public static void LogException(Exception e) => LogError(e);
+        public static void Log(object m, Object ctx) => Log(m);
+        public static void LogWarning(object m, Object ctx) => LogWarning(m);
+        public static void LogError(object m, Object ctx) => LogError(m);
     }
 
     public static class Time
     {
-        public static float time = 0f, deltaTime = 1f / 60f;
+        public static float time = 0f, deltaTime = 1f / 60f, unscaledTime = 0f, unscaledDeltaTime = 1f / 60f, realtimeSinceStartup = 0f, timeScale = 1f;
+        public static double timeAsDouble => time;
         public static int frameCount = 0;
     }
 
@@ -40,11 +45,14 @@ namespace UnityEngine
         static int _nextId = 1;
         readonly int _id = _nextId++;
         public string name;
+        public HideFlags hideFlags;
         public static readonly List<GameObject> AllGameObjects = new List<GameObject>();
         public int GetInstanceID() => _id;
         public static void Destroy(Object o) { if (o is GameObject g) g.Destroyed = true; }
+        public static void Destroy(Object o, float t) => Destroy(o);
         public static void DestroyImmediate(Object o) => Destroy(o);
-        public static void ResetWorld() { AllGameObjects.Clear(); Physics.Clear(); }
+        public static void DontDestroyOnLoad(Object o) { }
+        public static void ResetWorld() { AllGameObjects.Clear(); Physics.Clear(); Random.Reset(); }
         public override string ToString() => name;
     }
 
@@ -67,7 +75,8 @@ namespace UnityEngine
 
         public bool activeSelf => _active;
         public bool activeInHierarchy => _active && (transform.parent == null || transform.parent.gameObject.activeInHierarchy);
-        public void SetActive(bool v) => _active = v;
+        /// <summary>Like Unity, (de)activation adds / removes the colliders from physics immediately.</summary>
+        public void SetActive(bool v) { if (_active == v) return; _active = v; Physics.Invalidate(); }
         public IReadOnlyList<Component> Components => _components;
 
         public T AddComponent<T>() where T : Component
@@ -92,6 +101,18 @@ namespace UnityEngine
             return list.ToArray();
         }
 
+        public void GetComponentsInChildren<T>(bool includeInactive, List<T> result) where T : class
+        {
+            result.Clear();
+            Collect(transform, result, includeInactive);
+        }
+
+        public T GetComponentInChildren<T>(bool includeInactive = false) where T : class
+        {
+            var a = GetComponentsInChildren<T>(includeInactive);
+            return a.Length > 0 ? a[0] : null;
+        }
+
         static void Collect<T>(Transform t, List<T> list, bool inactive) where T : class
         {
             if (!inactive && !t.gameObject.activeSelf) return;
@@ -109,6 +130,8 @@ namespace UnityEngine
         public new string name { get => _go.name; set => _go.name = value; }
         public T GetComponent<T>() where T : class => _go.GetComponent<T>();
         public T[] GetComponentsInChildren<T>(bool includeInactive = false) where T : class => _go.GetComponentsInChildren<T>(includeInactive);
+        public void GetComponentsInChildren<T>(bool includeInactive, List<T> result) where T : class => _go.GetComponentsInChildren(includeInactive, result);
+        public T GetComponentInChildren<T>(bool includeInactive = false) where T : class => _go.GetComponentInChildren<T>(includeInactive);
         public T GetComponentInParent<T>() where T : class
         {
             var t = transform;
@@ -143,6 +166,8 @@ namespace UnityEngine
         public Quaternion localRotation { get => _lr; set => _lr = value.normalized; }
         public Vector3 localScale { get => _ls; set => _ls = value; }
         public Vector3 localEulerAngles { get => _lr.eulerAngles; set => _lr = Quaternion.Euler(value); }
+        public void SetPositionAndRotation(Vector3 p, Quaternion r) { position = p; rotation = r; }
+        public void SetLocalPositionAndRotation(Vector3 p, Quaternion r) { _lp = p; localRotation = r; }
 
         public Matrix4x4 localToWorldMatrix => _parent == null ? Matrix4x4.TRS(_lp, _lr, _ls) : _parent.localToWorldMatrix * Matrix4x4.TRS(_lp, _lr, _ls);
         public Matrix4x4 worldToLocalMatrix => localToWorldMatrix.inverse;
@@ -173,6 +198,11 @@ namespace UnityEngine
         {
             var q = Quaternion.Euler(x, y, z);
             if (s == Space.Self) localRotation = _lr * q; else rotation = q * rotation;
+        }
+        public void Rotate(Vector3 euler, Space s = Space.Self) => Rotate(euler.x, euler.y, euler.z, s);
+        public void Rotate(Vector3 axis, float angle, Space s = Space.Self)
+        {
+            if (s == Space.Self) localRotation = _lr * Quaternion.AngleAxis(angle, axis); else rotation = Quaternion.AngleAxis(angle, axis) * rotation;
         }
         public Transform Find(string n) { foreach (var c in _children) if (c.name == n) return c; return null; }
     }
@@ -238,11 +268,13 @@ namespace UnityEngine
         static int _stamp;
         static bool _synced;
         public static bool autoSyncTransforms = false;
+        public static Vector3 gravity = new Vector3(0f, -9.81f, 0f);
         public static bool queriesHitTriggers = true;
         public static int RaycastCount, OverlapCount;
 
         internal static void Register(Collider c) { _all.Add(c); _synced = false; }
         internal static void Clear() { _all.Clear(); _boxes.Clear(); _grid.Clear(); _big.Clear(); _synced = false; }
+        internal static void Invalidate() => _synced = false;
 
         static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 
