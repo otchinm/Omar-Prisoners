@@ -1041,7 +1041,7 @@ namespace PrisonersOfOmar.Characters
             const int C = 6;
             mb.BeginPart();
             int first = mb.V.Count;
-            float legFront = b.LegRz[7] + 0.06f * s;
+            float legFront = b.LegRz[7] + 0.09f * s; // hangs clear of the thick thighs
             for (int r = 0; r < ys.Length; r++)
             {
                 float v = 1f - (b.NeckY - 0.0f - ys[r]) / (b.NeckY - yBottom);
@@ -1076,7 +1076,8 @@ namespace PrisonersOfOmar.Characters
                         case 3: w = SkinWeight.One(BoneId.Hips); break;
                         case 4: w = SkinWeight.One(BoneId.Hips).Plus(leg, 0.2f * sideK); break;
                         default:
-                            float lw = Mathf.Lerp(0.45f, 0.85f, sideK) * (r == 5 ? 0.8f : 1f);
+                            // each half of the apron goes with its own leg (no knee poking through when he strides)
+                            float lw = Mathf.Lerp(0.8f, 0.97f, sideK) * (r == 5 ? 0.9f : 1f);
                             w = SkinWeight.One(BoneId.Hips).Plus(leg, lw);
                             if (sideK < 0.2f) w = SkinWeight.Two(BoneId.LUpperLeg, BoneId.RUpperLeg, 0.5f).Plus(BoneId.Hips, 0.24f); // symmetric
                             break;

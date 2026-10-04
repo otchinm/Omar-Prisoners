@@ -247,9 +247,9 @@ namespace PrisonersOfOmar.Gameplay
         public const float OmarStaminaSeconds = 9f;
         /// <summary>m/s per second: the AI Omar accelerates from walk to full run over ~1.2 s.</summary>
         public const float OmarAcceleration = 3f;
-        public const float OmarEyeHeight = 2.12f;
-        /// <summary>How much lower Omar's head / eyes go when he fully stoops under a door frame (he is ~2.3 m tall).</summary>
-        public const float OmarDuckDrop = 0.24f;
+        public const float OmarEyeHeight = 2.3f;
+        /// <summary>How much lower Omar's head / eyes go when he fully stoops under a door frame (he is ~2.5 m tall).</summary>
+        public const float OmarDuckDrop = 0.36f;
         // shorter reach and slower swings; after every swing he stands still for AttackRecover seconds
         public const float AttackRange = 1.65f, AttackCooldown = 2.6f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
         public const float AttackRecover = 1.5f;

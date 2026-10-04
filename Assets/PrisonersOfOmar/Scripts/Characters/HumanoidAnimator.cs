@@ -379,8 +379,8 @@ namespace PrisonersOfOmar.Characters
             float sway = -swayAmp * Mathf.Sin(2f * Mathf.PI * (_phase + 0.25f - D * 0.5f));
             float limpDip = _injW * _moveW * 0.035f * s * Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * (_phase / Mathf.Max(0.1f, D * 2f))));
             p.HipsPos = new Vector3(sway * _moveW + shift * 0.025f * s * idleW,
-                -drop + bob * _moveW - limpDip + breath * 0.002f * idleW - 0.075f * s * _duckW,
-                -0.06f * s * _crouchW - 0.05f * s * _duckW);
+                -drop + bob * _moveW - limpDip + breath * 0.002f * idleW - 0.09f * s * _duckW,
+                -0.06f * s * _crouchW - 0.06f * s * _duckW);
             float yawAmp = Mathf.Lerp(Mathf.Lerp(6f, 11f, _runW), 3f, _crouchW) * _moveW;
             float pelvisYaw = yawAmp * Mathf.Cos(2f * Mathf.PI * _phase);
             float rollAmp = Mathf.Lerp(4f, 3f, _runW) * _moveW * (_heavy ? 1.15f : 1f);
@@ -389,16 +389,16 @@ namespace PrisonersOfOmar.Characters
             float lean = _heavy ? 2.5f + 1.5f * _moveW
                 : Mathf.Lerp(Mathf.Lerp(3f, 11f, _runW) * _moveW, 20f, _crouchW) + 9f * _sprintW;
             lean += _injW * 6f * _moveW;
-            p.Rot[(int)BoneId.Hips] = new Vector3(lean * 0.35f + 9f * _duckW, pelvisYaw, pelvisRoll);
-            p.Rot[(int)BoneId.Spine] = new Vector3(lean * 0.3f + (_heavy ? 4f : 0f) + 13f * _duckW, -pelvisYaw * 0.45f, -pelvisRoll * 0.5f);
+            p.Rot[(int)BoneId.Hips] = new Vector3(lean * 0.35f + 11f * _duckW, pelvisYaw, pelvisRoll);
+            p.Rot[(int)BoneId.Spine] = new Vector3(lean * 0.3f + (_heavy ? 4f : 0f) + 16f * _duckW, -pelvisYaw * 0.45f, -pelvisRoll * 0.5f);
             float chestRoll = -pelvisRoll * 0.4f + _injW * _moveW * 5f;
-            p.Rot[(int)BoneId.Chest] = new Vector3(lean * 0.35f - breath * breathAmp * idleW - breath * breathAmp * 0.5f * _moveW * _exert + 11f * _duckW,
+            p.Rot[(int)BoneId.Chest] = new Vector3(lean * 0.35f - breath * breathAmp * idleW - breath * breathAmp * 0.5f * _moveW * _exert + 13f * _duckW,
                 -pelvisYaw * 0.9f, chestRoll);
             // head stabilization
             float headCounter = -(lean * 1.0f);
             // ducking: the head is bowed with the back, not stabilised level
-            p.Rot[(int)BoneId.Neck] = new Vector3(headCounter * 0.35f + (_heavy ? -4f : 0f) + 6f * _duckW, pelvisYaw * 0.3f, 0f);
-            p.Rot[(int)BoneId.Head] = new Vector3(headCounter * 0.55f + breath * 0.8f * idleW + 4f * _duckW, pelvisYaw * 0.45f, -chestRoll * 0.6f);
+            p.Rot[(int)BoneId.Neck] = new Vector3(headCounter * 0.35f + (_heavy ? -4f : 0f) + 8f * _duckW, pelvisYaw * 0.3f, 0f);
+            p.Rot[(int)BoneId.Head] = new Vector3(headCounter * 0.55f + breath * 0.8f * idleW + 5f * _duckW, pelvisYaw * 0.45f, -chestRoll * 0.6f);
 
             // ---------------------------------------------------------------- arms (FK)
             float swing = Mathf.Lerp(Mathf.Lerp(15f, 44f, _runW) * Mathf.Clamp01(_speed / Mathf.Max(0.5f, WalkSpeed) + 0.2f), 8f, _crouchW) * _moveW;
@@ -407,6 +407,8 @@ namespace PrisonersOfOmar.Characters
             float c = Mathf.Cos(2f * Mathf.PI * _phase);
             float elbow = Mathf.Lerp(Mathf.Lerp(12f, 78f, _runW) * _moveW + 9f * idleW, 45f, _crouchW);
             float flexBias = Mathf.Lerp(Mathf.Lerp(3f, -8f, _runW) * _moveW, -22f, _crouchW) + (_heavy ? -6f : 0f);
+            flexBias -= 34f * _duckW; // stooped under a door frame: the arms still hang down, not back along the bent torso
+            elbow += 10f * _duckW;
             float abd = Mathf.Lerp(5f + 0.6f * breath * idleW + 3f * _airW * 6f, 12f, _runW * _moveW) + (_heavy ? 3f : 0f);
             float rF = flexBias - swing * c, lF = flexBias + swing * c;
             float rE = elbow + Mathf.Max(0f, -c) * swing * 0.5f, lE = elbow + Mathf.Max(0f, c) * swing * 0.5f;

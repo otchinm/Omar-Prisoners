@@ -88,7 +88,7 @@ namespace PrisonersOfOmar.Gameplay
             if (!simulated)
             {
                 a.Hitbox = go.AddComponent<CapsuleCollider>();
-                float h = a.IsOmar ? 2.1f : 1.75f;
+                float h = a.IsOmar ? 2.25f : 1.75f;
                 a.Hitbox.height = h;
                 a.Hitbox.radius = 0.32f;
                 a.Hitbox.center = new Vector3(0, h * 0.5f, 0);

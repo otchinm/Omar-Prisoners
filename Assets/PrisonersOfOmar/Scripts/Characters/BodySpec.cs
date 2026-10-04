@@ -362,7 +362,7 @@ namespace PrisonersOfOmar.Characters
             // a real giant: ~2.3 m, so he has to stoop under door frames (the avatar bends him, HumanoidAnimator.Duck);
             // round and massive rather than boxy - deep barrel chest, a heavy gut, thick limbs, huge hands,
             // long arms hanging out past the belly
-            Skeleton(2.3f, false);
+            Skeleton(2.5f, false);
             Heavy = true;
             float s = Scale;
             Torso = Rings(s,
