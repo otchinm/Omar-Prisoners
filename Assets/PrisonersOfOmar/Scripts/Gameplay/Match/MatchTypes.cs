@@ -263,6 +263,8 @@ namespace PrisonersOfOmar.Gameplay
         public static float OmarSightMul = 1f, OmarHearingMul = 1f, DetectFillMul = 1f, SupplyMul = 1f;
         public static int StartWires = 5, StartBears = 3;
         public static float Brightness = 1.7f, GlowStrength = 1f;
+        /// <summary>PsxEnvironment.GradeAmount: the olive / yellow tape look of the reference, only above Normal.</summary>
+        public static float LightGrade = 0f;
         public static int GrandmaRoamProgress = 2;
         public static float GrandmaRoamNight = 0.5f;
         public static Difficulty CurrentDifficulty = Difficulty.Normal;
@@ -272,6 +274,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             CurrentDifficulty = d;
             float baseRun = 4.75f, lighter = 170f, flash = 260f;
+            LightGrade = d == Difficulty.Hard ? 0.75f : d == Difficulty.Nightmare ? 0.9f : 0f;
             switch (d)
             {
                 case Difficulty.Easy:

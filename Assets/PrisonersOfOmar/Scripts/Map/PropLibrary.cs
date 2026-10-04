@@ -735,11 +735,18 @@ namespace PrisonersOfOmar.Map
         {
             Begin(mb, pos, yaw);
             Gray(mb, 0.85f);
-            mb.Material = food ? Mat.Lit(Tex.BucketFood, new Color(tint, tint, tint)) : Mat.Lit(null, new Color(0.8f * tint, 0.8f * tint, 0.78f * tint));
-            mb.AddCylinder(Vector3.zero, 0.13f, 0.155f, 0.38f, 9, !lid, false, null, true);
+            // plain pails are dented galvanised metal (they used to be untextured flat grey)
+            mb.Material = food ? Mat.Lit(Tex.BucketFood, new Color(tint, tint, tint)) : Mat.Lit(Tex.Galvanized, new Color(0.85f * tint, 0.82f * tint, 0.76f * tint));
+            mb.AddCylinder(Vector3.zero, 0.13f, 0.155f, 0.38f, 9, false, false, null, true);
+            if (!lid)
+            {
+                // murky contents just below the rim (single-sided walls would otherwise show the floor through it)
+                mb.Material = Mat.Lit(Tex.Dirt, new Color(0.3f * tint, 0.26f * tint, 0.18f * tint));
+                mb.AddCylinder(new Vector3(0, 0.36f, 0), 0.152f, 0.152f, 0.002f, 9, true, false, null, false);
+            }
             if (lid)
             {
-                mb.Material = Mat.Lit(null, new Color(0.85f * tint, 0.85f * tint, 0.82f * tint));
+                mb.Material = Mat.Lit(Tex.Galvanized, new Color(0.85f * tint, 0.85f * tint, 0.8f * tint));
                 mb.AddCylinder(new Vector3(0, 0.38f, 0), 0.165f, 0.16f, 0.03f, 9, true, false, null, false);
             }
             mb.Material = Mat.Lit(Tex.MetalDark);

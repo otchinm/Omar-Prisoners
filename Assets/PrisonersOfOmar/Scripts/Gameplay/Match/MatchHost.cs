@@ -1044,7 +1044,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             _nextEventAt = W.Time + _rng.Range(40f, 100f);
             float r = _rng.NextFloat();
-            if (r < 0.34f) Event(WorldEventKind.AnomalyPulse, _rng.Range(0.3f, 1f), _rng.Range(3f, 9f));
+            if (r < 0.34f) Event(WorldEventKind.Thunder); // (no more random anomaly surges: they read as rendering bugs)
             else if (r < 0.46f)
             {
                 if (W.PowerOn && _powerRestoreAt < 0f)

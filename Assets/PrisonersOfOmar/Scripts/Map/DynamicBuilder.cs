@@ -473,6 +473,18 @@ namespace PrisonersOfOmar.Map
             return info;
         }
 
+        /// <summary>
+        /// Builder for dressing that belongs to a cage slot (straw, bucket, stains inside it): it is parented to the cage
+        /// Root, so it appears and disappears with the cage. Takes map coordinates like any room builder.
+        /// </summary>
+        public static MeshBuilder CageDressing(MapContext ctx, CageInfo cage)
+        {
+            int index = ctx.Data.Cages.IndexOf(cage);
+            var mb = ctx.NewBuilder("CageDressing_" + index, Layers.World, cage.Root);
+            mb.PushMatrix(Matrix4x4.TRS(cage.Root.localPosition, cage.Root.localRotation, Vector3.one).inverse);
+            return mb;
+        }
+
         // ================================================================== gates
 
         /// <summary>Chain-link gate leaf: pivot at the hinge post (floor), leaf along local +X, collider on Layers.Door.</summary>

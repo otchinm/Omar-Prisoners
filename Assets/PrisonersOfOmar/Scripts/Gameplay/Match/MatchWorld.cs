@@ -109,6 +109,7 @@ namespace PrisonersOfOmar.Gameplay
 
             Tuning.ApplyDifficulty(Settings.Difficulty);
             PsxEnvironment.Brightness = Tuning.Brightness;
+            PsxEnvironment.GradeAmount = Tuning.LightGrade;
             PsxItemGlow.GlobalStrength = Tuning.GlowStrength;
             AdminState.Reset();
             AnomalySystem.Reset();
@@ -121,14 +122,14 @@ namespace PrisonersOfOmar.Gameplay
             if (Map == null) Map = new MapData { Root = transform, Nav = new NavGraph(), OmarSpawn = new Pose(Vector3.zero, Quaternion.identity) };
             while (Map.PrisonerSpawns.Count < 4) Map.PrisonerSpawns.Add(new Pose(new Vector3(Map.PrisonerSpawns.Count * 1.5f, 1f, 0), Quaternion.identity));
 
-            foreach (var z in Map.AnomalyZones) AnomalySystem.RegisterZone(z.Center, z.Radius, z.Strength);
+            // (map anomaly zones are no longer registered: the PS1 warping stays a faint wobble, never a constant distortion)
             if (Map.Nav != null)
                 Map.Nav.IsDoorBlocked = code =>
                     code == NavGraph.EdgeMainGate ? !Objectives.GateCut :
                     code == NavGraph.EdgeVehicleGate ? !Objectives.CarGone :
                     code == NavGraph.EdgeShelter ? !Objectives.ShelterOpen :
                     code == NavGraph.EdgeBreach ? !Objectives.Exploded : false;
-            AnomalySystem.SetBaseline(0.06f);
+            AnomalySystem.SetBaseline(0f);
 
             BuildEntities();
             SpawnItems();
@@ -158,6 +159,7 @@ namespace PrisonersOfOmar.Gameplay
             AnomalySystem.Reset();
             VhsEffect.ResetTransient();
             PsxEnvironment.Brightness = 1f;
+            PsxEnvironment.GradeAmount = 0f;
             PsxItemGlow.GlobalStrength = 1f;
             AdminState.Reset();
             try { PsxFx.ClearBloodDecals(); } catch { }

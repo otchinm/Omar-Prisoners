@@ -5,8 +5,8 @@ using UnityEngine;
 namespace PrisonersOfOmar.Gameplay
 {
     /// <summary>
-    /// Omar proximity for the viewing prisoner: lo-fi static audio + VHS interference grows as he gets close
-    /// (stronger with line of sight), random static bursts, heartbeat.
+    /// Omar proximity for the viewing prisoner: lo-fi static audio + VHS interference only while he is in sight (it
+    /// kicks in the moment he appears and grows as he gets close), random static bursts, heartbeat (also when unseen).
     /// </summary>
     public sealed class ProximityFx : MonoBehaviour
     {
@@ -15,6 +15,7 @@ namespace PrisonersOfOmar.Gameplay
         float _burstTimer = 3f;
         float _beatTimer;
         float _terror;
+        bool _seen;
 
         /// <summary>VhsEffect.Interference when Omar is right in front of the viewer.</summary>
         const float MaxInterference = 0.35f;
@@ -36,27 +37,41 @@ namespace PrisonersOfOmar.Gameplay
             float dt = Time.deltaTime;
             _terror = Mathf.MoveTowards(_terror, 0f, dt * 0.15f);
 
+            // like the reference: silence while you just walk around; the interference only appears the moment Omar is
+            // actually SEEN (in front of the camera, nothing in between) and grows as he gets closer
             float target = 0f;
             Vector3 viewer;
             bool prisonerView = TryGetViewer(w, out viewer);
             var omar = w.OmarAvatar;
+            bool seen = false;
             if (prisonerView && omar != null && omar.Visible && w.Ending == null)
             {
-                float d = Vector3.Distance(viewer, omar.ChestPosition);
+                Vector3 to = omar.ChestPosition - viewer;
+                float d = to.magnitude;
                 float t = Mathf.Clamp01(1f - d / Tuning.InterferenceRadius);
-                if (t > 0f)
+                var rig = PsxCameraRig.Instance;
+                Vector3 fwd = rig != null ? rig.transform.forward : to;
+                bool inView = d < 2.5f || Vector3.Dot(fwd, to / Mathf.Max(d, 0.01f)) > 0.62f;
+                if (t > 0f && inView && !Physics.Linecast(viewer, omar.ChestPosition, Layers.SightBlockers, QueryTriggerInteraction.Ignore))
                 {
-                    bool los = !Physics.Linecast(viewer, omar.ChestPosition, Layers.SightBlockers, QueryTriggerInteraction.Ignore);
-                    target = Mathf.Pow(t, 1.3f) * (los ? 1f : 0.6f);
+                    seen = true;
+                    target = Mathf.Lerp(0.25f, 1f, Mathf.Pow(t, 1.2f));
                 }
             }
-            target = Mathf.Max(target, _terror * 0.6f);
+            if (seen && !_seen)
+            {
+                // the moment he appears: a short hit of static + a picture glitch
+                AudioManager.Play2D(AudioManager.Variant(Snd.StaticBurst, 3), 0.1f + target * 0.12f, Random.Range(0.9f, 1.1f), AudioCategory.Stinger);
+                VhsEffect.TriggerGlitch(0.12f + target * 0.15f, 0.18f);
+                _level = Mathf.Max(_level, target * 0.7f);
+            }
+            _seen = seen;
             if (w.Ending != null) { target = 0f; _level = 0f; _terror = 0f; }
-            _level = Mathf.MoveTowards(_level, target, dt * (target > _level ? 1.5f : 0.8f));
+            _level = Mathf.MoveTowards(_level, target, dt * (target > _level ? 2.5f : 0.9f));
             // the picture only degrades a little: the player must always see what is in front of them
             VhsEffect.Interference = _level * MaxInterference;
 
-            // quiet, textured static (never overwhelming)
+            // quiet, textured static, only while he is in sight
             float sv = Mathf.Clamp01(_level * 1.1f) * 0.12f;
             float hv = Mathf.Clamp01((_level - 0.7f) / 0.3f) * 0.06f;
             if (sv > 0.01f && _static == null) _static = AudioManager.Loop2D(Snd.StaticLoop, 0f, AudioCategory.Stinger, 0.05f);
@@ -78,7 +93,7 @@ namespace PrisonersOfOmar.Gameplay
 
             // heartbeat
             bool chased = w.Chase != null && w.Chase.IsTarget(w.LocalId);
-            float fear = Mathf.Max(_level, chased ? 0.85f : 0f);
+            float fear = Mathf.Max(Mathf.Max(_level, _terror * 0.6f), chased ? 0.85f : 0f);
             if (prisonerView && fear > 0.22f)
             {
                 _beatTimer -= dt;

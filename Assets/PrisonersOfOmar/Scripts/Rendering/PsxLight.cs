@@ -298,8 +298,9 @@ namespace PrisonersOfOmar.Rendering
                     Vector3 p = l.transform.position;
                     float k = l.CurrentIntensity * PsxEnvironment.LightGain;
                     bool spot = l.Type == PsxLightType.Spot;
+                    var lc = PsxEnvironment.Grade(l.Color);
                     _pos[i] = new Vector4(p.x, p.y, p.z, l.Range);
-                    _col[i] = new Vector4(l.Color.r * k, l.Color.g * k, l.Color.b * k, spot ? 1f : 0f);
+                    _col[i] = new Vector4(lc.r * k, lc.g * k, lc.b * k, spot ? 1f : 0f);
                     if (spot)
                     {
                         Vector3 f = l.transform.forward;
@@ -367,6 +368,22 @@ namespace PrisonersOfOmar.Rendering
         /// (Nightmare = 1, the original very dark look; Easy brightest). Scales ambient and light contribution.</summary>
         public static float Brightness = 1f;
 
+        /// <summary>(iteration 2) Colour grade of all lighting (lights, ambient, fog): 0 = as authored, 1 = every light pulled to
+        /// the sickly olive / yellow of the reference tape (keeps each light's brightness). Set per difficulty (Hard+).</summary>
+        public static float GradeAmount = 0f;
+        /// <summary>Hue the grade pulls the lighting towards.</summary>
+        public static Color GradeColor = new Color(1f, 0.97f, 0.4f);
+
+        /// <summary>Applies <see cref="GradeAmount"/> to a light / ambient colour.</summary>
+        public static Color Grade(Color c)
+        {
+            if (GradeAmount <= 0.001f) return c;
+            float lum = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+            // the grade colour has luminance ~0.93: rescale so the light keeps its brightness
+            var target = new Color(GradeColor.r * lum * 1.08f, GradeColor.g * lum * 1.08f, GradeColor.b * lum * 1.08f, c.a);
+            return Color.Lerp(c, target, GradeAmount);
+        }
+
         /// <summary>Multiplier of every light's contribution derived from <see cref="Brightness"/> (gentler than the ambient lift).</summary>
         public static float LightGain => Mathf.Sqrt(Mathf.Max(0.1f, Brightness));
 
@@ -401,6 +418,7 @@ namespace PrisonersOfOmar.Rendering
         internal static void UploadValues(Color ambient, Color fogColor, float fogStart, float fogEnd, Vector4 snapRes, float affine)
         {
             float b = Mathf.Max(0.1f, Brightness), fb = Mathf.Sqrt(b);
+            ambient = Grade(ambient); fogColor = Grade(fogColor);
             Shader.SetGlobalVector(PsxShaderIds.Ambient, new Vector4(ambient.r * b, ambient.g * b, ambient.b * b, 1f));
             Shader.SetGlobalVector(PsxShaderIds.FogColor, new Vector4(fogColor.r * fb, fogColor.g * fb, fogColor.b * fb, 1f));
             float inv = fogEnd > fogStart + 0.001f ? 1f / (fogEnd - fogStart) : 0f;

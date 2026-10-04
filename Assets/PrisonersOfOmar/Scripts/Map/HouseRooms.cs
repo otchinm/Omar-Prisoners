@@ -429,12 +429,13 @@ namespace PrisonersOfOmar.Map
             for (int i = 0; i < 4; i++)
             {
                 var c = V(-9.8f, F, cz[i]);
-                Dyn.Cage(ctx, mb, room, c, -90f);
-                // inside: straw, a piss bucket, blanket, tally marks behind
-                Props.Billboard(mb, hay, c + V(-0.5f, 0, 0.4f), 0.9f, 0.3f, 2, 30f + i * 20f, 0.5f, 0.8f);
-                Props.Billboard(mb, hay, c + V(-0.2f, 0, -0.6f), 0.7f, 0.25f, 2, 70f + i * 15f, 0.5f, 0.8f);
-                Props.Bucket(mb, c + V(-0.65f, 0, 0.7f * (i % 2 == 0 ? 1 : -1)), i * 40f, false, 0.55f, false);
-                Arch.FloorDecal(mb, Mat.Decal(i % 2 == 0 ? "blood_splatter_1" : "grime"), c + V(0.2f, 0.035f, 0), 1.2f, 1.2f, i * 70f);
+                var cage = Dyn.Cage(ctx, mb, room, c, -90f);
+                // inside: straw, a piss bucket, a stain - part of the cage slot, so an unused slot leaves nothing behind
+                var inside = Dyn.CageDressing(ctx, cage);
+                Props.Billboard(inside, hay, c + V(-0.5f, 0, 0.4f), 0.9f, 0.3f, 2, 30f + i * 20f, 0.5f, 0.8f);
+                Props.Billboard(inside, hay, c + V(-0.2f, 0, -0.6f), 0.7f, 0.25f, 2, 70f + i * 15f, 0.5f, 0.8f);
+                Props.Bucket(inside, c + V(-0.65f, 0, 0.7f * (i % 2 == 0 ? 1 : -1)), i * 40f, false, 0.55f, false);
+                Arch.FloorDecal(inside, Mat.Decal(i % 2 == 0 ? "blood_splatter_1" : "grime"), c + V(0.2f, 0.035f, 0), 1.2f, 1.2f, i * 70f);
                 // each cage has its own marks: tallies, fingernail scratches, a list of names, crosses
                 string[] marks = { "graffiti_scrawl_2", "nail_scratches", "writing_names", "crosses_2" };
                 Arch.Decal(mb, Mat.Decal(marks[i]), V(-10.89f, F + 1.0f, cz[i]), Vector3.right, 0.8f, 0.8f, i == 2 ? 0f : i * 25f);

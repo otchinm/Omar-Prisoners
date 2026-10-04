@@ -330,7 +330,6 @@ namespace PrisonersOfOmar.Gameplay
             var oa = AvatarOf(omar);
             if (oa != null && omar != LocalId) oa.PlayAction(CharacterAction.Scream);
             Chase.PlayScream(oa, index);
-            AnomalySystem.Pulse(0.35f, 2.5f);
             if (LocalAvatar != null && oa != null && !LocalIsOmar && Vector3.Distance(oa.Position, LocalAvatar.Position) < 26f)
             {
                 VhsEffect.TriggerGlitch(0.3f, 0.35f);
@@ -489,7 +488,7 @@ namespace PrisonersOfOmar.Gameplay
             foreach (var c in f.BreachBlockers) if (c != null) c.enabled = false;
             if (f.BarrelsRoot != null) f.BarrelsRoot.gameObject.SetActive(false);
             if (_fireFx == null) try { _fireFx = PsxFx.CreateFire(_dynamicRoot, f.ExplosionCenter, 1.5f); } catch { }
-            AnomalySystem.Pulse(0.8f, 3f);
+            AnomalySystem.Pulse(0.2f, 2f);
             if (LocalAvatar != null)
             {
                 float d = Vector3.Distance(LocalAvatar.Position, f.ExplosionCenter);

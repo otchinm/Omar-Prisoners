@@ -232,7 +232,7 @@ namespace PrisonersOfOmar.Gameplay
         void Start()
         {
             AnomalySystem.Reset();
-            AnomalySystem.SetBaseline(0.1f);
+            AnomalySystem.SetBaseline(0f);
             PsxEnvironment.Set(new Color(0.03f, 0.03f, 0.04f), new Color(0.01f, 0.01f, 0.015f), 2f, 14f);
             try { MenuSceneBuilder.Build(transform, out _cam); }
             catch (System.Exception e) { Debug.LogException(e); _cam = new Pose(new Vector3(1000, 1.2f, 1000), Quaternion.identity); }

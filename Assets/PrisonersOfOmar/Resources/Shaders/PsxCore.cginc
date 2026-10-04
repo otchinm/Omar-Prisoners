@@ -175,14 +175,15 @@ float3 PsxApplyFog(float3 c, float fog)
 // ------------------------------------------------------------------------------------ projection + PS1 artifacts
 // Projects a world position to clip space and applies vertex snapping and the anomaly warps:
 //   (a) snap grid collapse + grid crawl   (b) screen-space waves + rolling band   (c) depth breathing (dolly-zoom wobble)
-//   (d) polygon tearing (GTE overflow spikes)   (e) UV swimming / texture page corruption (returned in uvOffset)
+//   (e) UV swimming (returned in uvOffset); polygon tearing and texture page corruption were removed
 //   objPos   object-space position: seeds per-vertex randomness (coincident vertices move together)
 //   anomaly  anomaly intensity at this vertex (0 .. ~1.5)
 //   viewDist camera distance before any warp (for fog)
 float4 PsxWorldToClip(float3 worldPos, float3 objPos, float anomaly, out float2 uvOffset, out float viewDist)
 {
     float t = _PsxTime;
-    float a = anomaly;
+    // anomalies stay subtle: a faint swim / wobble at most, never geometry or texture corruption
+    float a = min(anomaly, 0.35);
     float seed = _PsxAnomaly.y;
 
     float3 viewPos = mul(UNITY_MATRIX_V, float4(worldPos, 1.0)).xyz;
@@ -192,16 +193,7 @@ float4 PsxWorldToClip(float3 worldPos, float3 objPos, float anomaly, out float2 
     float breathe = sin(t * 1.31 - viewDist * 0.35) * 0.65 + sin(t * 0.43 + 1.7) * 0.35;
     viewPos.xy *= 1.0 + a * 0.11 * breathe;
 
-    // (d) polygon tearing: a few vertices are yanked towards / away from the camera for a few frames
-    float tick = floor(t * 15.0);
-    float h = PsxHash13(objPos * 3.17 + float3(tick * 0.618, seed, tick * 0.319));
-    float spikeChance = saturate(a - 0.12) * 0.03;
-    float spike = (h < spikeChance) ? 1.0 : 0.0;
-    spike *= (viewPos.z < -0.25) ? 1.0 : 0.0;           // only vertices in front of the camera (view looks down -z)
-    float h2 = PsxHash13(objPos * 5.03 + float3(seed, tick * 0.417, 7.7));
-    float spikeZ = min(viewPos.z * lerp(0.25, 2.2, h2), -0.1);
-    viewPos.z = lerp(viewPos.z, spikeZ, spike);
-
+    // (d) polygon tearing removed: yanked vertices read as random shapes popping up on screen, not as a PS1 look
     float4 clip = mul(UNITY_MATRIX_P, float4(viewPos, 1.0));
     float w = max(clip.w, 0.0001);
     float2 ndc = clip.xy / w;
@@ -227,16 +219,10 @@ float4 PsxWorldToClip(float3 worldPos, float3 objPos, float anomaly, out float2 
 
     clip.xy = (clip.w > 0.0001) ? ndc * clip.w : clip.xy;
 
-    // (e) UV swimming + texture page corruption (blocky wrong-region sampling at high intensity)
+    // (e) faint UV swimming
     uvOffset = float2(sin(worldPos.y * 1.9 + worldPos.x * 0.7 + t * 1.7),
                       sin(worldPos.z * 1.6 - worldPos.x * 0.5 + t * 1.3 + 1.3)) * (a * 0.05);
-    float pageTick = floor(t * 6.0);
-    float3 cell = floor(worldPos * 0.75);
-    float hc = PsxHash13(cell + float3(pageTick * 0.71, seed, pageTick * 0.29));
-    float corrupt = (hc < saturate(a - 0.45) * 0.3) ? 1.0 : 0.0;
-    float hc2 = PsxHash13(cell * 1.31 + float3(seed, pageTick * 0.53, 2.9));
-    uvOffset += corrupt * (floor(float2(hc2, frac(hc2 * 13.17)) * 4.0) * 0.25 + 0.125);
-
+    // texture page corruption removed (it looked like broken textures)
     return clip;
 }
 
@@ -262,7 +248,7 @@ v2f_psx PsxVert(appdata_psx v)
     col.rgb *= PsxVertexLighting(worldPos, n);
 #endif
     o.color = col;
-    o.fogAffine = float2(PsxFogFactor(viewDist), saturate(_PsxAffine + anomaly * 0.3));
+    o.fogAffine = float2(PsxFogFactor(viewDist), saturate(_PsxAffine + min(anomaly, 0.35) * 0.15));
     return o;
 }
 

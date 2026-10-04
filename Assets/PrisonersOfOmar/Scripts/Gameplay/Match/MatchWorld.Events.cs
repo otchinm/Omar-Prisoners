@@ -17,9 +17,8 @@ namespace PrisonersOfOmar.Gameplay
             switch (kind)
             {
                 case WorldEventKind.CagesOpen:
-                    AnomalySystem.Pulse(0.5f, 3f);
-                    VhsEffect.TriggerGlitch(0.8f, 0.6f);
-                    AudioManager.Play2D(AudioManager.Variant(Snd.StaticBurst, 3), 0.7f, 1f, AudioCategory.Stinger);
+                    VhsEffect.TriggerGlitch(0.4f, 0.4f);
+                    AudioManager.Play2D(Snd.CageOpen, 0.5f);
                     if (!LocalIsOmar) AddMessage("THE CAGE LOCKS CLICK OPEN ALL AT ONCE. RUN. HIDE. GET OUT.", 6f);
                     break;
                 case WorldEventKind.OmarAwake:

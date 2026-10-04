@@ -77,7 +77,8 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        static float Volume(AmbientType t) => t == AmbientType.Exterior ? 0.65f : 0.55f;
+        // quiet beds: like the reference most of the time you only hear the room and your own steps
+        static float Volume(AmbientType t) => t == AmbientType.Exterior ? 0.42f : 0.3f;
 
         static void PlayRandom(AmbientType t, Vector3 p)
         {
