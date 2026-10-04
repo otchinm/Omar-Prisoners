@@ -467,6 +467,7 @@ namespace PrisonersOfOmar.Gameplay
             if (omar)
             {
                 if (target == UseTarget.Door && tid >= 0 && tid < W.Doors.Length && Near(sender, W.Doors[tid].Info.Center, 3.6f)) SmashBoards(sender, tid);
+                else if (target == UseTarget.Cage) PunishCage(sender, tid);
                 return;
             }
             if (!IsPrisoner(sender)) return;
@@ -723,6 +724,8 @@ namespace PrisonersOfOmar.Gameplay
 
         // ================================================================== struggle / traps
 
+        readonly System.Collections.Generic.Dictionary<int, float> _struggleAt = new System.Collections.Generic.Dictionary<int, float>();
+
         public void OnStruggleReq(int sender, NetReader r)
         {
             byte kind = r.ReadByte();
@@ -734,8 +737,11 @@ namespace PrisonersOfOmar.Gameplay
             if (kind == 0 && st.Life == LifeState.Caged && st.Cage >= 0 && st.Cage < W.Cages.Length && !W.Cages[st.Cage].Open)
             {
                 var cage = W.Cages[st.Cage];
-                if (n % 10 == 0) DeliverNoise(cage.Info.Inside.position, 9f);
-                if (n > 8 && _rng.Chance(0.013f))
+                // mashing faster than a human can is ignored (each press is a chance to break the lock)
+                if (_struggleAt.TryGetValue(sender, out var lastPress) && W.Time - lastPress < 0.11f) { _struggle[key] = n - 1; return; }
+                _struggleAt[sender] = W.Time;
+                if (n % 4 == 0) CageRattled(st.Cage, sender);   // the whole lock clanks: Omar may hear it and come
+                if (n > 6 && _rng.Chance(Tuning.CageBreakChance))
                 {
                     _struggle[key] = 0;
                     ReleaseCage(st.Cage);

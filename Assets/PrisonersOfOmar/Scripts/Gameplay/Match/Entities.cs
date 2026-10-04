@@ -568,6 +568,8 @@ namespace PrisonersOfOmar.Gameplay
         public readonly CageInfo Info;
         public bool Open;
         public int Occupant = -1;
+        /// <summary>Local time of the last lock rattle from the prisoner inside (Omar may punish them for a while).</summary>
+        public float RattleAt = -999f;
         float _angle, _target;
         readonly Quaternion _closed;
 
@@ -591,10 +593,15 @@ namespace PrisonersOfOmar.Gameplay
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
             p = default;
-            if (who.IsOmar) return false;
+            if (who.IsOmar)
+            {
+                if (Open || Occupant < 0 || Time.time - RattleAt > Tuning.CagePunishWindow - 1f) return false;
+                p = InteractPrompt.Hold("TRIED TO GET OUT? OPEN THE CAGE...", 1.0f);
+                return true;
+            }
             if (who.Status != null && who.Status.Cage == Index && !Open)
             {
-                p = InteractPrompt.Press("STRUGGLE WITH THE LOCK (MASH E)");
+                p = InteractPrompt.Press("FORCE THE LOCK (MASH E) - IT CLANKS, HE MAY HEAR");
                 return true;
             }
             if (Open || Occupant < 0) return false;
@@ -609,6 +616,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             var w = MatchWorld.Instance;
             if (w == null) return;
+            if (who.IsOmar) { w.SendUse(UseTarget.Cage, Index, -1); return; }
             if (who.Status != null && who.Status.Cage == Index) { w.SendStruggle(0); return; }
             int item = who.ItemId(ItemType.CageKey);
             if (item < 0) item = who.ItemId(ItemType.BoltCutters);

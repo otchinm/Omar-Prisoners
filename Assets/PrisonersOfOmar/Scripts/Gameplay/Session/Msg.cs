@@ -99,5 +99,6 @@ namespace PrisonersOfOmar.Gameplay
         AdminState = 145,    // host -> admin: debug state (positions, codes...)
         AdminTeleport = 146, // host -> one player: move yourself here (admin "bring player" / "bring Omar")
         AdminItemSpawn = 147, // host -> all: a new item appears (admin give / spawn)
+        CageRattle = 148,    // host -> all: a caged prisoner rattles the lock (cage, prisoner) - loud, Omar may come to punish them
     }
 }

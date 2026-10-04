@@ -17,6 +17,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.ShotFx, OnShotFx);
             RegisterGrandmaHandlers(s);
             RegisterKitchenHandlers(s);
+            s.On(Msg.CageRattle, OnCageRattle);
         }
 
         void UnregisterWorldHandlers(NetSession s)
@@ -25,6 +26,7 @@ namespace PrisonersOfOmar.Gameplay
             s.Off(Msg.ShotFx);
             UnregisterGrandmaHandlers(s);
             UnregisterKitchenHandlers(s);
+            s.Off(Msg.CageRattle);
         }
 
         partial void RegisterGrandmaHandlers(NetSession s);

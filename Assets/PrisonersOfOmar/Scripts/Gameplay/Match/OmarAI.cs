@@ -12,7 +12,7 @@ namespace PrisonersOfOmar.Gameplay
     /// </summary>
     public sealed class OmarAI : MonoBehaviour
     {
-        enum Mode { Waking, Patrol, Investigate, Chase, Search, Chop }
+        enum Mode { Waking, Patrol, Investigate, Chase, Search, Chop, Punish }
 
         MatchWorld W;
         MatchHost H;
@@ -52,6 +52,9 @@ namespace PrisonersOfOmar.Gameplay
         bool _chopping;
         int _revenge = -1;
         float _revengeAt;
+        // a caged prisoner rattled the lock and he heard it: he goes to kill them in their cage
+        int _punishCage = -1;
+        float _punishSwingAt = -1f, _punishKillAt = -1f;
 
         public static OmarAI Attach(Avatar a, MatchWorld w)
         {
@@ -115,6 +118,64 @@ namespace PrisonersOfOmar.Gameplay
             StartInvestigate(pos, radius > 12f || d < 12f);
         }
 
+        /// <summary>A caged prisoner clanks the lock: the closer he is, the likelier he notices and comes to deal with them.</summary>
+        public void OnCageRattle(int cage, Vector3 pos)
+        {
+            if (_mode == Mode.Waking || _mode == Mode.Punish || (_mode == Mode.Chase && _target >= 0)) return;
+            if (cage < 0 || cage >= W.Cages.Length) return;
+            float d = Vector3.Distance(pos, A.Position);
+            float chance = Mathf.Lerp(Tuning.CageNoticeNear, 0f, d / 36f) * Tuning.OmarHearingMul * (_chopping ? 0.6f : 1f);
+            if (Random.value >= chance) return;
+            _mode = Mode.Punish;
+            _punishCage = cage;
+            _punishSwingAt = _punishKillAt = -1f;
+            _running = d > 6f;
+            _modeTimer = 45f;
+            SetGoal(W.Cages[cage].Info.Outside.position);
+        }
+
+        void TickPunish(float dt)
+        {
+            var c = _punishCage >= 0 && _punishCage < W.Cages.Length ? W.Cages[_punishCage] : null;
+            if (c == null) { _mode = Mode.Patrol; PickPatrol(); return; }
+            if (_punishKillAt < 0f && (c.Open || c.Occupant < 0))
+            {
+                // got out before he came: look for them around the pens
+                _punishCage = -1;
+                StartSearch(c.Info.Outside.position);
+                return;
+            }
+            Vector3 to = c.Info.Outside.position - A.Position; to.y = 0f;
+            if (_punishSwingAt < 0f)
+            {
+                _modeTimer -= dt;
+                if (to.magnitude < 1.2f || (Arrived() && to.magnitude < 2.4f))
+                {
+                    _path.Clear();
+                    _punishSwingAt = W.Time + 0.9f;   // stands and looks at them through the bars for a moment
+                    H.BroadcastAction(A.Id, CharacterAction.Search);
+                }
+                else if (_modeTimer <= 0f || (Arrived() && to.magnitude >= 2.4f)) { _punishCage = -1; _mode = Mode.Patrol; PickPatrol(); }
+                return;
+            }
+            Vector3 look = c.Info.Inside.position - A.Position; look.y = 0f;
+            if (look.sqrMagnitude > 0.01f) _yaw = Mathf.MoveTowardsAngle(_yaw, Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg, 240f * dt);
+            if (_punishKillAt < 0f && W.Time >= _punishSwingAt)
+            {
+                H.BroadcastAction(A.Id, CharacterAction.Attack);
+                _punishKillAt = W.Time + Tuning.AttackWindup;
+            }
+            if (_punishKillAt > 0f && W.Time >= _punishKillAt)
+            {
+                H.PunishCage(A.Id, _punishCage);
+                _punishCage = -1;
+                _punishKillAt = -1f;
+                _recoverUntil = W.Time + Tuning.AttackRecover + 0.8f;
+                _mode = Mode.Patrol;
+                _waitTimer = 2f;
+            }
+        }
+
         public void OnAlarm(Vector3 pos)
         {
             if (_mode == Mode.Waking) return;
@@ -170,6 +231,7 @@ namespace PrisonersOfOmar.Gameplay
                 case Mode.Chase: TickChase(dt); break;
                 case Mode.Search: TickSearch(dt); break;
                 case Mode.Chop: TickChop(dt); break;
+                case Mode.Punish: TickPunish(dt); break;
             }
             if (_chopping && _mode != Mode.Chop) { _chopping = false; H.StopChopping(A.Id); }
 

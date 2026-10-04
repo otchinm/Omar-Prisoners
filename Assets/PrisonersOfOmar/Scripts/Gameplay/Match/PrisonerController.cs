@@ -645,7 +645,7 @@ namespace PrisonersOfOmar.Gameplay
             if (st.Life == LifeState.Caged)
             {
                 _hasPrompt = true;
-                _prompt = InteractPrompt.Press("STRUGGLE WITH THE LOCK (MASH E)");
+                _prompt = InteractPrompt.Press("FORCE THE LOCK (MASH E) - IT CLANKS, HE MAY HEAR");
                 if (GameInput.InteractDown) _w.SendStruggle(0);
                 _target = null;
                 return;

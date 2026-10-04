@@ -273,6 +273,12 @@ namespace PrisonersOfOmar.Gameplay
         public const float AllCagedGrace = 30f;
         // capture
         public static int MaxCaptures = 3;
+        /// <summary>Chance per E press (after the first few) that the rusty cage lock gives way.</summary>
+        public static float CageBreakChance = 0.035f;
+        /// <summary>Chance per lock rattle (every 4 presses) that Omar notices when he is right there (falls to 0 at 36 m).</summary>
+        public static float CageNoticeNear = 0.4f;
+        /// <summary>For this long after the last rattle Omar may open the cage and kill the prisoner inside.</summary>
+        public const float CagePunishWindow = 25f;
 
         // ---- difficulty (iteration 2, Docs/ITERATION2.md §4) ----
         public static float OmarSightMul = 1f, OmarHearingMul = 1f, DetectFillMul = 1f, SupplyMul = 1f;
@@ -292,10 +298,10 @@ namespace PrisonersOfOmar.Gameplay
             LightGrade = d == Difficulty.Hard ? 0.75f : d == Difficulty.Nightmare ? 0.9f : 0f;
             switch (d)
             {
-                case Difficulty.Easy: StaminaSeconds = 15f; StaminaRegenDelay = 0.8f; StaminaRegenRate = 0.3f; break;
-                case Difficulty.Hard: StaminaSeconds = 10.5f; StaminaRegenDelay = 1.0f; StaminaRegenRate = 0.23f; break;
-                case Difficulty.Nightmare: StaminaSeconds = 7f; StaminaRegenDelay = 1.2f; StaminaRegenRate = 0.2f; break;
-                default: StaminaSeconds = 12.5f; StaminaRegenDelay = 0.9f; StaminaRegenRate = 0.26f; break;
+                case Difficulty.Easy: StaminaSeconds = 15f; StaminaRegenDelay = 0.8f; StaminaRegenRate = 0.3f; CageBreakChance = 0.05f; CageNoticeNear = 0.25f; break;
+                case Difficulty.Hard: StaminaSeconds = 10.5f; StaminaRegenDelay = 1.0f; StaminaRegenRate = 0.23f; CageBreakChance = 0.028f; CageNoticeNear = 0.5f; break;
+                case Difficulty.Nightmare: StaminaSeconds = 7f; StaminaRegenDelay = 1.2f; StaminaRegenRate = 0.2f; CageBreakChance = 0.02f; CageNoticeNear = 0.6f; break;
+                default: StaminaSeconds = 12.5f; StaminaRegenDelay = 0.9f; StaminaRegenRate = 0.26f; CageBreakChance = 0.035f; CageNoticeNear = 0.4f; break;
             }
             switch (d)
             {
