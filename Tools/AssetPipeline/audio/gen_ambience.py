@@ -333,31 +333,46 @@ def vhs_static(n, rng, harsh=0.0):
     return y
 
 
-@sound("Ambience/static_loop", norm=("lufs", -17.0, -2.0), desc="low quality analog static (Omar proximity)", **BED)
+def tape_interference(n, rng, heavy=0.0):
+    """Quiet, textured dirty-tape interference (circular): mains hum, sparse crackle and pops, a low band of hiss
+    and a faint garbled radio voice drifting in and out. No harsh white noise."""
+    hum = np.zeros(n)
+    for k in range(1, 7):
+        hum += np.sin(TAU * dsp.phase(dsp.qfreq(60.0 * k, n), n)) / k ** 1.3
+    hum = dsp.circ_filter(dsp.sat(hum, 1.6 + 2.0 * heavy), dsp._sos("lowpass", 900))
+    hiss = dsp.circ_filter(dsp.pink(n, rng), dsp._sos("bandpass", (300, 2600)))
+    hiss *= 0.6 + 0.4 * dsp.smooth_rand(n, rng, 0.6)
+    cr = dsp.circ_filter(dsp.crackle(n, rng, 10 + 30 * heavy), dsp._sos("bandpass", (500, 3500)))
+    pops = dsp.circ_filter(dsp.crackle(n, rng, 2 + 4 * heavy), dsp.rbj("bp", 600, 1.2))
+    # garbled radio: grains of the women's screams, pitched down and squeezed through a tiny band, barely there
+    src = dsp.norm(common.src_segment("screams_long", 3.5, 6.0))
+    radio = dsp.granular(src, rng, n, grain=0.09, density=14.0, pitch=-7.0, jitter=0.03, reverse_prob=0.5)
+    radio = dsp.circ_filter(dsp.norm(radio), dsp._sos("bandpass", (500, 2000)))
+    radio *= np.clip(dsp.smooth_rand(n, rng, 0.25), 0, 1) ** 2
+    y = (0.22 + 0.15 * heavy) * dsp.norm(hum) + 0.5 * dsp.norm(hiss) + (0.45 + 0.3 * heavy) * dsp.norm(cr) \
+        + 0.4 * dsp.norm(pops) + 0.22 * dsp.norm(radio)
+    return y
+
+
+@sound("Ambience/static_loop", norm=("lufs", -29.0, -8.0), desc="quiet dirty-tape interference while Omar is in sight", **BED)
 def static_loop(rng):
     n = L(8.0, 6)
     chans = []
     for c in range(2):
-        y = vhs_static(n, rng, 0.0)
-        y = dsp.hold(dsp.crush(dsp.norm(y) * 0.9, 7), 3)
+        y = tape_interference(n, rng, 0.0)
+        y = dsp.hold(dsp.crush(dsp.norm(y) * 0.9, 9), 2)
         chans.append(y)
     return st(*chans)
 
 
-@sound("Ambience/static_heavy_loop", norm=("lufs", -13.0, -1.0), desc="harsh broken-VHS static", **BED)
+@sound("Ambience/static_heavy_loop", norm=("lufs", -25.0, -6.0), desc="denser, crackling tape interference when Omar is very close", **BED)
 def static_heavy_loop(rng):
     n = L(6.0, 12)
     chans = []
-    bursts = np.ones(n)
-    for _ in range(10):
-        p, m = rng.integers(0, n), N(rng.uniform(0.04, 0.25))
-        idx = (p + np.arange(m)) % n
-        bursts[idx] *= rng.choice([0.15, 1.8, 2.4])
-    bursts = np.convolve(np.concatenate([bursts[-50:], bursts, bursts[:50]]), np.ones(101) / 101, "same")[50:-50]
     for c in range(2):
-        y = vhs_static(n, rng, 1.0)
-        y = dsp.fold(dsp.norm(y) * bursts, 1.6) * 0.5 + 0.5 * dsp.sat(dsp.norm(y) * bursts, 4)
-        y = dsp.hold(dsp.crush(dsp.norm(y) * 0.95, 5), 4)
+        y = tape_interference(n, rng, 1.0)
+        y = dsp.sat(dsp.norm(y) * 1.4, 1.8)
+        y = dsp.hold(dsp.crush(dsp.norm(y) * 0.9, 8), 2)
         chans.append(y)
     return st(*chans)
 

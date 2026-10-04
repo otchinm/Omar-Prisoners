@@ -308,7 +308,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (Time.time - _lastBreath < 3f) return;
             _lastBreath = Time.time;
-            AudioManager.Play2D(AudioManager.Variant(Snd.BreathHeavy, 3), 0.55f);
+            AudioManager.Play2D(_avatar.Voice(VoiceLine.Breath), 0.55f);
             MakeNoise(4f);
         }
 
@@ -1076,7 +1076,7 @@ namespace PrisonersOfOmar.Gameplay
             AudioManager.SetMuffle(st.Hidden ? (bed ? 0.35f : 0.7f) : 0f);
 
             // blood trail is drawn by MatchWorld for every injured avatar
-            if (st.Injured && !PainkillersActive && _sprintingNow && Random.value < dt * 0.4f) AudioManager.Play2D(AudioManager.Variant(Snd.Hurt, 3), 0.3f, 1.1f);
+            if (st.Injured && !PainkillersActive && _sprintingNow && Random.value < dt * 0.4f) AudioManager.Play2D(_avatar.Voice(VoiceLine.Hurt), 0.3f, 1.05f);
         }
 
         void PublishState(PlayerStatus st)
@@ -1114,6 +1114,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 StartCaptureFx();
                 AudioManager.Play2D(Snd.StingDeath, 1f, 1f, AudioCategory.Stinger);
+                AudioManager.Play2D(_avatar.Voice(VoiceLine.Death), 0.9f);
                 VhsEffect.Desaturate = 0.6f;
             }
             // entered a hiding spot
@@ -1181,7 +1182,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             _captureFx = 1f;
             AudioManager.Play2D(Snd.StingCapture, 1f, 1f, AudioCategory.Stinger);
-            AudioManager.Play2D(Snd.ScreamsLong, 0.5f, 1f, AudioCategory.Stinger);
+            AudioManager.Play2D(_avatar.Voice(VoiceLine.Scream), 0.85f);   // your own scream as you are dragged away
+            AudioManager.Play2D(Snd.ScreamsLong, 0.2f, 1f, AudioCategory.Stinger);
             AudioManager.SetDistortion(0.5f);
             VhsEffect.TriggerRoll(1.2f);
             VhsEffect.TriggerGlitch(1f, 1.5f);
@@ -1199,7 +1201,7 @@ namespace PrisonersOfOmar.Gameplay
         public void OnHit(bool captured)
         {
             _hitFx = 1f;
-            AudioManager.Play2D(AudioManager.Variant(Snd.Hurt, 3), 1f);
+            AudioManager.Play2D(_avatar.Voice(VoiceLine.Hurt), 1f);
             if (!captured)
             {
                 AudioManager.Play2D(Snd.StingJumpscare, 0.9f, 1f, AudioCategory.Stinger);

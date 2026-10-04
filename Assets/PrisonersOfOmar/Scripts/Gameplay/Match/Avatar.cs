@@ -17,6 +17,10 @@ namespace PrisonersOfOmar.Gameplay
 
         public int Id { get; private set; }
         public PlayerInfo Info { get; private set; }
+        /// <summary>The character whose voice this avatar uses (Omar / unknown -> the first prisoner's).</summary>
+        public CharacterSkin VoiceSkin => Info != null && Info.Skin != CharacterSkin.Omar ? Info.Skin : CharacterSkin.Prisoner1;
+        /// <summary>Random variant of one of this prisoner's own voice lines (Audio/Voices/&lt;skin&gt;/...).</summary>
+        public string Voice(VoiceLine line) => Snd.Voice(VoiceSkin, line);
         public bool IsLocal { get; private set; }
         public bool IsOmar => Info.Role == PlayerRole.Omar;
         /// <summary>Simulated on this machine (local player or host AI).</summary>

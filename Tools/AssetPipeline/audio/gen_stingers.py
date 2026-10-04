@@ -8,6 +8,7 @@ from common import sound
 from dsp import N, T, SR, TAU
 
 LOUD = dict(ch=2, norm=("loud", -0.5), q=5)
+SOFT = dict(ch=2, norm=("lufs", -22.0, -6.0), q=5)  # static bursts: short, quiet hits of tape noise
 MUSIC = dict(ch=2, norm=("peak", -1.0), q=5)
 
 
@@ -301,14 +302,14 @@ def sting_ending_good(rng):
 
 
 # --------------------------------------------------------------------------------------------- static bursts / glitches
-@sound("Stingers/static_burst_1", desc="short harsh static burst", **LOUD)
+@sound("Stingers/static_burst_1", desc="short harsh static burst", **SOFT)
 def static_burst_1(rng):
     n = N(0.38)
     y = st_static(n, rng, 1.0) * dsp.env([(0, 0.3), (0.005, 1), (0.3, 0.9), (0.38, 0)], n)[:, None]
     return y
 
 
-@sound("Stingers/static_burst_2", desc="stuttering static burst", **LOUD)
+@sound("Stingers/static_burst_2", desc="stuttering static burst", **SOFT)
 def static_burst_2(rng):
     n = N(0.65)
     y = st_static(n, rng, 0.9)
@@ -318,7 +319,7 @@ def static_burst_2(rng):
     return (y + buzz) * gate[:, None] * dsp.env([(0, 1), (0.6, 0.8), (0.65, 0)], n)[:, None]
 
 
-@sound("Stingers/static_burst_3", desc="swelling static burst with a buried scream", **LOUD)
+@sound("Stingers/static_burst_3", desc="swelling static burst with a buried scream", **SOFT)
 def static_burst_3(rng):
     n = N(0.95)
     y = st_static(n, rng, 0.8) * dsp.env([(0, 0.2), (0.7, 1), (0.93, 1), (0.95, 0)], n)[:, None]

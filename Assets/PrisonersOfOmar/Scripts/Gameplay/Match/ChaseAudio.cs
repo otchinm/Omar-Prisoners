@@ -36,6 +36,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (target == w.LocalId)
                 {
                     AudioManager.Play2D(Snd.StingSpotted, 0.9f, 1f, AudioCategory.Stinger);
+                    if (w.LocalAvatar != null && !w.LocalIsOmar) AudioManager.Play2D(w.LocalAvatar.Voice(VoiceLine.Gasp), 0.7f);
                     VhsEffect.TriggerGlitch(0.25f, 0.25f);
                     w.AddMessage("HE SEES YOU", 2f);
                 }

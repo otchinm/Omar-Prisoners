@@ -144,27 +144,23 @@ def step_gravel(rng, v):
 
 
 def step_omar(rng, v):
-    """Heavy butcher boots: deep boomy floor hit, hard heel clack, leather creak, saturated."""
+    """Heavy, muffled boot fall: a deep boomy body thump through the floor, soft heel, no wooden creak or click,
+    so it reads through walls."""
     p, toe = _timing(rng)
-    toe *= 1.3
-    n = N(0.8)
-    modes = sfx.wood_modes(rng, 84 * p, 10, 0.13)
-    heel = sfx.strike(n, rng, modes, hardness=0.7, noise_mix=0.35, noise_lp=5000)
-    heel += 0.8 * sfx.thud(n, rng, 55 * p, 0.13, 0.9, 0.015, noise=0.6, noise_lp=1200)
-    clack = dsp.burst(n, rng, 0.0002, 0.0012, lp_hz=7000, hp_hz=600)
-    toe_hit = sfx.strike(n, rng, sfx.wood_modes(rng, 85 * p, 9, 0.08), 0.5, noise_mix=0.3)
-    y = dsp.norm(heel) + 0.6 * dsp.norm(clack) + 0.55 * np.roll(dsp.norm(toe_hit), N(toe))
-    y = dsp.peq(y, 280, 1.0, 4)
-    m = N(rng.uniform(0.15, 0.25))
-    rate = np.linspace(rng.uniform(140, 200), rng.uniform(60, 90), m)
-    leather = sfx.creak(m, rng, rate, modes=[(480, 6, 1.0), (930, 8, 0.6), (1500, 10, 0.4), (2300, 12, 0.2)],
-                        amp_env=dsp.env([(0, 0), (0.03, 1), (m / dsp.SR, 0)], m), jitter=0.4)
-    dsp.place(y, leather, N(toe * 0.6), 0.22)
-    if v == 3:  # something metal on his belt
-        dsp.place(y, sfx.metal_hit(N(0.3), rng, 1900, 8, (0.05, 0.15)), N(0.02), 0.08)
-    y = dsp.reverb(y, rng, 0.45, 0.15, predelay=0.006, bright=4000, dark=700)
-    y = dsp.sat(dsp.norm(y), 2.2)
-    return dsp.lofi(y, 11, 1.5, 1.4)
+    toe *= 1.35
+    n = N(0.9)
+    boom = sfx.thud(n, rng, 46 * p, 0.17, 0.85, 0.02, noise=0.35, noise_lp=500, attack=0.004)
+    body = sfx.thud(n, rng, 150 * p, 0.07, 0.5, 0.012, noise=0.55, noise_lp=900, attack=0.003)  # audible on small speakers
+    roll = sfx.thud(n, rng, 60 * p, 0.12, 0.6, 0.02, noise=0.4, noise_lp=450, attack=0.006)
+    knock = sfx.thud(n, rng, 230 * p, 0.05, 0.4, 0.01, noise=0.6, noise_lp=1400, attack=0.002)   # the floor itself
+    y = 0.55 * dsp.norm(boom) + dsp.norm(body) + 0.6 * dsp.norm(knock) + 0.45 * np.roll(dsp.norm(roll), N(toe))
+    if v == 3:  # something on his belt knocks dully
+        dsp.place(y, dsp.lp(sfx.metal_hit(N(0.3), rng, 900, 6, (0.04, 0.1)), 1200), N(0.03), 0.06)
+    y = dsp.lp(y, 1400, 2)                     # muffled: no clicks, no creaks, nothing bright
+    y = dsp.peq(y, 160, 0.9, 3)                # heavy body
+    y = dsp.reverb(y, rng, 0.6, 0.22, predelay=0.01, bright=1500, dark=400)
+    y = dsp.sat(dsp.norm(y), 1.8)
+    return dsp.lofi(y, 11, 1.5, 1.3, lp_hz=3000)
 
 
 _FUNCS = {"wood": step_wood, "concrete": step_concrete, "dirt": step_dirt, "grass": step_grass,

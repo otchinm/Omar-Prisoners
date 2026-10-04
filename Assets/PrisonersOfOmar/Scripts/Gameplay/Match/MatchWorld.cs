@@ -425,6 +425,8 @@ namespace PrisonersOfOmar.Gameplay
             Session.SendToHost(NetChannel.Reliable);
         }
 
+        float _nextStruggleVoice;
+
         /// <summary>kind 0 = cage, 1 = bear trap.</summary>
         public void SendStruggle(byte kind)
         {
@@ -432,6 +434,12 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteByte(kind);
             Session.SendToHost(NetChannel.Reliable);
             AudioManager.Play2D(kind == 0 ? Snd.CageRattle : Snd.Struggle, 0.55f, UnityEngine.Random.Range(0.9f, 1.1f));
+            // straining voice (not on every mash: the clip is longer than a key press)
+            if (LocalAvatar != null && UnityEngine.Time.time >= _nextStruggleVoice)
+            {
+                _nextStruggleVoice = UnityEngine.Time.time + 1.6f;
+                AudioManager.Play2D(LocalAvatar.Voice(VoiceLine.Struggle), 0.5f);
+            }
         }
 
         public void SendAction(CharacterAction a)

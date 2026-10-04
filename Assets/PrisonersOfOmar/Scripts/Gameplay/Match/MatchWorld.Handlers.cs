@@ -146,9 +146,14 @@ namespace PrisonersOfOmar.Gameplay
             else if (av != null)
             {
                 if (!before.Injured && st.Injured && st.Life == LifeState.Free)
-                    AudioManager.Play3D(AudioManager.Variant(Snd.Hurt, 3), av.ChestPosition, 0.9f, Random.Range(0.9f, 1.1f), 2f, 25f);
+                    AudioManager.Play3D(av.Voice(VoiceLine.Hurt), av.ChestPosition, 0.9f, Random.Range(0.95f, 1.05f), 2f, 25f);
                 if (before.Life == LifeState.Free && st.Life == LifeState.Caged)
+                {
+                    AudioManager.Play3D(av.Voice(VoiceLine.Scream), av.ChestPosition, 1f, 1f, 4f, 45f);
                     AddMessage(Session.Find(id)?.Name + " WAS DRAGGED BACK TO THE PENS", 4f);
+                }
+                if (st.Life == LifeState.Dead && before.Life != LifeState.Dead)
+                    AudioManager.Play3D(av.Voice(VoiceLine.Death), av.ChestPosition, 1f, 1f, 4f, 45f);
                 if (before.Life == LifeState.Caged && st.Life == LifeState.Free)
                     AddMessage(Session.Find(id)?.Name + " IS OUT OF THE CAGE", 3f);
                 if (st.Life == LifeState.Dead && before.Life != LifeState.Dead)
