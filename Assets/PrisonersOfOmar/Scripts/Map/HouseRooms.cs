@@ -301,7 +301,7 @@ namespace PrisonersOfOmar.Map
             Props.Toilet(ctx, mb, V(4.2f, F, 2.58f), 0f);
             Props.PedestalSink(ctx, mb, V(3.33f, F, 0.6f), -90f);
             Props.Mirror(mb, V(3.08f, F + 1.55f, 0.6f), Vector3.right, 0.5f, 0.65f);
-            Arch.Decal(mb, Mat.Decal("writing_help"), V(9.0f, F + 1.6f, -0.92f), Vector3.forward, 1.4f, 0.7f, 3f);
+            Arch.Decal(mb, Mat.Decal("writing_dont_look"), V(9.0f, F + 1.6f, -0.92f), Vector3.forward, 1.3f, 0.65f, 3f);
             Arch.Decal(mb, Mat.Decal("blood_splatter_3"), V(10.89f, F + 1.0f, 2.2f), Vector3.left, 1.0f, 1.0f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(6f, F, 1f), 2.5f, 2.0f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("blood_pool"), V(8.2f, F, 1.8f), 1.0f, 0.8f, 10f);
@@ -403,13 +403,12 @@ namespace PrisonersOfOmar.Map
         {
             const string A = "House.UpperHall";
             float F = FU;
-            Props.Rug(mb, V(-0.3f, F, -4.0f), 0, 1.1f, 5.0f, new Color(0.35f, 0.3f, 0.25f));
             Props.Crate(ctx, mb, V(-2.45f, F, 7.4f), 5f, 0.6f, true);
             Props.Crate(ctx, mb, V(-2.45f, F + 0.48f, 7.4f), 35f, 0.45f, true, true);
             Props.Bucket(mb, V(-2.5f, F, -7.45f), 0f, false, 0.7f, false);
             Props.Chair(ctx, mb, V(1.0f, F, -7.35f), 200f);
             Props.WallPicture(mb, V(-2.93f, F + 1.7f, -2.8f), Vector3.right, 0.6f, 0.45f, Mat.Lit(Tex.PaintingLandscape, new Color(0.7f, 0.7f, 0.7f)), Mat.Lit(Tex.WoodFurniture), 0.05f);
-            Arch.Decal(mb, Mat.Decal("writing_help"), V(-2.92f, F + 1.4f, 3.6f), Vector3.right, 1.3f, 0.65f, -6f);
+            Arch.Decal(mb, Mat.Decal("writing_he_sees_you"), V(-2.92f, F + 1.4f, 3.6f), Vector3.right, 1.3f, 0.65f, -6f);
             Arch.Decal(mb, Mat.Decal("blood_smear"), V(-1.0f, F, -5.4f), Vector3.up, 0.6f, 1.6f, 80f);
             Arch.Decal(mb, Mat.Decal("water_stain"), V(-0.5f, CU - 0.01f, 2f), Vector3.down, 2.0f, 1.6f, 20f);
             ctx.Key(A, V(-2.45f, F + 0.48f + 0.36f, 7.4f));
@@ -426,17 +425,19 @@ namespace PrisonersOfOmar.Map
             float F = FU;
             float[] cz = { -6.55f, -4.15f, -1.75f, 0.65f };
             var hay = Mat.Cutout(Tex.GrassTall2, new Color(0.8f, 0.7f, 0.5f));
+            int room = ctx.CellRoom("CageRoom", A, V(-6.5f, F, -3.0f));
             for (int i = 0; i < 4; i++)
             {
                 var c = V(-9.8f, F, cz[i]);
-                var cage = Dyn.Cage(ctx, mb, i, c, -90f);
-                ctx.Data.PrisonerSpawns.Add(cage.Inside);
+                Dyn.Cage(ctx, mb, room, c, -90f);
                 // inside: straw, a piss bucket, blanket, tally marks behind
                 Props.Billboard(mb, hay, c + V(-0.5f, 0, 0.4f), 0.9f, 0.3f, 2, 30f + i * 20f, 0.5f, 0.8f);
                 Props.Billboard(mb, hay, c + V(-0.2f, 0, -0.6f), 0.7f, 0.25f, 2, 70f + i * 15f, 0.5f, 0.8f);
                 Props.Bucket(mb, c + V(-0.65f, 0, 0.7f * (i % 2 == 0 ? 1 : -1)), i * 40f, false, 0.55f, false);
                 Arch.FloorDecal(mb, Mat.Decal(i % 2 == 0 ? "blood_splatter_1" : "grime"), c + V(0.2f, 0.035f, 0), 1.2f, 1.2f, i * 70f);
-                Arch.Decal(mb, Mat.Decal("graffiti_scrawl_2"), V(-10.89f, F + 1.0f, cz[i]), Vector3.right, 0.8f, 0.8f, i * 25f);
+                // each cage has its own marks: tallies, fingernail scratches, a list of names, crosses
+                string[] marks = { "graffiti_scrawl_2", "nail_scratches", "writing_names", "crosses_2" };
+                Arch.Decal(mb, Mat.Decal(marks[i]), V(-10.89f, F + 1.0f, cz[i]), Vector3.right, 0.8f, 0.8f, i == 2 ? 0f : i * 25f);
                 ctx.Nav.Add(V(-7.6f, F, cz[i]), A);
             }
             Props.Chair(ctx, mb, V(-5.5f, F, -3.0f), 90f);
@@ -447,7 +448,7 @@ namespace PrisonersOfOmar.Map
             Props.FloorMattress(mb, V(-5.6f, F, 0.9f), 90f, true);
             Arch.FloorDecal(mb, Mat.Decal("blood_pool"), V(-6.4f, F, -2.5f), 1.6f, 1.3f, 20f);
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(-7.0f, F, -5.0f), 3.0f, 2.6f, 0f);
-            Arch.Decal(mb, Mat.Decal("writing_help"), V(-3.08f, F + 1.6f, -2.4f), Vector3.left, 1.3f, 0.65f, 4f);
+            Arch.Decal(mb, Mat.Decal("writing_let_me_out"), V(-3.08f, F + 1.6f, -2.4f), Vector3.left, 1.4f, 0.7f, 4f);
             Arch.Decal(mb, Mat.Decal("blood_handprint"), V(-7.5f, F + 1.0f, 1.92f), Vector3.back, 0.25f, 0.25f, 0f);
             ctx.Key(A, V(-3.5f, F + Props.TableTop, -1.0f));
             ctx.Common(A, V(-4.0f, F, -7.45f));

@@ -67,6 +67,8 @@ namespace PrisonersOfOmar.Gameplay
             {
                 ItemSpawnInfo pick = null;
                 string forb = Forbidden(t);
+                // the cage key never lies in a room with cages (any cell room can hold prisoners)
+                if (t == ItemType.CageKey) foreach (var room in map.CellRooms) if (!string.IsNullOrEmpty(room.Area)) forb += "|" + room.Area;
                 for (int pass = 0; pass < 3 && pick == null; pass++)
                 {
                     foreach (var s in spots)

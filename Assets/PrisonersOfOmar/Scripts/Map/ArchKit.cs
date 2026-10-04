@@ -530,8 +530,9 @@ namespace PrisonersOfOmar.Map
             switch (kind)
             {
                 case WindowKind.Red:
-                    if (exterior) { pane = ctx.GlowMat(Tex.WindowRed, new Color(1f, 0.85f, 0.85f), new Color(0.25f, 0.2f, 0.2f)); }
-                    else pane = ctx.GlowMat(Tex.Cloth, new Color(0.75f, 0.12f, 0.08f), new Color(0.2f, 0.05f, 0.04f));
+                    // drawn curtains lit from behind: dusty gray cloth (no more red)
+                    if (exterior) { pane = ctx.GlowMat(Tex.Cloth, new Color(0.5f, 0.49f, 0.46f), new Color(0.16f, 0.16f, 0.15f)); }
+                    else pane = ctx.GlowMat(Tex.Cloth, new Color(0.46f, 0.45f, 0.42f), new Color(0.14f, 0.14f, 0.13f));
                     target = glow ?? mb;
                     break;
                 case WindowKind.Boarded:
@@ -579,7 +580,7 @@ namespace PrisonersOfOmar.Map
             if (!exterior && kind == WindowKind.Red)
             {
                 // heavy curtain folds + rod in front of the glowing cloth
-                var cloth = Mat.Lit(Tex.Cloth, new Color(0.55f, 0.1f, 0.07f));
+                var cloth = Mat.Lit(Tex.Cloth, new Color(0.4f, 0.39f, 0.36f));
                 mb.Material = cloth;
                 mb.Color = Shade.Gray(0.85f);
                 mb.AddBox(new Vector3(-hw + 0.08f, -0.05f, -0.09f), new Vector3(0.22f, h + 0.25f, 0.05f), BoxUV.Local, 0.6f);

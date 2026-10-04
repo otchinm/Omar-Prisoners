@@ -103,7 +103,7 @@ namespace PrisonersOfOmar.Map
 
         static void Environment(MapContext ctx)
         {
-            PsxEnvironment.Set(new Color(0.05f, 0.055f, 0.08f), new Color(0.02f, 0.025f, 0.035f), 4f, 45f);
+            PsxEnvironment.Set(new Color(0.056f, 0.057f, 0.062f), new Color(0.026f, 0.027f, 0.029f), 4f, 45f); // gray, bleak
             try
             {
                 var sky = PsxSky.Create("Textures/Sky/sky_night", new Color(0.55f, 0.6f, 0.7f));
@@ -111,7 +111,7 @@ namespace PrisonersOfOmar.Map
             }
             catch (Exception e) { Debug.LogError("[MapBuilder] sky failed: " + e); }
             // a very weak moon fill (not switchable)
-            var moon = ctx.Light(new Vector3(70f, 230f, 60f), new Color(0.32f, 0.36f, 0.5f), 0.22f, 650f, PsxFlicker.None, LightGroup.None, "MoonFill");
+            var moon = ctx.Light(new Vector3(70f, 230f, 60f), new Color(0.36f, 0.37f, 0.41f), 0.22f, 650f, PsxFlicker.None, LightGroup.None, "MoonFill");
             moon.Priority = -1;
             ctx.Data.AmbientZones.Add(new AmbientZoneInfo { Type = AmbientType.Exterior, Bounds = MapMath.MinMax(new Vector3(-220f, -10f, -200f), new Vector3(200f, 120f, 230f)) });
             ctx.Ambient(AmbientType.House, new Vector3(-11.2f, HouseBuilder.FG - 0.1f, -8.2f), new Vector3(11.2f, HouseBuilder.Ridge, 8.2f));

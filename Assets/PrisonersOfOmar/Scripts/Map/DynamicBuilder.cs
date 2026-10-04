@@ -376,15 +376,20 @@ namespace PrisonersOfOmar.Map
 
         // ================================================================== cages
 
-        /// <summary>2x2x2 m cage with its door on the local -Z face. Static bars go to <paramref name="mb"/>.</summary>
-        public static CageInfo Cage(MapContext ctx, MeshBuilder mb, int index, Vector3 center, float yaw)
+        /// <summary>
+        /// 2x2x2 m cage with its door on the local -Z face: a cage slot in cell room <paramref name="room"/> (see <see cref="MapContext.CellRoom"/>). Everything of the cage
+        /// (frame, bars, door, colliders) lives under its Root, which starts INACTIVE: the match activates only the slots
+        /// it uses (one per prisoner, random rooms). <paramref name="mb"/> is unused (kept for call-site symmetry).
+        /// </summary>
+        public static CageInfo Cage(MapContext ctx, MeshBuilder mb, int room, Vector3 center, float yaw)
         {
+            int index = ctx.Data.Cages.Count;
             var rot = MapMath.Yaw(yaw);
             var root = GeoUtil.CreateChild(ctx.Dynamic, "Cage_" + index, center, rot, Layers.World);
+            mb = ctx.NewBuilder("CageFrame_" + index, Layers.World, root); // local space of the root
             var bars = Mat.Cutout(Tex.CageBars);
             var frame = Mat.Lit(Tex.MetalRusty);
             float s = 1.0f, H = 2.0f, dw = 0.47f;
-            mb.Push(center, rot);
             mb.Color = Shade.Gray(0.8f);
             mb.Material = frame;
             for (int ix = -1; ix <= 1; ix += 2)
@@ -415,7 +420,6 @@ namespace PrisonersOfOmar.Map
             mb.AddQuad(new Vector3(dw, 0, -s), new Vector3(dw, H, -s), new Vector3(s, H, -s), new Vector3(s, 0, -s), new Rect(0, 0, (s - dw) / uvs, H / uvs));
             mb.AddQuad(new Vector3(-dw, 1.92f, -s), new Vector3(-dw, H, -s), new Vector3(dw, H, -s), new Vector3(dw, 1.92f, -s), new Rect(0, 0, 2 * dw / uvs, 0.16f));
             mb.Color = Shade.Gray(1f);
-            mb.Pop();
 
             // door (hinge on the local -X side, swings outward = local -Z)
             var pivot = GeoUtil.CreateChild(root, "CageDoorPivot", new Vector3(-dw + 0.02f, 0.02f, -s), Quaternion.identity, Layers.Door);
@@ -460,8 +464,12 @@ namespace PrisonersOfOmar.Map
                 Interact = interact,
                 Inside = new Pose(center + rot * new Vector3(0, 0, 0.2f), Quaternion.LookRotation(front, Vector3.up)),
                 Outside = MapMath.FacingPose(center + front * (s + 0.75f), front),
+                RoomIndex = room,
             };
             ctx.Data.Cages.Add(info);
+            if (room >= 0 && room < ctx.Data.CellRooms.Count) ctx.Data.CellRooms[room].CageIndices.Add(index);
+            ctx.Data.PrisonerSpawns.Add(info.Inside);
+            root.gameObject.SetActive(false);
             return info;
         }
 

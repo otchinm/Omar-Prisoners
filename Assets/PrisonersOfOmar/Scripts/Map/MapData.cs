@@ -34,7 +34,7 @@ namespace PrisonersOfOmar.Map
         /// <summary>Lights in the radio room that turn on once the fuse is inserted (start Off).</summary>
         public readonly List<PsxLight> RadioRoomLights = new List<PsxLight>();
 
-        /// <summary>One per prisoner, inside the cages (index 0..3 matches Cages[0..3]).</summary>
+        /// <summary>One per cage slot, inside the cage (index matches <see cref="Cages"/>).</summary>
         public readonly List<Pose> PrisonerSpawns = new List<Pose>();
         public Pose OmarSpawn;
         /// <summary>Overview camera poses for spectators / ending shots.</summary>

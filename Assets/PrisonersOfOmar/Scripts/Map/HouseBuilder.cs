@@ -19,8 +19,10 @@ namespace PrisonersOfOmar.Map
 
         public const string GlowBulbs = "HouseBulbs", GlowRed = "HouseRed", GlowBasement = "BasementBulbs", GlowRadio = "RadioRoom", GlowExterior = "ExteriorLights";
 
-        public static readonly Color Warm = new Color(1f, 0.74f, 0.45f);
-        public static readonly Color RedLamp = new Color(1f, 0.13f, 0.08f);
+        // gray, bleak bulbs (the house used to be lit warm/red): a hint of old tungsten, mostly washed out
+        public static readonly Color Warm = new Color(0.86f, 0.83f, 0.76f);
+        /// <summary>Dim lamps behind the drawn curtains (formerly red).</summary>
+        public static readonly Color RedLamp = new Color(0.62f, 0.62f, 0.6f);
 
         internal sealed class Room
         {
@@ -439,7 +441,7 @@ namespace PrisonersOfOmar.Map
         {
             var glow = ctx.GlowBuilder(GlowRed);
             for (int i = 0; i < RedLamps.Length; i++)
-                ctx.Light(RedLamps[i], RedLamp, 1.05f, 4.6f, PsxFlicker.Pulse, LightGroup.Power, "RedLamp_" + i, 0.12f, 0.6f, GlowRed);
+                ctx.Light(RedLamps[i], RedLamp, 0.8f, 4.2f, PsxFlicker.Pulse, LightGroup.Power, "RedLamp_" + i, 0.12f, 0.6f, GlowRed);
             foreach (var (lvl, side, along, kind) in Windows)
             {
                 float y = FloorY[lvl] + 1.5f;
@@ -457,7 +459,7 @@ namespace PrisonersOfOmar.Map
             // attic gable windows
             Arch.Window(ctx, ext, glow, new Vector3(-11.1f, 8.2f, 0), Vector3.left, 0.6f, 0.8f, WindowKind.Dark, true);
             Arch.Window(ctx, ext, glow, new Vector3(11.1f, 8.2f, 0), Vector3.right, 0.6f, 0.8f, WindowKind.Red, true);
-            ctx.Light(new Vector3(10.5f, 8.2f, 0), RedLamp, 0.8f, 3.5f, PsxFlicker.Pulse, LightGroup.Power, "RedLamp_Attic", 0.15f, 0.4f, GlowRed);
+            ctx.Light(new Vector3(10.5f, 8.2f, 0), RedLamp, 0.65f, 3.5f, PsxFlicker.Pulse, LightGroup.Power, "RedLamp_Attic", 0.15f, 0.4f, GlowRed);
         }
 
         // ------------------------------------------------------------------ porch + stoops

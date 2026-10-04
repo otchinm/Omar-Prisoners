@@ -618,10 +618,11 @@ namespace PrisonersOfOmar.Gameplay
 
         public void Apply(bool open, int occupant)
         {
+            if (occupant >= 0) SetActive(true); // a slot appears once somebody is locked in it
             bool changed = open != Open;
             Open = open; Occupant = occupant;
             _target = Open ? Info.OpenAngle : 0f;
-            if (changed) AudioManager.Play3D(Open ? Snd.CageOpen : Snd.CageClose, InteractPoint, 0.9f, 1f, 2f, 20f);
+            if (changed && Active) AudioManager.Play3D(Open ? Snd.CageOpen : Snd.CageClose, InteractPoint, 0.9f, 1f, 2f, 20f);
         }
 
         public void Tick(float dt)

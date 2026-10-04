@@ -235,9 +235,11 @@ namespace PrisonersOfOmar.Gameplay
             float r = Random.value;
             if (r < 0.25f && W.Cages.Length > 0)
             {
-                bool anyCaged = false;
-                foreach (var c in W.Cages) if (c.Occupant >= 0) anyCaged = true;
-                if (anyCaged) { SetGoal(W.Cages[Random.Range(0, W.Cages.Length)].Info.Outside.position); return; }
+                // check on one of the occupied cages (they are spread over several rooms)
+                int caged = 0, pick = -1;
+                for (int i = 0; i < W.Cages.Length; i++)
+                    if (W.Cages[i].Occupant >= 0 && Random.Range(0, ++caged) == 0) pick = i;
+                if (pick >= 0) { SetGoal(W.Cages[pick].Info.Outside.position); return; }
             }
             if (r < 0.45f)
             {

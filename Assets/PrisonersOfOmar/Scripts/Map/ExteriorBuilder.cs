@@ -498,7 +498,7 @@ namespace PrisonersOfOmar.Map
             Props.Bucket(mb, V(-65.5f, F, 4.2f), 0f, false, 0.55f, false);
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(-62f, F, 5f), 4f, 3.5f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("blood_smear"), V(-61f, F, 4.2f), 0.6f, 1.6f, 60f);
-            Arch.Decal(mb, Mat.Decal("writing_help"), V(-58.11f, F + 2.1f, 6.8f), Vector3.left, 1.0f, 0.5f, 0f);
+            Arch.Decal(mb, Mat.Decal("writing_he_sees_you"), V(-58.11f, F + 2.1f, 6.8f), Vector3.left, 1.1f, 0.55f, 0f);
             Arch.Decal(mb, Mat.Decal("graffiti_scrawl_2"), V(-65.89f, F + 1.7f, 5.2f), Vector3.right, 0.9f, 0.9f, 0f);
             ctx.Key(A, V(-58.4f, F + Props.SinkTop, 4.36f));
             ctx.Common(A, V(-65.25f, F, 6.75f));

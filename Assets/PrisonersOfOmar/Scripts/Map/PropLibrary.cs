@@ -938,7 +938,8 @@ namespace PrisonersOfOmar.Map
             Begin(mb, pos, yaw);
             mb.Color = Shade.Gray(0.85f);
             mb.Material = Mat.Lit(Tex.Carpet, tint);
-            mb.AddBox(new Vector3(0, 0.006f, 0), new Vector3(w, 0.012f, d), BoxUV.PerFace, 1f, 1.0f, BoxFaces.PosY);
+            // thick enough that floor decals (+1.2 cm) and contact blobs stay underneath instead of z-fighting with it
+            mb.AddBox(new Vector3(0, 0.013f, 0), new Vector3(w, 0.026f, d), BoxUV.PerFace, 1f, 1.0f, BoxFaces.All & ~BoxFaces.NegY);
             Gray(mb, 1f);
             End(mb);
         }

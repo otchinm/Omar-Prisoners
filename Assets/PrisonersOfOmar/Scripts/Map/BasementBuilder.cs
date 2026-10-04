@@ -187,9 +187,9 @@ namespace PrisonersOfOmar.Map
             mb.Color = Shade.Gray(1f);
             ctx.Data.Shelter.Keypad = ctx.Interact(null, V(-10.79f, F + 1.35f, -5.15f), V(0.2f, 0.36f, 0.3f), Quaternion.identity, "ShelterKeypad");
             ctx.Marker("ShelterKeypad", V(-10.85f, F + 1.35f, -5.15f), Quaternion.LookRotation(Vector3.right));
-            ctx.Light(V(-10.6f, F + 2.45f, -2.9f), new Color(1f, 0.12f, 0.06f), 0.9f, 4.2f, PsxFlicker.Pulse, LightGroup.Power, "Shelter_Emergency", 0.5f, 1.2f, Glow);
+            ctx.Light(V(-10.6f, F + 2.45f, -2.9f), new Color(0.72f, 0.7f, 0.64f), 0.8f, 4.2f, PsxFlicker.Pulse, LightGroup.Power, "Shelter_Emergency", 0.5f, 1.2f, Glow);
             var g = ctx.GlowBuilder(Glow);
-            g.Material = ctx.GlowColor(new Color(1f, 0.15f, 0.08f));
+            g.Material = ctx.GlowColor(new Color(0.8f, 0.78f, 0.7f));
             g.AddBox(V(-10.84f, F + 2.45f, -2.9f), V(0.1f, 0.12f, 0.18f), BoxUV.Local, 1f);
             // shelter supplies
             Props.Cot(ctx, mb, V(-9.0f, F, -7.45f), 90f);
@@ -276,7 +276,7 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(-5.0f, F, 7.5f));
             ctx.Common(A, V(-10.5f, F, 7.5f));
             ctx.WallNote(A, V(-9.0f, F + 1.5f, 7.89f), Vector3.back);
-            Arch.Bulb(ctx, mb, Glow, V(-7.0f, C, 4.0f), 0.45f, new Color(1f, 0.16f, 0.1f), 1.25f, 6.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Exhibit_RedBulb", false, 0.5f);
+            Arch.Bulb(ctx, mb, Glow, V(-7.0f, C, 4.0f), 0.45f, new Color(0.7f, 0.7f, 0.68f), 1.1f, 6.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Exhibit_Bulb", false, 0.5f);
             ctx.Marker("Exhibit", V(-4.0f, F + 1.6f, 5.0f), Quaternion.LookRotation(V(-1, 0, -0.3f)));
             ctx.Anomaly("Exhibit", V(-7f, F + 1.1f, 4f), 7f, 0.35f);
             ctx.Nav.Add(V(-5.0f, F, 4.2f), A);
@@ -353,8 +353,8 @@ namespace PrisonersOfOmar.Map
             Props.Crate(ctx, mb, V(-24.0f, F, -4.76f), 8f, 0.55f);
             Props.Barrel(ctx, mb, V(-26.75f, F, 6.75f), 0f, Tex.BarrelWater, 0.35f);
             Props.Bones(mb, V(-33f, F, 5.5f), 1501, 4, false);
-            Arch.Decal(mb, Mat.Decal("writing_help"), V(-27.09f, F + 1.4f, -1.0f), Vector3.right, 1.2f, 0.6f, -5f);
-            Arch.Decal(mb, Mat.Decal("graffiti_scrawl_2"), V(-24.91f, F + 1.5f, 3.0f), Vector3.left, 0.9f, 0.9f, 0f);
+            Arch.Decal(mb, Mat.Decal("writing_names"), V(-27.09f, F + 1.4f, -1.0f), Vector3.right, 0.9f, 0.9f, -3f);
+            Arch.Decal(mb, Mat.Decal("nail_scratches"), V(-24.91f, F + 1.2f, 3.0f), Vector3.left, 0.8f, 0.8f, 0f);
             // lights (some broken)
             Arch.Bulb(ctx, mb, Glow, V(-15f, TunnelCeil, -4f), 0.25f, HouseBuilder.Warm, 0.9f, 5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Tunnel_Bulb_0", false, 0.4f);
             Arch.Bulb(ctx, mb, Glow, V(-21.5f, TunnelCeil, -4f), 0.25f, HouseBuilder.Warm, 0.9f, 5f, PsxFlicker.None, LightGroup.Power, "Tunnel_Bulb_1", false, 0f, true);

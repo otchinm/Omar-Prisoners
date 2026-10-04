@@ -275,6 +275,13 @@ namespace PrisonersOfOmar.Map
         public void Spectator(Vector3 eye, Vector3 target) => Data.SpectatorCameras.Add(MapMath.LookPose(eye, target));
 
         /// <summary>Registers a named area's bounds (register specific rooms before the zones containing them).</summary>
+        /// <summary>(iteration 2) Registers a room prisoners can start / be locked up in; returns its index for <see cref="Dyn.Cage"/>.</summary>
+        public int CellRoom(string name, string area, Vector3 center)
+        {
+            Data.CellRooms.Add(new CellRoomInfo { Name = name, Area = area, Center = center });
+            return Data.CellRooms.Count - 1;
+        }
+
         public void Area(string name, Vector3 min, Vector3 max)
         {
             if (Data.AreaBounds.ContainsKey(name))

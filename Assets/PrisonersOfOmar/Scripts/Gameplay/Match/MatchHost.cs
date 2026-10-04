@@ -248,6 +248,7 @@ namespace PrisonersOfOmar.Gameplay
                 _cagesOpened = true;
                 for (int i = 0; i < W.Cages.Length; i++)
                 {
+                    if (!W.Cages[i].Active) continue;
                     int occ = W.Cages[i].Occupant;
                     BroadcastCage(i, true, -1);
                     if (occ >= 0)

@@ -90,6 +90,7 @@ namespace PrisonersOfOmar.Gameplay
                 case AdminCmd.OpenAllCages:
                     for (int i = 0; i < W.Cages.Length; i++)
                     {
+                        if (!W.Cages[i].Active) continue;
                         int occ = W.Cages[i].Occupant;
                         BroadcastCage(i, true, -1);
                         if (occ >= 0) { var st = Edit(occ); if (st.Life == LifeState.Caged) { st.Life = LifeState.Free; st.Cage = -1; Commit(st); } }
