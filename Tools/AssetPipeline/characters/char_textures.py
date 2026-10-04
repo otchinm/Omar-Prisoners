@@ -1029,8 +1029,8 @@ def corpse_leg(spec, rng, h, w, th, t):
 
 
 # --------------------------------------------------------------------------------------------- grandmother
-GRANNY_DRESS = "#d8c690"          # faded pale-yellow house dress
-GRANNY_FLOWERS = ("#c8703a", "#b8504a", "#d89a48", "#7a8a48")
+GRANNY_DRESS = "#c9a666"          # faded mustard-yellow house dress (clearly darker than her pale skin)
+GRANNY_FLOWERS = ("#a8422e", "#8e2e2a", "#c46a34", "#5e7038")
 
 
 def floral(h, w, rng, base=GRANNY_DRESS, density=1.0, scale=1.0, stains=0.35):
@@ -1060,7 +1060,7 @@ def floral(h, w, rng, base=GRANNY_DRESS, density=1.0, scale=1.0, stains=0.35):
 def old_skin(spec, rng, h, w):
     sk = skin(h, w, rgb(spec["skin"]), rng, mottle=0.16, pores=0.05, redness=0.05)
     spots = smoothstep(0.72, 0.76, fbm(h, w, 14, rng, octaves=3))
-    return mix(sk, rgb("#8a7040"), spots * 0.35)  # liver spots
+    return mix(sk, rgb("#8a6a58"), spots * 0.22)  # faint liver spots
 
 
 def torso_granny(spec, rng, h, w, th, t):
@@ -1080,12 +1080,12 @@ def torso_granny(spec, rng, h, w, th, t):
 
 
 def arm_granny(spec, rng, h, w, th, t):
-    # long floral sleeves to just below the elbow, thin sallow forearms
+    # long floral sleeves down to the wrist with a pale lace cuff (only the bony hands show)
     sk = old_skin(spec, rng, h, w)
-    sk = shade(sk, 1 - 0.1 * np.exp(-((t - 0.5) / 0.06) ** 2))  # bony elbow
     cl = floral(h, w, rng, density=1.4, scale=0.8)
-    img = mix(sk, cl, smoothstep(0.40, 0.42, t))
-    img = mix(img, rgb("#e8e0c8"), band(t, 0.40, 0.44) * 0.7)
+    cl = shade(cl, 1 + 0.12 * np.sin(t * 60 + np.deg2rad(th) * 2) * np.exp(-((t - 0.45) / 0.12) ** 2))
+    img = mix(sk, cl, smoothstep(0.055, 0.065, t))
+    img = mix(img, rgb("#ece4d0"), band(t, 0.06, 0.11) * 0.85)
     if spec.get("dead"):
         img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=0.4, scale=5, splatter=2.0) * 0.85)
     return img
@@ -1095,9 +1095,9 @@ def leg_granny(spec, rng, h, w, th, t):
     # the dress reaches mid-calf; pale shins; white socks
     sk = old_skin(spec, rng, h, w)
     dress = floral(h, w, rng, density=1.1)
-    hem = 0.40 + 0.01 * np.sin(np.deg2rad(th) * 5)
+    hem = 0.30 + 0.01 * np.sin(np.deg2rad(th) * 5)
     img = mix(sk, dress, smoothstep(hem - 0.005, hem + 0.005, t))
-    img = shade(img, 1 - 0.15 * band(t, hem, hem + 0.03))
+    img = mix(img, rgb("#7a5a34"), band(t, hem, hem + 0.025) * 0.7)
     sock = fabric(h, w, rgb("#e4e0d4"), rng, folds=0.1, grain=0.1, stains=0.3, stain_color=rgb("#b8b098"))
     img = mix(img, sock, 1 - smoothstep(0.14, 0.15, t))
     if spec.get("dead"):
@@ -1406,15 +1406,15 @@ CHARACTERS = {
         leg=mannequin_limb(pale_plastic, [0.08, 0.5, 0.95]), extra="surface", misc="none",
         shoe=lambda spec, rng, h, w, view: pale_plastic(h, w, rng)),
     "grandma": dict(
-        seed=909, female=True, skin="#c8b07a", redness=0.0, mottle=0.22, eyes="#1e1a14", sclera="#c8bc98",
-        brows="#b8b2a4", brow_thick=1.8, lips="#8a6a5a", lip_alpha=0.45, shadow="#3a2a1e", liner=0.6,
-        hair_style="bangs", hair="#cfcbc0", hair_hi="#efebe2", hair_contrast=0.3, straight_cut=True,
+        seed=909, female=True, skin="#d6c2b2", redness=0.08, mottle=0.2, eyes="#1e1a14", sclera="#d0c8b4",
+        brows="#b8b2a4", brow_thick=1.8, lips="#8a6060", lip_alpha=0.5, shadow="#4a3434", liner=0.6,
+        hair_style="bob", fringe_sweep=1.0, hair="#c4c2bc", hair_hi="#f0eeea", hair_contrast=0.32, straight_cut=True,
         torso=torso_granny, arm=arm_granny, leg=leg_granny, shoe=sneaker("#e2ded4", "#c8c4b8", sole="#d8d4c8", dirty=0.5),
         nails="#b8a888", hand_grime=0.25, extra="hair", misc="hair"),
     "grandma_dead": dict(
-        seed=909, female=True, dead=True, skin="#b8a878", redness=0.0, mottle=0.3, eyes="#1e1a14", sclera="#b8ac88",
+        seed=909, female=True, dead=True, skin="#c4b0a2", redness=0.0, mottle=0.3, eyes="#1e1a14", sclera="#c0b8a4",
         brows="#b8b2a4", brow_thick=1.8, lips="#5a3a34", lip_alpha=0.7, dead_eyes=True, open_mouth=True,
-        head_blood=0.35, shadow="#3a2a1e", hair_style="bangs", hair="#c8c2b4", hair_hi="#e2ddd2", hair_contrast=0.3,
+        head_blood=0.35, shadow="#3a2a1e", hair_style="bob", fringe_sweep=1.0, hair="#bcb8b0", hair_hi="#e2ddd6", hair_contrast=0.3,
         straight_cut=True, torso=torso_granny, arm=arm_granny, leg=leg_granny,
         shoe=sneaker("#d8d0c4", "#c8c4b8", sole="#d8d4c8", dirty=0.6), nails="#b8a888", hand_blood=0.5, hand_grime=0.3,
         extra="hair", misc="hair"),
