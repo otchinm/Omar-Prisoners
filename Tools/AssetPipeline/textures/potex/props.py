@@ -1143,6 +1143,22 @@ def window_red_glow(ctx):
     return finish(ctx, img, light=0.03, grain=0.02)
 
 
+@texture("Props/window_dim_glow", (64, 64), k=8, desat=0.0, dark=1.0, q=60)
+def window_dim_glow(ctx):
+    """Drawn, dusty curtains lit dimly from behind: grey and bleak (replaces the red windows)."""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(1)
+    xs = (np.arange(W) + 0.5) / W
+    folds = 0.75 + 0.25 * np.sin(xs * 2 * np.pi * 7 + fft_noise(r, H, W, beta=3.0, ax=1, ay=4) * 1.5)
+    glow = 1.0 - 0.35 * radial(W, H, r=W * 0.7)
+    v = clamp01(folds * glow)
+    inner = gradient_map(v, [(0, "#16161a"), (0.5, "#5a5850"), (1, "#9c988a")])
+    dirt = grime(ctx.sub(2), H, W, cover=0.35, beta=2.4, sharp=0.5)
+    inner = mix(inner, "#3a362c", dirt * 0.3)
+    img, fm = window_frame(ctx, inner, "#b0aca0")
+    return finish(ctx, img, light=0.03, grain=0.02)
+
+
 @texture("Props/window_dark", (64, 64), k=8)
 def window_dark(ctx):
     W, H = ctx.W, ctx.H

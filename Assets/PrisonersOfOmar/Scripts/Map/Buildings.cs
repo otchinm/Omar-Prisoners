@@ -53,7 +53,7 @@ namespace PrisonersOfOmar.Map
                 {
                     bool alongX = o.side == 'S' || o.side == 'N';
                     float c = o.side == 'S' ? b.Z0 : o.side == 'N' ? b.Z1 : o.side == 'W' ? b.X0 : b.X1;
-                    Vector3 center = alongX ? new Vector3(o.along, 0f, c) : new Vector3(c, 0f, o.along);
+                    Vector3 center = alongX ? new Vector3(o.along, b.FloorY, c) : new Vector3(c, b.FloorY, o.along); // threshold at floor level
                     Arch.DoorFrame(mb, center, alongX, o.w, o.h, b.T, b.Trim);
                 }
             // floor

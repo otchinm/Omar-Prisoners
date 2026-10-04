@@ -98,6 +98,7 @@ namespace PrisonersOfOmar.Map
         public const string SiloMetal = Props + "silo_metal";
         public const string UtilityPole = Props + "utility_pole";
         public const string WindowRed = Props + "window_red_glow";
+        public const string WindowDim = Props + "window_dim_glow";
         public const string WindowDark = Props + "window_dark";
         public const string WindowBoarded = Props + "window_boarded";
         public const string DoorWood = Props + "door_wood";

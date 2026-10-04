@@ -504,6 +504,9 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(new Vector3(-hw + 0.02f, holeH * 0.5f, 0), new Vector3(0.04f, holeH, d), BoxUV.Local, 0.5f);
             mb.AddBox(new Vector3(hw - 0.02f, holeH * 0.5f, 0), new Vector3(0.04f, holeH, d), BoxUV.Local, 0.5f);
             mb.AddBox(new Vector3(0, holeH - 0.02f, 0), new Vector3(holeW, 0.04f, d), BoxUV.Local, 0.5f);
+            // threshold saddle: closes the floor gap inside the wall thickness (floors stop at the wall faces), slightly raised
+            // and overlapping both floors so it never z-fights with them
+            mb.AddBox(new Vector3(0, 0.008f, 0), new Vector3(holeW - 0.08f, 0.016f, wallT + 0.07f), BoxUV.Local, 0.5f, 0f, BoxFaces.All & ~BoxFaces.NegY);
             for (int s = -1; s <= 1; s += 2)
             {
                 float z = s * (wallT * 0.5f + 0.012f);
@@ -531,7 +534,7 @@ namespace PrisonersOfOmar.Map
             {
                 case WindowKind.Red:
                     // drawn curtains lit from behind: dusty gray cloth (no more red)
-                    if (exterior) { pane = ctx.GlowMat(Tex.Cloth, new Color(0.5f, 0.49f, 0.46f), new Color(0.16f, 0.16f, 0.15f)); }
+                    if (exterior) { pane = ctx.GlowMat(Tex.WindowDim, new Color(0.85f, 0.85f, 0.82f), new Color(0.2f, 0.2f, 0.19f)); }
                     else pane = ctx.GlowMat(Tex.Cloth, new Color(0.46f, 0.45f, 0.42f), new Color(0.14f, 0.14f, 0.13f));
                     target = glow ?? mb;
                     break;
