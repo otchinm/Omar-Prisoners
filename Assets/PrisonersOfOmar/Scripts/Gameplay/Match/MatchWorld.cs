@@ -150,6 +150,7 @@ namespace PrisonersOfOmar.Gameplay
                 Session.PlayerLeft -= OnPlayerLeft;
                 UnregisterHandlers();
             }
+            try { Grandma?.Destroy(); } catch { }
             AnomalySystem.Reset();
             VhsEffect.ResetTransient();
             PsxEnvironment.Brightness = 1f;
@@ -176,6 +177,7 @@ namespace PrisonersOfOmar.Gameplay
             Hiding = new HidingEntity[Map.HidingSpots.Count];
             for (int i = 0; i < Hiding.Length; i++) Hiding[i] = new HidingEntity(i, Map.HidingSpots[i]);
             BuildCages();
+            try { BuildGrandma(); } catch (Exception e) { Debug.LogException(e); }
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();

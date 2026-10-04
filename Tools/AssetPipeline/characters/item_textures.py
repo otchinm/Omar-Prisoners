@@ -6,7 +6,7 @@ import numpy as np
 from PIL import ImageDraw
 
 from paint import (rgb, fill, uv_grid, fbm, photo_detail, smoothstep, mix, shade, blur, text_mask, downsample, degrade,
-                   fabric, blood, blood_color, grime, draw_mask, photo_color)
+                   fabric, blood, blood_color, grime, draw_mask, photo_color, skin, hair_strands, soft_ellipse)
 
 S = 4
 
@@ -542,6 +542,80 @@ def revolver():
     return c.done()
 
 
+# grandma.png 128x128 (GrandmaRig.cs): dress (0,0,64,64) face (64,0,32,32) skin (96,0,32,32) hair (64,32,32,32)
+# socks (96,32,32,16) shoes (96,48,32,16) hair back (64,64,32,32) mouth (96,64,32,32)
+# chair metal (0,96,32,32) tyre (32,96,32,32) seat vinyl (64,96,32,32) chrome (96,96,32,32)  [64..96 rows 0..64: dress hem]
+def _grandma(bloody):
+    c = Canvas(128, 128, 77)
+    r = c.rng
+    # faded floral house dress: pale yellow, small pink / orange roses with green leaves
+    dress = fabric(64 * S, 64 * S, rgb("#cfc08a"), r, folds=0.22, grain=0.05, stains=0.35, stain_color=rgb("#8a7a48"))
+    h = w = 64 * S
+    for _ in range(46):
+        cx, cy = r.randint(0, w), r.randint(0, h)
+        rr = r.uniform(2.2, 3.6) * S
+        col = rgb(["#c87a6a", "#d49060", "#b86870", "#d8a070"][r.randint(0, 4)])
+        dress = mix(dress, col, soft_ellipse(h, w, cx, cy, rr, rr * 0.85, 2.0) * 0.75)
+        for k in range(2):
+            a = r.uniform(0, 6.28)
+            dress = mix(dress, rgb("#7a8a50"), soft_ellipse(h, w, cx + np.cos(a) * rr * 1.5, cy + np.sin(a) * rr * 1.5, rr * 0.7, rr * 0.35, 1.5, a) * 0.6)
+    dress = grime(dress, r, 0.3, (0.35, 0.3, 0.15))
+    if bloody:
+        m = blood(h, w, r, amount=0.55, scale=5, splatter=1.0)
+        dress = mix(dress, blood_color(r, h, w), m * 0.95)
+    c.put(0, 0, dress)
+    c.put(0, 64, dress[: 32 * S])
+    c.put(64, 64 + 0, dress[: 32 * S, : 32 * S]) if False else None
+
+    # face: sallow, sunken dark eyes, thin pursed mouth, hair falling over her left eye
+    fh = fw = 32 * S
+    face = skin(fh, fw, rgb("#c4ae72"), r, mottle=0.12, pores=0.05, redness=0.15)
+    face = shade(face, 1 - 0.18 * soft_ellipse(fh, fw, fw * 0.22, fh * 0.66, fw * 0.12, fh * 0.12, 8))   # hollow cheeks
+    face = shade(face, 1 - 0.18 * soft_ellipse(fh, fw, fw * 0.78, fh * 0.66, fw * 0.12, fh * 0.12, 8))
+    for ex in (0.32, 0.68):
+        face = mix(face, rgb("#3a2614"), soft_ellipse(fh, fw, fw * ex, fh * 0.45, fw * 0.12, fh * 0.075, 6) * 0.85)
+        face = mix(face, rgb("#0a0604"), soft_ellipse(fh, fw, fw * ex, fh * 0.455, fw * 0.05, fh * 0.03, 2))
+        face = mix(face, rgb("#d8d0b0"), soft_ellipse(fh, fw, fw * ex + fw * 0.012, fh * 0.452, fw * 0.012, fh * 0.01, 1) * 0.6)
+    face = mix(face, rgb("#6a5030"), soft_ellipse(fh, fw, fw * 0.5, fh * 0.6, fw * 0.035, fh * 0.07, 4) * 0.5)        # nose shadow
+    face = mix(face, rgb("#3a1a14"), soft_ellipse(fh, fw, fw * 0.5, fh * 0.78, fw * 0.13, fh * 0.012, 2) * 0.9)       # mouth
+    yy, xx = np.mgrid[0:fh, 0:fw].astype(np.float32)
+    for k in range(5):  # wrinkles
+        y0 = fh * (0.25 + 0.04 * k)
+        face = shade(face, 1 - 0.12 * (np.abs(yy - y0 - 3 * np.sin(xx / fw * 6)) < 1.2) * smoothstep(0.15, 0.3, xx / fw) * smoothstep(0.85, 0.7, xx / fw))
+    hair_c = rgb("#d8d6cc")
+    fringe = hair_strands(fh, fw, hair_c, r, highlight=rgb("#f0eee4"), contrast=0.3)
+    fmask = np.clip(smoothstep(fh * 0.16, fh * 0.1, yy) + smoothstep(fw * 0.5, fw * 0.36, xx) * smoothstep(fh * 0.58, fh * 0.5, yy), 0, 1)
+    face = mix(face, fringe, fmask)
+    if bloody:
+        face = mix(face, blood_color(r, fh, fw), blood(fh, fw, r, amount=0.3, scale=4, splatter=0.6) * 0.9)
+    c.put(64, 0, face)
+    sk = skin(fh, fw, rgb("#bea86c"), r, mottle=0.14, pores=0.05, redness=0.1)
+    sk = shade(sk, 1 - 0.1 * smoothstep(0.6, 0.9, fbm(fh, fw, 4, r, octaves=3)))  # liver spots
+    if bloody:
+        sk = mix(sk, blood_color(r, fh, fw), blood(fh, fw, r, amount=0.35, scale=4, splatter=0.8) * 0.9)
+    c.put(96, 0, sk)
+    c.put(64, 32, hair_strands(fh, fw, hair_c, r, highlight=rgb("#f2f0e8"), contrast=0.35))
+    c.put(64, 64, hair_strands(fh, fw, rgb("#c8c6bc"), r, highlight=rgb("#e8e6dc"), contrast=0.35))
+    c.put(96, 32, fabric(16 * S, 32 * S, rgb("#dcd8cc"), r, folds=0.1, stains=0.3, stain_color=rgb("#8a8270")))
+    c.put(96, 48, plastic(16 * S, 32 * S, "#cfc8b8", r, dirt=0.4))
+    c.put(96, 64, fill(32 * S, 32 * S, rgb("#1a0806")))
+    c.put(0, 96, metal(32 * S, 32 * S, "#1c1c1e", r, scratches=0.5, rust=0.2))
+    tyre = fill(32 * S, 32 * S, rgb("#141414"))
+    tyre = shade(tyre, 1 + 0.25 * ((np.mgrid[0:32 * S, 0:32 * S][0] // S) % 3 == 0))
+    c.put(32, 96, tyre)
+    c.put(64, 96, plastic(32 * S, 32 * S, "#202020", r, dirt=0.3))
+    c.put(96, 96, metal(32 * S, 32 * S, "#6a6a6a", r, scratches=0.5, rust=0.3))
+    return c.done()
+
+
+def grandma():
+    return _grandma(False)
+
+
+def grandma_dead():
+    return _grandma(True)
+
+
 ITEMS = {
     "lighter": lighter,
     "lighterfuel": lighterfuel,
@@ -560,6 +634,8 @@ ITEMS = {
     "bottle": bottle,
     "pills": pills,
     "revolver": revolver,
+    "grandma": grandma,
+    "grandma_dead": grandma_dead,
     "cleaver": cleaver,
     "tripwire_stake": tripwire_stake,
     "beartrap": beartrap,

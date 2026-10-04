@@ -203,6 +203,7 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Noise heard by Omar (human: HUD ping; AI: investigation).</summary>
         public void DeliverNoise(Vector3 pos, float radius)
         {
+            GrandmaHeard(pos, radius);
             radius *= Tuning.OmarHearingMul;
             foreach (var ai in _ais) if (ai != null) ai.OnNoise(pos, radius);
             var omar = S.FindOmar();

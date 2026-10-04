@@ -30,6 +30,11 @@ STROKES = {
     "W": [[(0, 0), (0.25, 1), (0.5, 0.4), (0.75, 1), (1, 0)]],
     "C": [[(1, 0.15), (0.7, 0), (0.3, 0), (0, 0.3), (0, 0.7), (0.3, 1), (0.7, 1), (1, 0.85)]],
     "!": [[(0.5, 0), (0.5, 0.7)], [(0.5, 0.9), (0.5, 1)]],
+    "B": [[(0, 1), (0, 0), (0.7, 0), (0.95, 0.12), (0.95, 0.35), (0.7, 0.48), (0, 0.48)], [(0.7, 0.48), (1, 0.62), (1, 0.85), (0.7, 1), (0, 1)]],
+    "F": [[(1, 0), (0, 0), (0, 1)], [(0, 0.48), (0.75, 0.48)]],
+    "V": [[(0, 0), (0.5, 1), (1, 0)]],
+    "'": [[(0.5, 0), (0.45, 0.3)]],
+    "?": [[(0, 0.2), (0.3, 0), (0.75, 0), (1, 0.2), (1, 0.38), (0.5, 0.55), (0.5, 0.72)], [(0.5, 0.9), (0.5, 1)]],
 }
 
 
@@ -302,6 +307,105 @@ def writing_help(ctx):
 @texture("Decals/writing_omar", (128, 64), alpha="hard", q=45, desat=0.0, dark=0.97)
 def writing_omar(ctx):
     return blood_writing(ctx, "OMAR SEES", (0.03, 0.12, 0.97, 0.62), ctx.W * 0.026, 14)
+
+
+# ---- iteration 2: varied writings (placed sparingly and where they make sense)
+@texture("Decals/writing_let_me_out", (128, 64), alpha="hard", q=45, desat=0.0, dark=0.97)
+def writing_let_me_out(ctx):
+    return blood_writing(ctx, "LET ME OUT", (0.03, 0.14, 0.97, 0.6), ctx.W * 0.026, 10)
+
+
+@texture("Decals/writing_he_sees_you", (128, 64), alpha="hard", q=45, desat=0.0, dark=0.97)
+def writing_he_sees_you(ctx):
+    return blood_writing(ctx, "HE SEES YOU", (0.03, 0.16, 0.97, 0.58), ctx.W * 0.024, 9)
+
+
+@texture("Decals/writing_dont_look", (128, 64), alpha="hard", q=45)
+def writing_dont_look(ctx):
+    """charcoal / marker: DON'T LOOK BACK"""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(3)
+    m = scrawl(W, H, "DON'T LOOK", r, (0.04 * W, 0.18 * H, 0.96 * W, 0.6 * H), W * 0.02, slant=0.1, jitter=0.07, passes=2)
+    m = (rough_edges(blur(m, W / 512), ctx, W / 256) > 0.5).astype(np.float32)
+    return marker_color(ctx, H, W, 4), m
+
+
+@texture("Decals/writing_names", (128, 128), alpha="hard", q=45)
+def writing_names(ctx):
+    """names scratched into the plaster and crossed out, one after another"""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(5)
+    words = ["ANNA", "TOM", "SARAH", "MIKE", "LEE", "KATE"]
+    m = np.zeros((H, W), np.float32)
+    im, d = canvas(W, H)
+    for i, wd in enumerate(words):
+        y0 = (0.05 + i * 0.155) * H
+        x0 = (0.06 + 0.12 * r.uniform()) * W
+        x1 = min(W * 0.96, x0 + len(wd) * 0.13 * W)
+        m = np.maximum(m, scrawl(W, H, wd, r, (x0, y0, x1, y0 + 0.1 * H), W * 0.012, slant=0.05, jitter=0.08, passes=2))
+        if i < len(words) - 1:  # crossed out - all but the last one
+            d.line([(x0 - 4, y0 + 0.06 * H + r.normal(0, 2)), (x1 + 4, y0 + 0.04 * H + r.normal(0, 2))], fill=255, width=max(2, int(W * 0.012)))
+    m = np.maximum(m, to_mask(im))
+    m = (rough_edges(blur(m, W / 512), ctx, W / 256) > 0.5).astype(np.float32)
+    return marker_color(ctx, H, W, 5, "#1a1612"), m
+
+
+def _cross_mask(W, H, r, crosses, width):
+    im, d = canvas(W, H)
+    for (cx, cy, size, rot, inv) in crosses:
+        a = np.radians(rot)
+        def pt(x, y):
+            return (cx + (x * np.cos(a) - y * np.sin(a)) * size + r.normal(0, size * 0.02),
+                    cy + (x * np.sin(a) + y * np.cos(a)) * size + r.normal(0, size * 0.02))
+        bar = 0.25 if inv else -0.25
+        for _ in range(2):
+            d.line([pt(0, -0.6), pt(0, 0.6)], fill=255, width=int(width))
+            d.line([pt(-0.35, bar), pt(0.35, bar)], fill=255, width=int(width))
+    return to_mask(im)
+
+
+@texture("Decals/crosses_1", (128, 128), alpha="hard", q=45)
+def crosses_1(ctx):
+    """a cluster of crosses daubed on the wall (the grandmother's room)"""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(7)
+    cr = [(W * 0.5, H * 0.42, W * 0.38, r.normal(0, 4), False), (W * 0.18, H * 0.72, W * 0.16, r.normal(0, 8), False),
+          (W * 0.82, H * 0.7, W * 0.14, r.normal(0, 8), False), (W * 0.32, H * 0.14, W * 0.1, r.normal(0, 10), False)]
+    m = _cross_mask(W, H, r, cr, W * 0.035)
+    m = drip_from((m > 0.5).astype(np.float32), r, 5, H * 0.1, W * 0.012, H)
+    m = (rough_edges(blur(m, W / 512), ctx, W / 256) > 0.5).astype(np.float32)
+    return marker_color(ctx, H, W, 7, "#141010"), m
+
+
+@texture("Decals/crosses_2", (128, 128), alpha="hard", q=45, desat=0.0, dark=0.97)
+def crosses_2(ctx):
+    """upside-down crosses in dried blood"""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(8)
+    cr = [(W * 0.3, H * 0.45, W * 0.3, r.normal(0, 5), True), (W * 0.72, H * 0.55, W * 0.24, r.normal(0, 6), True)]
+    m = _cross_mask(W, H, r, cr, W * 0.03)
+    m = drip_from((m > 0.5).astype(np.float32), r, 8, H * 0.22, W * 0.014, H)
+    m = (rough_edges(blur(m, W / 512), ctx, W / 256) > 0.5).astype(np.float32)
+    return blood_color(ctx, H, W, 11), m
+
+
+@texture("Decals/nail_scratches", (128, 128), alpha="hard", q=45)
+def nail_scratches(ctx):
+    """desperate finger nail scratches (inside the cages / on doors)"""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(9)
+    im, d = canvas(W, H)
+    for g in range(4):
+        x0, y0 = r.uniform(0.1, 0.8) * W, r.uniform(0.05, 0.4) * H
+        ln = r.uniform(0.3, 0.55) * H
+        slope = r.uniform(-0.15, 0.15)
+        for k in range(4):
+            xs = x0 + k * W * 0.035
+            d.line([(xs, y0 + k * 3), (xs + slope * ln, y0 + ln - k * 6)], fill=255, width=max(1, int(W * 0.008)))
+    m = to_mask(im)
+    m = (rough_edges(blur(m, W / 768), ctx, W / 400) > 0.5).astype(np.float32)
+    img = gradient_map(clamp01(0.5 + 0.2 * fft_noise(r, H, W, beta=2.0)), [(0, "#2a1a14"), (1, "#5a3a2a")])
+    return img, m
 
 
 # --------------------------------------------------------------------------------------

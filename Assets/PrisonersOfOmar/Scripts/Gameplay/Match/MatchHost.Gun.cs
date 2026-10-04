@@ -8,7 +8,16 @@ namespace PrisonersOfOmar.Gameplay
     public sealed partial class MatchHost
     {
         /// <summary>Every host tick (grandmother, kitchen routine).</summary>
-        partial void TickWorld(float dt);
+        void TickWorld(float dt)
+        {
+            TickGrandma(dt);
+            TickKitchen(dt);
+        }
+
+        partial void TickGrandma(float dt);
+        partial void TickKitchen(float dt);
+        /// <summary>A noise somebody made (the grandmother turns towards it).</summary>
+        partial void GrandmaHeard(Vector3 pos, float radius);
         /// <summary>A shot hit <paramref name="c"/>: set <paramref name="kind"/> to MatchWorld.ShotGrandma when it was her.</summary>
         partial void OnShotHit(int shooter, Collider c, Vector3 point, ref byte kind);
 

@@ -246,23 +246,32 @@ namespace PrisonersOfOmar.Gameplay
                 }
                 else { _omarLastPos[id] = p; _omarMovedAt[id] = now; }
                 if (!_omarVel.TryGetValue(id, out var vel) || vel.sqrMagnitude < 0.04f) continue;
-                for (int i = 0; i < W.Doors.Length; i++)
+                ShoveDoorsWith(p, vel);
+            }
+        }
+
+        /// <summary>A body (Omar, the grandmother's wheelchair) at <paramref name="p"/> moving with <paramref name="vel"/>
+        /// shoves the unlocked doors it runs into.</summary>
+        void ShoveDoorsWith(Vector3 p, Vector3 vel)
+        {
+            if (W.Doors.Length == 0 || vel.sqrMagnitude < 0.04f) return;
+            EnsureDoorArrays();
+            for (int i = 0; i < W.Doors.Length; i++)
+            {
+                var d = W.Doors[i];
+                if (d.Locked || d.Boarded) continue;
+                if ((d.Info.Center - p).sqrMagnitude > 9f) continue;
+                float before = d.Velocity;
+                if (!d.Shove(p, vel)) continue;
+                if (d.Grabber >= 0)
                 {
-                    var d = W.Doors[i];
-                    if (d.Locked || d.Boarded) continue;
-                    if ((d.Info.Center - p).sqrMagnitude > 9f) continue;
-                    float before = d.Velocity;
-                    if (!d.Shove(p, vel)) continue;
-                    if (d.Grabber >= 0)
-                    {
-                        // nobody holds a door shut against him
-                        float v = d.Velocity;
-                        ReleaseDoor(d, d.Angle, v);
-                    }
-                    _doorDirty[i] = true;
-                    _doorMoving[i] = true;
-                    if (d.Velocity > 330f && before < 60f) PushFx(d); // a running shoulder charge
+                    // nobody holds a door shut against him
+                    float v = d.Velocity;
+                    ReleaseDoor(d, d.Angle, v);
                 }
+                _doorDirty[i] = true;
+                _doorMoving[i] = true;
+                if (d.Velocity > 330f && before < 60f) PushFx(d); // a running shoulder charge
             }
         }
 

@@ -19,6 +19,7 @@ namespace PreviewHarness
                 case "items": Items(outDir); return true;
                 case "fparms": FpArms(args, outDir); return true;
                 case "perf": Perf(); return true;
+                case "grandma": Grandma(outDir); return true;
             }
             return false;
         }
@@ -219,6 +220,22 @@ namespace PreviewHarness
             var w = new SceneWriter();
             w.Add(arms.gameObject, cam.transform.worldToLocalMatrix);
             w.Save(Path.Combine(outDir, a.Count > 4 ? a[4] : "fparms.json"));
+        }
+
+        /// <summary>grandma: the grandmother in every mode side by side.</summary>
+        static void Grandma(string outDir)
+        {
+            var w = new SceneWriter();
+            var modes = new[] { GrandmaMode.WatchingTv, GrandmaMode.Roaming, GrandmaMode.Screaming, GrandmaMode.Dead };
+            for (int i = 0; i < modes.Length; i++)
+            {
+                var rig = GrandmaRig.Create(null);
+                rig.SetMode(modes[i]);
+                rig.SetMoveSpeed(modes[i] == GrandmaMode.Roaming ? 1f : 0f);
+                for (int f = 0; f < 50; f++) Runtime.Tick(1f / 30f);
+                w.Add(rig.gameObject, Matrix4x4.Translate(new Vector3((i - 1.5f) * 0.9f, 0, 0)));
+            }
+            w.Save(Path.Combine(outDir, "grandma.json"));
         }
 
         static void Perf()

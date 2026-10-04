@@ -155,42 +155,61 @@ namespace PrisonersOfOmar.Map
             ctx.Marker(marker, center + front * 0.01f, Quaternion.LookRotation(front));
         }
 
+        /// <summary>The living room is the grandmother's TV room: she sits in her wheelchair in front of the CRT,
+        /// crosses on the walls, papers and dirt everywhere, the TV is the main light.</summary>
         static void Living(MapContext ctx, MeshBuilder mb)
         {
             const string A = "House.Living";
             float F = FG;
-            Props.Rug(mb, V(7.8f, F, -4.5f), 90f, 2.8f, 2.2f, new Color(0.55f, 0.4f, 0.3f));
+            Props.Rug(mb, V(7.6f, F, -4.5f), 90f, 2.8f, 2.2f, new Color(0.5f, 0.42f, 0.34f));
             Props.TvStand(ctx, mb, V(10.62f, F, -4.5f), 90f);
             Props.CrtTv(ctx, mb, V(10.6f, F + Props.TvStandTop, -4.5f), 90f);
             var tvPos = V(10.6f, F + Props.TvStandTop, -4.5f) + MapMath.Yaw(90f) * Props.TvScreenLocal;
             BuildTvScreen(ctx, "TvLivingRoom", tvPos, 90f, out _);
-            ctx.Emitter(tvPos, "Audio/Ambience/tv_static_loop", 0.5f, 10f, true);
-            Props.Sofa(ctx, mb, V(6.0f, F, -4.5f), -90f);
-            Arch.Blob(mb, V(6.0f, F, -4.5f), 1.2f, 2.4f);
-            Props.CoffeeTable(ctx, mb, V(8.0f, F, -4.5f), 90f);
-            Props.Cans(mb, V(8.0f, F + Props.CoffeeTop, -4.8f), 401, 3, 0.15f);
+            Props.Sofa(ctx, mb, V(5.6f, F, -4.5f), -90f);
+            Arch.Blob(mb, V(5.6f, F, -4.5f), 1.2f, 2.4f);
+            // her side table with pills and a glass, pushed against the wall
+            Props.CoffeeTable(ctx, mb, V(8.3f, F, -7.3f), 0f);
+            Props.Cans(mb, V(8.2f, F + Props.CoffeeTop, -7.3f), 401, 2, 0.12f);
             Props.Armchair(ctx, mb, V(8.4f, F, -2.05f), 17f);
             Props.Bookshelf(ctx, mb, V(9.9f, F, -1.24f), 0f, 1.0f, 2.0f, 402);
             Props.FloorLampProp(mb, V(3.55f, F, -7.45f));
-            ctx.Light(V(3.55f, F + 1.45f, -7.45f), new Color(1f, 0.7f, 0.42f), 0.95f, 5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Living_Lamp", 0.25f, 7f, GlowBulbs);
+            ctx.Light(V(3.55f, F + 1.45f, -7.45f), new Color(0.85f, 0.8f, 0.72f), 0.45f, 4f, PsxFlicker.FaultyBulb, LightGroup.Power, "Living_Lamp", 0.25f, 7f, GlowBulbs);
             var g = ctx.GlowBuilder(GlowBulbs);
-            g.Material = ctx.GlowColor(new Color(1f, 0.75f, 0.45f));
+            g.Material = ctx.GlowColor(new Color(0.9f, 0.82f, 0.7f));
             g.AddSphere(V(3.55f, F + 1.4f, -7.45f), new Vector3(0.06f, 0.08f, 0.06f), 5, 3);
-            Props.Papers(mb, V(5.2f, F, -2.3f), 403, 4, 0.5f);
+            // clutter: papers, dirt, bottles, pill boxes
+            Props.Papers(mb, V(5.2f, F, -2.3f), 403, 5, 0.6f);
+            Props.Papers(mb, V(8.9f, F, -5.8f), 405, 4, 0.5f);
+            Props.Papers(mb, V(6.6f, F, -6.9f), 406, 3, 0.45f);
             Props.Bottles(mb, V(4.4f, F, -6.9f), 404, 4, 0.25f);
-            Arch.FloorDecal(mb, Mat.Decal("blood_splatter_2"), V(6.3f, F + Props.SofaSeat + 0.04f, -4.1f), 0.6f, 0.6f, 30f);
+            Arch.FloorDecal(mb, Mat.Decal("grime"), V(7.2f, F, -3.2f), 2.2f, 1.8f, 20f);
+            Arch.FloorDecal(mb, Mat.Decal("grime"), V(9.6f, F, -6.6f), 1.6f, 1.4f, 70f);
             Arch.Decal(mb, Mat.Decal("grime"), V(10.89f, F + 2.2f, -6.0f), Vector3.left, 1.5f, 1.8f, 0f);
-            ctx.Key(A, V(8.0f, F + Props.CoffeeTop, -4.2f));
+            // crosses on the walls (her room only)
+            Arch.Decal(mb, Mat.Decal("crosses_1"), V(10.89f, F + 2.05f, -2.4f), Vector3.left, 1.3f, 1.3f, 0f);
+            Arch.Decal(mb, Mat.Decal("crosses_1"), V(6.2f, F + 2.0f, -7.89f), Vector3.forward, 1.1f, 1.1f, 6f);
+            Arch.Decal(mb, Mat.Decal("crosses_2"), V(3.11f, F + 2.1f, -6.6f), Vector3.right, 0.9f, 0.9f, -4f);
+            ctx.Key(A, V(8.45f, F + Props.CoffeeTop, -7.15f));
             ctx.Common(A, V(9.9f, F + Props.BookshelfLevel(1), -1.32f));
             ctx.Key(A, V(9.9f, F + Props.BookshelfLevel(3), -1.32f));
             ctx.Common(A, V(5.0f, F, -7.45f));
-            ctx.Common(A, V(6.05f, F + 0.485f, -5.2f));
+            ctx.Common(A, V(5.65f, F + 0.485f, -5.2f));
             Dyn.Wardrobe(ctx, "Living.Wardrobe", V(4.3f, F, -1.39f), 0f);
             ctx.WallNote(A, V(3.08f, F + 1.5f, -2.6f), Vector3.right);
             ctx.Nav.Add(V(4.6f, F, -3.0f), A);
             ctx.Nav.Add(V(7.2f, F, -6.5f), A);
             ctx.Nav.Add(V(7.0f, F, -2.0f), A);
             ctx.Nav.Add(V(9.4f, F, -6.9f), A);
+
+            ctx.Data.Grandma = new GrandmaInfo
+            {
+                Area = A,
+                Room = MapMath.MinMax(V(3.1f, F, -7.9f), V(10.9f, F + 3f, -1.1f)),
+                ChairPose = new Pose(V(8.25f, F, -4.5f), MapMath.Yaw(90f)),
+                TvSoundPosition = tvPos,
+            };
+            if (ctx.Data.Markers.TryGetValue("TvLivingRoom", out var screen)) ctx.Data.Grandma.TvScreen = screen;
         }
 
         static void Bathroom(MapContext ctx, MeshBuilder mb)
