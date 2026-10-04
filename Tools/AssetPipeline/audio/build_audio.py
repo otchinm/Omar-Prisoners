@@ -35,6 +35,7 @@ import gen_items  # noqa: E402,F401
 import gen_world  # noqa: E402,F401
 import gen_omar  # noqa: E402,F401
 import gen_stingers  # noqa: E402,F401
+import gen_grandma  # noqa: E402,F401
 
 
 def _render(path):
