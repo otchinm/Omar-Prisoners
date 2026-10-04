@@ -31,12 +31,12 @@ namespace PrisonersOfOmar.Gameplay
                 if (!_targets.Add(target)) return;
                 var omar = w.OmarAvatar;
                 Vector3 p = omar != null ? omar.ChestPosition : Vector3.zero;
-                var src = AudioManager.Play3D(Snd.OmarFind, p, 1f, 1f, 4f, 50f, AudioCategory.Omar, omar != null ? omar.transform : null);
+                var src = AudioManager.Play3D(Snd.OmarFind, p, 1f, 1f, 7f, 75f, AudioCategory.Omar, omar != null ? omar.transform : null);
                 if (src != null) _find[target] = src;
                 if (target == w.LocalId)
                 {
                     AudioManager.Play2D(Snd.StingSpotted, 0.9f, 1f, AudioCategory.Stinger);
-                    VhsEffect.TriggerGlitch(0.6f, 0.35f);
+                    VhsEffect.TriggerGlitch(0.25f, 0.25f);
                     w.AddMessage("HE SEES YOU", 2f);
                 }
             }
@@ -51,7 +51,7 @@ namespace PrisonersOfOmar.Gameplay
         public void PlayScream(Avatar omar, int index)
         {
             Vector3 p = omar != null ? omar.ChestPosition : Vector3.zero;
-            var src = AudioManager.Play3D(Snd.OmarScream(index), p, 1f, 1f, 5f, 65f, AudioCategory.Omar, omar != null ? omar.transform : null);
+            var src = AudioManager.Play3D(Snd.OmarScream(index), p, 1f, 1f, 9f, 95f, AudioCategory.Omar, omar != null ? omar.transform : null);
             AudioManager.Duck(0.3f, 2.5f);
             if (src != null && Active) _screams.Add(src);
         }

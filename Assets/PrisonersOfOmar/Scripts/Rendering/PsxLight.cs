@@ -296,7 +296,7 @@ namespace PrisonersOfOmar.Rendering
                 {
                     var l = _sel[i];
                     Vector3 p = l.transform.position;
-                    float k = l.CurrentIntensity;
+                    float k = l.CurrentIntensity * PsxEnvironment.LightGain;
                     bool spot = l.Type == PsxLightType.Spot;
                     _pos[i] = new Vector4(p.x, p.y, p.z, l.Range);
                     _col[i] = new Vector4(l.Color.r * k, l.Color.g * k, l.Color.b * k, spot ? 1f : 0f);
@@ -367,6 +367,9 @@ namespace PrisonersOfOmar.Rendering
         /// (Nightmare = 1, the original very dark look; Easy brightest). Scales ambient and light contribution.</summary>
         public static float Brightness = 1f;
 
+        /// <summary>Multiplier of every light's contribution derived from <see cref="Brightness"/> (gentler than the ambient lift).</summary>
+        public static float LightGain => Mathf.Sqrt(Mathf.Max(0.1f, Brightness));
+
         /// <summary>Set ambient + fog; applied to shaders on the next frame.</summary>
         public static void Set(Color ambient, Color fogColor, float fogStart, float fogEnd)
         {
@@ -397,8 +400,9 @@ namespace PrisonersOfOmar.Rendering
         /// <summary>Uploads explicit values (fogEnd &lt;= fogStart disables fog).</summary>
         internal static void UploadValues(Color ambient, Color fogColor, float fogStart, float fogEnd, Vector4 snapRes, float affine)
         {
-            Shader.SetGlobalVector(PsxShaderIds.Ambient, new Vector4(ambient.r, ambient.g, ambient.b, 1f));
-            Shader.SetGlobalVector(PsxShaderIds.FogColor, new Vector4(fogColor.r, fogColor.g, fogColor.b, 1f));
+            float b = Mathf.Max(0.1f, Brightness), fb = Mathf.Sqrt(b);
+            Shader.SetGlobalVector(PsxShaderIds.Ambient, new Vector4(ambient.r * b, ambient.g * b, ambient.b * b, 1f));
+            Shader.SetGlobalVector(PsxShaderIds.FogColor, new Vector4(fogColor.r * fb, fogColor.g * fb, fogColor.b * fb, 1f));
             float inv = fogEnd > fogStart + 0.001f ? 1f / (fogEnd - fogStart) : 0f;
             Shader.SetGlobalVector(PsxShaderIds.FogParams, new Vector4(fogStart, inv, inv > 0f ? 1f : 0f, 0f));
             Shader.SetGlobalVector(PsxShaderIds.SnapRes, snapRes);

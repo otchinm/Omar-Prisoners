@@ -33,7 +33,7 @@ namespace PrisonersOfOmar.Gameplay
         public static float VisibilityRange(Avatar a)
         {
             float light = PsxLightManager.SampleIllumination(a.ChestPosition);
-            float range = Mathf.Lerp(Tuning.SightMinRange, Tuning.SightMaxRange, Mathf.Clamp01(light * 1.3f));
+            float range = Mathf.Lerp(Tuning.SightMinRange, Tuning.SightMaxRange, Mathf.Clamp01(light * 1.3f)) * Tuning.OmarSightMul;
             if (a.LighterOn) range = Mathf.Max(range, 24f);
             if (a.FlashlightOn) range = Mathf.Max(range, 40f);
             if (a.Crouching) range *= 0.62f;
@@ -85,6 +85,7 @@ namespace PrisonersOfOmar.Gameplay
                     float range = Mathf.Max(3f, VisibilityRange(a));
                     float rate = d < 3.5f ? 10f : Mathf.Lerp(2.2f, 0.6f, Mathf.Clamp01(d / range));
                     if (a.Sprinting) rate *= 1.4f;
+                    rate *= Tuning.DetectFillMul;
                     m = Mathf.Min(1f, m + rate * step);
                     _lastSeen[id] = now;
                     LastKnown[id] = a.Position;

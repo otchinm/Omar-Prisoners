@@ -34,14 +34,14 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        public static List<Placement> Place(MapData map, int seed, bool needBattery)
+        public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f)
         {
             var rng = DeterministicRandom.For(seed, "items");
             var result = new List<Placement>();
             var keyList = new List<ItemType> { ItemType.BoltCutters, ItemType.CarKeys, ItemType.GasCan, ItemType.Fuse, ItemType.CageKey, ItemType.Crowbar };
             if (needBattery) keyList.Add(ItemType.CarBattery);
             var common = new List<ItemType>();
-            void AddN(ItemType t, int n) { for (int i = 0; i < n; i++) common.Add(t); }
+            void AddN(ItemType t, int n) { n = Mathf.Max(1, Mathf.RoundToInt(n * supplyMul)); for (int i = 0; i < n; i++) common.Add(t); }
             AddN(ItemType.LighterFuel, 4);
             AddN(ItemType.Bandages, 4);
             AddN(ItemType.Flashlight, 2);
@@ -53,6 +53,12 @@ namespace PrisonersOfOmar.Gameplay
 
             var spots = new List<ItemSpawnInfo>(map.ItemSpawns);
             rng.Shuffle(spots);
+            // (iteration 2) exactly one revolver (2 rounds) at one of the dedicated spots
+            if (map.GunSpots.Count > 0)
+            {
+                var g = map.GunSpots[rng.Range(0, map.GunSpots.Count)];
+                result.Add(new Placement { Type = ItemType.Revolver, Position = g.Position, Yaw = g.Yaw, Charge = 1f });
+            }
             var used = new HashSet<ItemSpawnInfo>();
             var usedAreasForKeys = new HashSet<string>();
 

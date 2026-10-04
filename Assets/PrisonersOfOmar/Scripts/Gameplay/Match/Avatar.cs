@@ -331,7 +331,8 @@ namespace PrisonersOfOmar.Gameplay
             float maxD = crouch ? 6f : Sprinting ? 28f : 16f;
             if (IsOmar)
             {
-                AudioManager.Play3D(AudioManager.Variant(Snd.OmarStep, 4), transform.position, Mathf.Min(1f, vol + 0.3f), Random.Range(0.9f, 1.05f), 2f, maxD + 8f, AudioCategory.Omar);
+                // heavy, muffled, carry far (also through walls)
+                AudioManager.Play3D(AudioManager.Variant(Snd.OmarStep, 4), transform.position, 1f, Random.Range(0.88f, 1.0f), 3.5f, Sprinting ? 38f : 26f, AudioCategory.Omar);
             }
             else
             {

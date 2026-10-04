@@ -51,7 +51,8 @@ namespace PrisonersOfOmar.Audio
         float _distort, _distortTarget;
 
         /// <summary>Base per-category gain (balance).</summary>
-        static readonly float[] CategoryGain = { 1f, 1f, 0.75f, 0.7f, 1f, 1f };
+        // Omar stays at full gain; everything else sits a little under him so he is the loudest thing in the night
+        static readonly float[] CategoryGain = { 1f, 0.85f, 0.7f, 0.7f, 1f, 0.85f };
 
         public static AudioManager Create(Transform parent)
         {

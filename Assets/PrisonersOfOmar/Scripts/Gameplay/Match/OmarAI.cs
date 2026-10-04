@@ -45,6 +45,7 @@ namespace PrisonersOfOmar.Gameplay
         float _smashTimer = -1f;
         int _smashDoor = -1;
         float _stepDist, _bob;
+        float _speedCur;
 
         public static OmarAI Attach(Avatar a, MatchWorld w)
         {
@@ -82,7 +83,6 @@ namespace PrisonersOfOmar.Gameplay
             if (_mode == Mode.Chase && _target >= 0) return;
             _noiseScore = 99f;
             StartInvestigate(pos, true);
-            if (Random.value < 0.5f) TryScream();
         }
 
         public void OnSawHide(int prisoner, int spot)
@@ -148,7 +148,6 @@ namespace PrisonersOfOmar.Gameplay
                     _target = id;
                     _mode = Mode.Chase;
                     _repath = 0f;
-                    if (Random.value < 0.45f) TryScream();
                     _nextScreamAt = W.Time + Random.Range(14f, 24f);
                 }
             }
@@ -450,7 +449,10 @@ namespace PrisonersOfOmar.Gameplay
             {
                 float targetYaw = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
                 _yaw = Mathf.MoveTowardsAngle(_yaw, targetYaw, 360f * dt);
-                float speed = _running ? Tuning.OmarRunSpeed * 0.93f : Tuning.OmarWalkSpeed;
+                // no human sprint: the heavy walk just speeds up (ramps to full run over ~1.2 s, slows down faster)
+                float want = _running ? Tuning.OmarRunSpeed * 0.93f : Tuning.OmarWalkSpeed;
+                _speedCur = Mathf.MoveTowards(Mathf.Max(_speedCur, Tuning.OmarWalkSpeed * 0.6f), want, (want > _speedCur ? Tuning.OmarAcceleration : Tuning.OmarAcceleration * 2f) * dt);
+                float speed = _speedCur;
                 float align = Mathf.Clamp01(1f - Mathf.Abs(Mathf.DeltaAngle(_yaw, targetYaw)) / 90f);
                 vel = Quaternion.Euler(0, _yaw, 0) * Vector3.forward * speed * Mathf.Max(0.25f, align);
                 HandleDoors(vel);

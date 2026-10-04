@@ -27,6 +27,8 @@ namespace PrisonersOfOmar.Gameplay
         float _snapTimer, _endCheckTimer, _nextEventAt = 70f, _powerRestoreAt = -1f;
         bool _cagesOpened, _omarAwake, _ended;
         float _allCagedAt = -1f;
+        float _screamAt = -1f;
+        bool _screamForce;
         int _wires = Tuning.TripwireCharges, _bears = Tuning.BearTrapCharges;
         float _trapRecharge;
         float _omarStunUntil;
@@ -201,6 +203,7 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Noise heard by Omar (human: HUD ping; AI: investigation).</summary>
         public void DeliverNoise(Vector3 pos, float radius)
         {
+            radius *= Tuning.OmarHearingMul;
             foreach (var ai in _ais) if (ai != null) ai.OnNoise(pos, radius);
             var omar = S.FindOmar();
             if (omar == null || omar.IsBot || !omar.Connected) return;
@@ -226,6 +229,13 @@ namespace PrisonersOfOmar.Gameplay
             if (!W.Running || _ended) return;
             float t = W.Time;
             TickPlayer(dt);
+            if (_screamAt >= 0f && t >= _screamAt)
+            {
+                _screamAt = -1f;
+                var omar = S.FindOmar();
+                if (omar != null) DoScream(omar.Id, _screamForce);
+                _screamForce = false;
+            }
 
             _snapTimer -= dt;
             if (_snapTimer <= 0f) { _snapTimer = 0.05f; SendSnapshot(); }
@@ -759,6 +769,7 @@ namespace PrisonersOfOmar.Gameplay
                 BroadcastTrap(t, TrapState.Triggered, victim, true);
                 foreach (var ai in _ais) if (ai != null) ai.OnAlarm(t.InteractPoint);
                 DeliverNoise(t.InteractPoint, 15f);
+                ScheduleScream(0.6f, true); // he hears his siren and screams
             }
             else
             {
@@ -926,7 +937,10 @@ namespace PrisonersOfOmar.Gameplay
         {
             var st = W.StatusOf(target);
             if (spotted && (_ended || !W.Running || st == null || st.Life != LifeState.Free)) return;
+            bool fresh = spotted && !W.ChaseTargets.Contains(target);
             SetChase(target, spotted);
+            // "find" always plays (ChaseAudio); now and then one of his screams follows
+            if (fresh && _rng.Chance(0.55f)) ScheduleScream(_rng.Range(0.4f, 1.0f), false);
         }
 
         public void OnScreamReq(int sender, NetReader r)
@@ -935,11 +949,19 @@ namespace PrisonersOfOmar.Gameplay
             DoScream(sender);
         }
 
-        public bool DoScream(int omarId)
+        /// <summary>Omar screams after <paramref name="delay"/> seconds (host clock). <paramref name="force"/> ignores the cooldown.</summary>
+        void ScheduleScream(float delay, bool force)
+        {
+            float at = W.Time + delay;
+            if (_screamAt < 0f || at < _screamAt) _screamAt = at;
+            _screamForce |= force;
+        }
+
+        public bool DoScream(int omarId, bool force = false)
         {
             if (_ended || !W.Running) return false;
             float last = _lastScream.TryGetValue(omarId, out var l) ? l : -99f;
-            if (W.Time - last < Tuning.ScreamCooldown - 2f) return false;
+            if (W.Time - last < (force ? 3f : Tuning.ScreamCooldown - 2f)) return false;
             _lastScream[omarId] = W.Time;
             var w = S.Begin(Msg.Scream);
             w.WriteByte((byte)omarId);

@@ -104,6 +104,10 @@ namespace PrisonersOfOmar.Gameplay
             _dynamicRoot = new GameObject("Dynamic").transform;
             _dynamicRoot.SetParent(transform, false);
 
+            Tuning.ApplyDifficulty(Settings.Difficulty);
+            PsxEnvironment.Brightness = Tuning.Brightness;
+            PsxItemGlow.GlobalStrength = Tuning.GlowStrength;
+            AdminState.Reset();
             AnomalySystem.Reset();
             AnomalySystem.Seed = Seed;
             AnomalySystem.TimeSource = () => _clock;
@@ -148,6 +152,10 @@ namespace PrisonersOfOmar.Gameplay
             }
             AnomalySystem.Reset();
             VhsEffect.ResetTransient();
+            PsxEnvironment.Brightness = 1f;
+            PsxItemGlow.GlobalStrength = 1f;
+            AdminState.Reset();
+            try { PsxFx.ClearBloodDecals(); } catch { }
             AudioManager.StopAllSfx();
             GameInput.SetCursorLocked(false);
             if (Instance == this) Instance = null;
@@ -168,7 +176,7 @@ namespace PrisonersOfOmar.Gameplay
             foreach (var t in Map.TrapSpots) (t.Kind == TrapKind.Tripwire ? wires : bears).Add(t);
             rng.Shuffle(wires);
             rng.Shuffle(bears);
-            int nw = Mathf.Min(wires.Count, 5), nb = Mathf.Min(bears.Count, 3);
+            int nw = Mathf.Min(wires.Count, Tuning.StartWires), nb = Mathf.Min(bears.Count, Tuning.StartBears);
             for (int i = 0; i < nw; i++) Traps.Add(new TrapEntity(Traps.Count, TrapKind.Tripwire, wires[i].A, wires[i].B, _dynamicRoot));
             for (int i = 0; i < nb; i++) Traps.Add(new TrapEntity(Traps.Count, TrapKind.BearTrap, bears[i].A, bears[i].A, _dynamicRoot));
 
@@ -229,7 +237,7 @@ namespace PrisonersOfOmar.Gameplay
 
         void SpawnItems()
         {
-            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead);
+            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead, Tuning.SupplyMul);
             foreach (var p in placements)
             {
                 var e = new ItemEntity { Id = Items.Count, Type = p.Type, Charge = p.Charge };

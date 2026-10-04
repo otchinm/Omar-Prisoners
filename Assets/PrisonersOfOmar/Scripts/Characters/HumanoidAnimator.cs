@@ -277,6 +277,8 @@ namespace PrisonersOfOmar.Characters
             }
             float crouch = _crouchW;
             float runW = Smooth01((_speed - WalkSpeed * 1.08f) / Mathf.Max(0.1f, RunSpeed * 0.92f - WalkSpeed * 1.08f)) * (1f - crouch);
+            // Omar never breaks into a human run: his heavy walk just gets faster (longer, quicker strides)
+            if (_heavy) runW = 0f;
             _runW = runW;
             float sc = Mathf.Max(0.6f, _hipH / 0.855f);
             float L;
@@ -307,7 +309,7 @@ namespace PrisonersOfOmar.Characters
         {
             _moveW = Approach(_moveW, Smooth01((_speed - 0.12f) / 0.45f), dt, 0.08f);
             _crouchW = Approach(_crouchW, Crouching && Grounded ? 1f : 0f, dt, 0.2f);
-            _sprintW = Approach(_sprintW, Sprinting && _speed > WalkSpeed * 1.2f ? 1f : 0f, dt, 0.25f);
+            _sprintW = Approach(_sprintW, !_heavy && Sprinting && _speed > WalkSpeed * 1.2f ? 1f : 0f, dt, 0.25f);
             _injW = Approach(_injW, Injured ? 1f : 0f, dt, 0.4f);
             _airW = Approach(_airW, Grounded ? 0f : 1f, dt, Grounded ? 0.08f : 0.15f);
             _exert = Mathf.Clamp01(_exert + (_runW > 0.5f ? dt / 6f : -dt / 14f));
@@ -370,9 +372,11 @@ namespace PrisonersOfOmar.Characters
                 -0.06f * s * _crouchW);
             float yawAmp = Mathf.Lerp(Mathf.Lerp(6f, 11f, _runW), 3f, _crouchW) * _moveW;
             float pelvisYaw = yawAmp * Mathf.Cos(2f * Mathf.PI * _phase);
-            float rollAmp = Mathf.Lerp(4f, 3f, _runW) * _moveW * (_heavy ? 1.5f : 1f);
+            float rollAmp = Mathf.Lerp(4f, 3f, _runW) * _moveW * (_heavy ? 1.15f : 1f);
             float pelvisRoll = -rollAmp * Mathf.Sin(2f * Mathf.PI * (_phase + 0.25f - D * 0.5f)) + shift * 2.5f * idleW;
-            float lean = Mathf.Lerp(Mathf.Lerp(3f, 11f, _runW) * _moveW, 20f, _crouchW) + 9f * _sprintW + (_heavy ? 7f : 0f);
+            // Omar stays upright (no forward lean while chasing), just a slight heavy hunch
+            float lean = _heavy ? 2.5f + 1.5f * _moveW
+                : Mathf.Lerp(Mathf.Lerp(3f, 11f, _runW) * _moveW, 20f, _crouchW) + 9f * _sprintW;
             lean += _injW * 6f * _moveW;
             p.Rot[(int)BoneId.Hips] = new Vector3(lean * 0.35f, pelvisYaw, pelvisRoll);
             p.Rot[(int)BoneId.Spine] = new Vector3(lean * 0.3f + (_heavy ? 4f : 0f), -pelvisYaw * 0.45f, -pelvisRoll * 0.5f);
@@ -387,6 +391,7 @@ namespace PrisonersOfOmar.Characters
             // ---------------------------------------------------------------- arms (FK)
             float swing = Mathf.Lerp(Mathf.Lerp(15f, 44f, _runW) * Mathf.Clamp01(_speed / Mathf.Max(0.5f, WalkSpeed) + 0.2f), 8f, _crouchW) * _moveW;
             swing *= 1f + 0.35f * _sprintW;
+            if (_heavy) swing = Mathf.Min(swing * 0.35f, 9f); // arms mostly hang, a stiff small sway
             float c = Mathf.Cos(2f * Mathf.PI * _phase);
             float elbow = Mathf.Lerp(Mathf.Lerp(12f, 78f, _runW) * _moveW + 9f * idleW, 45f, _crouchW);
             float flexBias = Mathf.Lerp(Mathf.Lerp(3f, -8f, _runW) * _moveW, -22f, _crouchW) + (_heavy ? -6f : 0f);
