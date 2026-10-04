@@ -225,6 +225,7 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             bool lighter = !IsLocal && LighterOn && _heldType == ItemType.Lighter && _visible;
+            if (_heldType == ItemType.Lighter) ItemMeshFactory.SetLighterLid(_heldModel, lighter ? 1f : 0f);
             bool flash = !IsLocal && FlashlightOn && _heldType == ItemType.Flashlight && _visible;
 
             if (lighter)
@@ -232,7 +233,7 @@ namespace PrisonersOfOmar.Gameplay
                 var anchor = FindAnchor("Anchor_Flame");
                 if (_lighterLight == null)
                 {
-                    _lighterLight = PsxLight.Create(anchor, Vector3.up * 0.04f, new Color(1f, 0.7f, 0.36f), 1.25f, 5.5f, PsxFlicker.Candle, "LighterLight");
+                    _lighterLight = PsxLight.Create(anchor, Vector3.up * 0.04f, new Color(1f, 0.76f, 0.48f), 1.4f, 7f, PsxFlicker.Candle, "LighterLight");
                     _lighterLight.Priority = 8;
                 }
                 if (_flame == null && anchor != null)
@@ -264,6 +265,16 @@ namespace PrisonersOfOmar.Gameplay
             {
                 if (_flashLight != null) { Destroy(_flashLight.gameObject); _flashLight = null; }
                 if (_flashFill != null) { Destroy(_flashFill.gameObject); _flashFill = null; }
+            }
+        }
+
+        /// <summary>Where a shot leaves the revolver this avatar holds (falls back to in front of the chest).</summary>
+        public Vector3 MuzzlePosition
+        {
+            get
+            {
+                var t = _heldModel != null ? FindDeep(_heldModel.transform, "Anchor_Muzzle") : null;
+                return t != null ? t.position : ChestPosition + Forward * 0.45f + Vector3.up * 0.1f;
             }
         }
 

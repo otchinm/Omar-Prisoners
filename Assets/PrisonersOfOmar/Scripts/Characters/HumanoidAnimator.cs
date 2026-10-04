@@ -89,6 +89,13 @@ namespace PrisonersOfOmar.Characters
                 case CharacterAction.Cut: return 1.0f;
                 case CharacterAction.Heal: return 2.5f;
                 case CharacterAction.Wave: return 1.5f;
+                case CharacterAction.Shoot: return 0.55f;
+                case CharacterAction.BedLift: return 1.6f;
+                case CharacterAction.ChopMeat: return 1.1f;
+                case CharacterAction.CrawlUnder: return 0.9f;
+                case CharacterAction.CrawlOut: return 0.9f;
+                case CharacterAction.Cower: return 1.2f;
+                case CharacterAction.Push: return 0.6f;
                 default: return 0.8f;
             }
         }
@@ -140,7 +147,7 @@ namespace PrisonersOfOmar.Characters
         Vector3 _moveDir = Vector3.forward;
         float _phase, _prevPhase;
         float _moveW, _runW, _crouchW, _sprintW, _injW, _airW, _exert;
-        readonly float[] _holdW = new float[7];
+        readonly float[] _holdW = new float[8];
         readonly float[] _poseW = new float[7];
         bool _hiddenApplied;
 
@@ -572,6 +579,11 @@ namespace PrisonersOfOmar.Characters
                     p.HandIKR = 0f;
                     p.HandRotWR = 0f;
                     break;
+                case HoldPose.Pistol:
+                    p.SetHandGoalChest(1, new Vector3(0.13f * s, 0.06f * s + bob - pitch * 0.002f, 0.42f * s), 1f);
+                    p.SetHandRot(1, new Vector3(pitch * 0.9f, -4f, 0f), 1f);
+                    p.ElbowHintR = new Vector3(1f, -1f, -0.3f);
+                    break;
                 case HoldPose.Bottle:
                     p.SetHandGoalChest(1, new Vector3(0.22f * s, 0.27f * s + bob, -0.02f * s), 1f);
                     p.SetHandRot(1, new Vector3(115f, -10f, 0f), 1f);
@@ -732,6 +744,64 @@ namespace PrisonersOfOmar.Characters
                     break;
                 }
                 case CharacterAction.Attack: AttackPose(p, t); break;
+                case CharacterAction.ChopMeat:
+                {
+                    // the overhead chop, bent over the butcher table
+                    AttackPose(p, t);
+                    float k = HoldCurve(t, 0.0f, 0.2f, 0.8f, 1f);
+                    p.Rot[(int)BoneId.Spine].x += 12f * k;
+                    p.Rot[(int)BoneId.Chest].x += 8f * k;
+                    p.Rot[(int)BoneId.Head].x += 18f * k;
+                    break;
+                }
+                case CharacterAction.Shoot:
+                {
+                    // arm out straight, the shot kicks the hand up and back
+                    float k = HoldCurve(t, 0.0f, 0.08f, 0.7f, 1f);
+                    float kick = Bell(t, 0.1f, 0.45f);
+                    p.SetHandGoal(1, new Vector3(0.12f * s, chestY + (0.18f + 0.07f * kick) * s, (0.58f - 0.08f * kick) * s), k);
+                    p.SetHandRot(1, new Vector3(-35f * kick, -4f, 0f), k);
+                    p.ElbowHintR = new Vector3(1f, -1f, -0.2f);
+                    p.Rot[(int)BoneId.Chest].x += -6f * kick * k;
+                    p.Rot[(int)BoneId.Head].x += -8f * kick * k;
+                    break;
+                }
+                case CharacterAction.BedLift:
+                {
+                    // bend down, grab the frame with both hands, heave it up past the chest
+                    float grab = HoldCurve(t, 0.0f, 0.25f, 0.85f, 1f);
+                    float up = HoldCurve(t, 0.25f, 0.55f, 0.8f, 0.98f);
+                    float low = 0.45f * s, high = chestY + 0.1f * s;
+                    float y = Mathf.Lerp(low, high, up);
+                    p.HipsPos += new Vector3(0f, -0.22f * _legLen * grab * (1f - up * 0.7f), -0.05f * s * grab);
+                    p.Rot[(int)BoneId.Spine].x += (30f - 24f * up) * grab;
+                    p.Rot[(int)BoneId.Chest].x += (22f - 26f * up) * grab;
+                    p.Rot[(int)BoneId.Head].x += (10f - 22f * up) * grab;
+                    p.SetHandGoal(1, new Vector3(0.24f * s, y, (0.42f + 0.1f * up) * s), grab);
+                    p.SetHandGoal(0, new Vector3(-0.24f * s, y, (0.42f + 0.1f * up) * s), grab);
+                    p.ElbowHintR = new Vector3(1f, -0.6f, -0.3f);
+                    p.ElbowHintL = new Vector3(-1f, -0.6f, -0.3f);
+                    break;
+                }
+                case CharacterAction.Push:
+                {
+                    float k = HoldCurve(t, 0.0f, 0.2f, 0.45f, 0.95f);
+                    p.Rot[(int)BoneId.Chest].y += -22f * k;
+                    p.Rot[(int)BoneId.Spine].x += 8f * k;
+                    p.SetHandGoal(0, new Vector3(-0.05f * s, chestY + 0.15f * s, 0.55f * s), k);
+                    p.ElbowHintL = new Vector3(-1f, -1f, -0.2f);
+                    break;
+                }
+                case CharacterAction.Cower:
+                {
+                    float k = HoldCurve(t, 0.0f, 0.12f, 0.8f, 1f);
+                    p.HipsPos += new Vector3(0f, -0.08f * s * k, -0.04f * s * k);
+                    p.Rot[(int)BoneId.Spine].x += 14f * k;
+                    p.Rot[(int)BoneId.Head].x += 20f * k;
+                    p.SetHandGoal(1, new Vector3(0.08f * s, eyeY + 0.02f * s, 0.18f * s), k);
+                    p.SetHandGoal(0, new Vector3(-0.08f * s, eyeY + 0.04f * s, 0.16f * s), k);
+                    break;
+                }
                 case CharacterAction.Scream:
                 {
                     float k = HoldCurve(t, 0.0f, 0.14f, 0.82f, 1f);

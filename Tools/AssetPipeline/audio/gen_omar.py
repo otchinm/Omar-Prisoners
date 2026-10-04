@@ -146,7 +146,7 @@ def trap_place(rng):
                     amp_env=dsp.env([(0, 0), (0.2, 1), (0.8, 0)], m), jitter=0.3)
     dsp.place(y, spr, N(0.5), 0.5)
     dsp.place(y, small_metal(rng, N(0.3), 1300, (0.03, 0.12)), N(1.32), 0.6)  # catch set
-    return fin(y, rng, 0.6, 0.12)
+    return dsp.vhs(fin(y, rng, 0.7, 0.16), rng, bits=8, drive=2.0)
 
 
 @sound("Omar/trap_snap", desc="bear trap jaws slam shut: violent snap", **LOUD)
@@ -160,7 +160,7 @@ def trap_snap(rng):
     tw = dsp.sine(np.interp(T(m), [0, 0.7], [240, 190]) * (1 + 0.03 * np.sin(TAU * dsp.phase(16, m))), m)
     dsp.place(y, tw * dsp.expdec(m, 0.18), N(0.01), 0.35)
     y += 0.4 * chain_jingle(rng, n, 8, 0.25)
-    return fin(y, rng, 0.6, 0.15, sat=2.5)
+    return dsp.vhs(fin(y, rng, 0.8, 0.2, sat=3.0), rng, bits=8, drive=2.4, lp_hz=5800)
 
 
 @sound("Omar/tripwire_snap", desc="taut wire snaps: twang + whip", **ONE)
@@ -173,7 +173,7 @@ def tripwire_snap(rng):
     dsp.place(y, tw, 0, 0.8)
     dsp.place(y, dsp.click(N(0.02), 3500, 2, 0.002, rng), 0, 0.8)
     dsp.place(y, sfx.whoosh(N(0.25), rng, 800, 4000, 0.4, 2.0, 0.2), N(0.02), 0.4)
-    return fin(y, rng, 0.4, 0.1)
+    return dsp.vhs(fin(y, rng, 0.5, 0.14), rng, bits=8, drive=2.0)
 
 
 # --------------------------------------------------------------------------------------------- violence
@@ -244,3 +244,12 @@ def bed_lift(rng):
 
 def heavy_scrape_short(rng, n, env_):
     return sfx.scrape(n, rng, env_, 150, 3000, grit=600)
+
+
+@sound("Omar/stunned", desc="Omar hit by a bullet / blast: pained roar through the sack, staggering breath", **LOUD)
+def stunned(rng):
+    n = N(2.2)
+    y = np.zeros(n)
+    dsp.place(y, omar_voice(rng, "scream_3", 0.2, 1.2, 0.62, 0.7, 0.7), 0, 1.0)
+    dsp.place(y, sfx.breath(N(0.9), rng, [(0.0, 0.35, "in", 0.9), (0.45, 0.4, "out", 1.0)], voice=0.4, f0=72, sack=True), N(1.25), 0.6)
+    return dsp.vhs(fin(y, rng, 0.9, 0.22, sat=2.2), rng, bits=8, drive=2.2, lp_hz=5000)

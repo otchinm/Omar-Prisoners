@@ -169,6 +169,8 @@ namespace PrisonersOfOmar.Rendering
 
         // ------------------------------------------------------------------ procedural fallbacks
 
+        static readonly int[] Bayer4 = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+
         static Texture2D Make(int w, int h, string name, Func<float, float, Color> f)
         {
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
@@ -240,6 +242,27 @@ namespace PrisonersOfOmar.Rendering
 
             switch (baseName)
             {
+                case "item_glow":
+                    // pixelated halo: smooth falloff quantised with a 4x4 ordered dither
+                    return Make(32, 32, name, (u, v) =>
+                    {
+                        float r = Mathf.Sqrt(u * u + v * v);
+                        float a = Mathf.Clamp01(1f - r);
+                        a = a * a * (0.6f + 0.4f * a);
+                        int px = Mathf.FloorToInt((u + 1f) * 16f), py = Mathf.FloorToInt((v + 1f) * 16f);
+                        float th = (Bayer4[(py & 3) * 4 + (px & 3)] + 0.5f) / 16f;
+                        float q = a * 3f;
+                        float lvl = Mathf.Floor(q) + ((q - Mathf.Floor(q)) > th ? 1f : 0f);
+                        return new Color(1f, 1f, 1f, Mathf.Clamp01(lvl / 3f));
+                    });
+                case "item_sparkle":
+                    return Make(9, 9, name, (u, v) =>
+                    {
+                        float au = Mathf.Abs(u), av = Mathf.Abs(v);
+                        float cross = (au < 0.15f ? Mathf.Clamp01(1f - av) : 0f) + (av < 0.15f ? Mathf.Clamp01(1f - au) : 0f);
+                        float centre = au < 0.3f && av < 0.3f ? 1f : 0f;
+                        return new Color(1f, 1f, 1f, Mathf.Clamp01(cross * 0.8f + centre));
+                    });
                 case "glow":
                     return Make(32, 32, name, (u, v) =>
                     {

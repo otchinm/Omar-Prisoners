@@ -67,12 +67,14 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.KeypadReq, (id, r) => Host?.OnKeypadReq(id, r));
             s.On(Msg.EscapeReq, (id, r) => Host?.OnEscapeReq(id, r));
             RegisterPlayerHandlers(s);
+            RegisterWorldHandlers(s);
         }
 
         void UnregisterHandlers()
         {
             foreach (var m in HandledMessages) Session.Off(m);
             UnregisterPlayerHandlers(Session);
+            UnregisterWorldHandlers(Session);
         }
 
         // ------------------------------------------------------------------ avatars
@@ -329,7 +331,11 @@ namespace PrisonersOfOmar.Gameplay
             float seconds = r.ReadFloat();
             if (LocalOmar != null) LocalOmar.Stun(seconds);
             var oa = OmarAvatar;
-            if (oa != null) oa.PlayAction(CharacterAction.Stunned);
+            if (oa != null)
+            {
+                oa.PlayAction(CharacterAction.Stunned);
+                if (LocalOmar == null) AudioManager.Play3D(Snd.OmarStunned, oa.ChestPosition, 1f, Random.Range(0.9f, 1.02f), 3f, 40f, AudioCategory.Omar);
+            }
         }
 
         void OnNoise(int sender, NetReader r)

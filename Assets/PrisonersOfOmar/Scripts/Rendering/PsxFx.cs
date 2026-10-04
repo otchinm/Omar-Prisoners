@@ -32,15 +32,48 @@ namespace PrisonersOfOmar.Rendering
         }
 
         /// <summary>(iteration 2) Revolver muzzle flash at <paramref name="position"/> pointing along <paramref name="direction"/>.</summary>
-        public static void MuzzleFlash(Vector3 position, Vector3 direction)
+        public static void MuzzleFlash(Vector3 position, Vector3 direction, int layer = -1)
         {
-            LightFlash(position, new Color(1f, 0.85f, 0.6f), 3f, 7f, 0.07f);
+            if (layer < 0) layer = Layers.Default;
+            LightFlash(position, new Color(1f, 0.85f, 0.6f), 4f, 9f, 0.08f);
+            direction = direction.sqrMagnitude > 1e-6f ? direction.normalized : Vector3.forward;
+            // star-shaped flash + a hot core, gone in a few frames
+            var flash = Particle(position + direction * 0.06f, PsxFxAssets.Texture("glow"), PsxSurface.Additive, layer, false);
+            if (flash != null)
+            {
+                flash.Lifetime = 0.07f;
+                flash.StartSize = new Vector2(0.45f, 0.45f); flash.EndSize = new Vector2(0.2f, 0.2f);
+                flash.StartColor = new Color(1f, 0.9f, 0.6f, 1f); flash.EndColor = new Color(1f, 0.5f, 0.15f, 0f);
+                flash.Play();
+            }
+            var core = Particle(position + direction * 0.03f, PsxFxAssets.Texture("spark"), PsxSurface.Additive, layer, false);
+            if (core != null)
+            {
+                core.Lifetime = 0.05f;
+                core.StartSize = new Vector2(0.18f, 0.18f); core.EndSize = new Vector2(0.08f, 0.08f);
+                core.StartColor = Color.white; core.EndColor = new Color(1f, 0.8f, 0.4f, 0f);
+                core.Play();
+            }
             Sparks(position, direction);
+            for (int i = 0; i < 3; i++)
+            {
+                var smoke = Particle(position + direction * (0.05f + 0.04f * i), PsxFxAssets.Texture("smoke"), PsxSurface.Transparent, layer, false);
+                if (smoke == null) continue;
+                smoke.Lifetime = 0.9f + 0.3f * i;
+                smoke.StartSize = new Vector2(0.08f, 0.08f); smoke.EndSize = new Vector2(0.35f, 0.35f);
+                smoke.StartColor = new Color(0.7f, 0.7f, 0.68f, 0.45f); smoke.EndColor = new Color(0.6f, 0.6f, 0.6f, 0f);
+                smoke.Velocity = direction * 0.6f + Vector3.up * 0.25f + UnityEngine.Random.insideUnitSphere * 0.1f;
+                smoke.Drag = 2f;
+                smoke.Play();
+            }
         }
 
         // ------------------------------------------------------------------ persistent effects
 
-        /// <summary>Animated lighter flame billboard (persistent; destroy or SetActive(false) to hide). ~3cm tall at scale 1.</summary>
+        /// <summary>
+        /// Lighter flame (persistent; destroy or SetActive(false) to hide): two tall tongues with a white-yellow core
+        /// that lag behind motion and sometimes split, plus a soft warm glow. ~5 cm tall at scale 1.
+        /// </summary>
         public static GameObject CreateFlame(Transform parent, float scale = 1f)
         {
             int layer = parent != null ? parent.gameObject.layer : Layers.Default;
@@ -50,23 +83,30 @@ namespace PrisonersOfOmar.Rendering
             go.transform.localScale = Vector3.one * scale;
 
             var frames = PsxFxAssets.Frames("flame_", 4);
-            var body = PersistentSprite(go.transform, "FlameBody", Vector3.zero, layer, PsxFxAssets.QuadBottom,
-                PsxFxAssets.Material(frames[0], PsxSurface.Additive), true);
-            body.Frames = frames;
-            body.Fps = 14f;
-            body.StartSize = body.EndSize = new Vector2(0.018f, 0.032f);
-            body.StartColor = body.EndColor = new Color(1f, 0.95f, 0.88f, 1f);
-            body.Flicker = 0.15f;
-            body.SizeJitter = 0.2f;
-            body.Play();
+            var mat = PsxFxAssets.Material(frames[0], PsxSurface.Additive);
+            var flame = go.AddComponent<PsxFlame>();
+            for (int i = 0; i < 2; i++)
+            {
+                var t = PersistentSprite(go.transform, i == 0 ? "TongueA" : "TongueB", Vector3.zero, layer, PsxFxAssets.QuadBottom, mat, true);
+                t.Frames = frames;
+                t.Fps = i == 0 ? 15f : 11f;
+                t.StartSize = t.EndSize = new Vector2(flame.Width, flame.Height);
+                t.StartColor = t.EndColor = i == 0 ? new Color(1f, 0.97f, 0.9f, 1f) : new Color(1f, 0.78f, 0.5f, 0.85f);
+                t.Flicker = i == 0 ? 0.12f : 0.25f;
+                t.SizeJitter = 0.18f;
+                t.Play();
+                if (i == 0) { flame.TongueA = t; flame.BillA = t.GetComponent<PsxBillboard>(); }
+                else { flame.TongueB = t; flame.BillB = t.GetComponent<PsxBillboard>(); }
+            }
 
-            var glow = PersistentSprite(go.transform, "FlameGlow", new Vector3(0f, 0.013f, 0f), layer, PsxFxAssets.QuadCenter,
+            var glow = PersistentSprite(go.transform, "FlameGlow", new Vector3(0f, 0.02f, 0f), layer, PsxFxAssets.QuadCenter,
                 PsxFxAssets.Material("glow", PsxSurface.Additive), false);
-            glow.StartSize = glow.EndSize = new Vector2(0.09f, 0.09f);
-            glow.StartColor = glow.EndColor = new Color(1f, 0.55f, 0.2f, 0.32f);
-            glow.Flicker = 0.35f;
-            glow.SizeJitter = 0.1f;
+            glow.StartSize = glow.EndSize = new Vector2(0.13f, 0.13f);
+            glow.StartColor = glow.EndColor = new Color(1f, 0.6f, 0.25f, 0.3f);
+            glow.Flicker = 0.3f;
+            glow.SizeJitter = 0.12f;
             glow.Play();
+            flame.Glow = glow;
             return go;
         }
 

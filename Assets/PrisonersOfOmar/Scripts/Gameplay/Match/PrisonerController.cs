@@ -34,6 +34,9 @@ namespace PrisonersOfOmar.Gameplay
 
         // lights in the first-person hand
         bool _lighterOn, _flashOn;
+        float _lighterLitAt, _flickAt = -1f, _lidOpen;
+        bool _flickRetry;
+        bool LighterLit => _lighterOn && Time.time >= _lighterLitAt;
         PsxLight _lighterLight, _flashLight, _flashFill;
         GameObject _flame;
         AudioSource _flameLoop;
@@ -366,7 +369,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var l = ItemOfType(ItemType.Lighter);
                 if (l == null || ht != ItemType.Lighter || hidden) _lighterOn = false;
-                else
+                else if (LighterLit)
                 {
                     l.Charge = Mathf.Max(0f, l.Charge - dt / Tuning.LighterBurnSeconds);
                     if (l.Charge <= 0f) { _lighterOn = false; AudioManager.Play2D(Snd.LighterClose, 0.6f); _w.AddMessage("THE LIGHTER IS OUT OF FUEL", 3f); }
@@ -410,8 +413,16 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.Lighter:
                     if (held.Charge <= 0.001f) { AudioManager.Play2D(Snd.LighterFlick, 0.5f); _w.AddMessage("NO FUEL", 2f); break; }
                     _lighterOn = !_lighterOn;
-                    if (_lighterOn) { AudioManager.Play2D(Snd.LighterOpen, 0.6f); AudioManager.Play2D(Snd.LighterFlick, 0.7f, Random.Range(0.95f, 1.05f)); MakeNoise(3f); }
-                    else AudioManager.Play2D(Snd.LighterClose, 0.6f);
+                    if (_lighterOn)
+                    {
+                        // flick the lid open, then strike the wheel (sometimes it takes a second strike)
+                        AudioManager.Play2D(Snd.LighterOpen, 0.6f);
+                        _flickRetry = Random.value < 0.22f;
+                        _flickAt = Time.time + 0.13f;
+                        _lighterLitAt = Time.time + (_flickRetry ? 0.5f : 0.19f);
+                        MakeNoise(3f);
+                    }
+                    else { AudioManager.Play2D(Snd.LighterClose, 0.6f); _flickAt = -1f; }
                     break;
                 case ItemType.Flashlight:
                     if (held.Charge <= 0.001f) { AudioManager.Play2D(Snd.FlashlightClick, 0.5f); _w.AddMessage("THE BATTERIES ARE DEAD", 2f); break; }
@@ -443,6 +454,9 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.Bottle:
                     Throw(held);
                     break;
+                case ItemType.Revolver:
+                    Fire(held);
+                    break;
                 case ItemType.SoundMeter:
                     AudioManager.Play2D(Snd.SoundMeterTick, 0.4f);
                     _w.AddMessage("THE NEEDLE SHOWS HOW MUCH NOISE I MAKE", 2.5f);
@@ -451,6 +465,36 @@ namespace PrisonersOfOmar.Gameplay
                     _w.AddMessage("I NEED TO USE THIS ON SOMETHING (E)", 2.5f);
                     break;
             }
+        }
+
+        float _nextShot, _cockAt = -1f;
+
+        /// <summary>Revolver: one deafening shot (the host decides what it hit). Two rounds in the cylinder.</summary>
+        void Fire(ItemEntity gun)
+        {
+            if (Time.time < _nextShot) return;
+            _nextShot = Time.time + 0.75f;
+            if (gun.Charge < 0.49f)
+            {
+                AudioManager.Play2D(Snd.GunEmpty, 0.8f, Random.Range(0.95f, 1.05f));
+                _arms?.Play(CharacterAction.Shoot);
+                return;
+            }
+            gun.Charge = Mathf.Max(0f, gun.Charge - 0.5f); // predicted, the host confirms
+            var rig = PsxCameraRig.Instance;
+            Vector3 origin = rig != null ? rig.transform.position : _avatar.EyePosition;
+            Vector3 dir = rig != null ? rig.transform.forward : Quaternion.Euler(_pitch, _yaw, 0) * Vector3.forward;
+            _w.SendShoot(origin, dir);
+            _arms?.Play(CharacterAction.Shoot);
+            AudioManager.Play2D(Snd.GunShot, 1f, Random.Range(0.96f, 1.03f));
+            var muzzle = _arms != null && _arms.HeldModel != null ? Avatar.FindDeep(_arms.HeldModel.transform, "Anchor_Muzzle") : null;
+            try { PsxFx.MuzzleFlash(muzzle != null ? muzzle.position : origin + dir * 0.5f, dir, muzzle != null ? Layers.ViewModel : -1); } catch { }
+            // the kick throws the view up; the tape tears for a moment
+            _pitch = Mathf.Clamp(_pitch - 4.5f, -85f, 85f);
+            _yaw += Random.Range(-1.2f, 1.2f);
+            _hitFx = Mathf.Max(_hitFx, 0.35f);
+            VhsEffect.TriggerGlitch(0.35f, 0.18f);
+            if (gun.Charge >= 0.49f) _cockAt = Time.time + 0.4f;
         }
 
         void StartUseHold(ItemType t)
@@ -554,6 +598,7 @@ namespace PrisonersOfOmar.Gameplay
             _who.Crouching = _crouch;
             _hasPrompt = false;
             _prompt = default;
+            SetGlowTarget(null);
             if (!_w.Running || GameInput.GameplayBlocked) { _hold = 0; return; }
 
             // special states first
@@ -602,6 +647,7 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             if (target != _target) { _target = target; _hold = 0; }
+            SetGlowTarget(_target as WorldItem);
             if (_target == null) { _holdLock = false; return; }
             if (!_target.GetPrompt(_who, out _prompt)) { _hold = 0; return; }
             _hasPrompt = true;
@@ -844,6 +890,17 @@ namespace PrisonersOfOmar.Gameplay
             return false;
         }
 
+        WorldItem _glowItem;
+
+        /// <summary>The item we aim at glows brighter.</summary>
+        void SetGlowTarget(WorldItem wi)
+        {
+            if (wi == _glowItem) return;
+            if (_glowItem != null && _glowItem.Glow != null) _glowItem.Glow.Highlighted = false;
+            _glowItem = wi;
+            if (_glowItem != null && _glowItem.Glow != null) _glowItem.Glow.Highlighted = true;
+        }
+
         // ================================================================== traps
 
         void CheckTraps(PlayerStatus st)
@@ -885,7 +942,17 @@ namespace PrisonersOfOmar.Gameplay
                 var needle = Avatar.FindDeep(_arms.HeldModel.transform, "Needle");
                 if (needle != null) needle.localRotation = Quaternion.Euler(0, 0, ItemMeshFactory.SoundMeterNeedleAngle(_noiseSmoothed));
             }
-            SetHandLights(_lighterOn && want == ItemType.Lighter && show, _flashOn && want == ItemType.Flashlight && show);
+            if (_cockAt >= 0f && Time.time >= _cockAt) { _cockAt = -1f; AudioManager.Play2D(Snd.GunCock, 0.6f); }
+            if (!_lighterOn) _flickAt = -1f;
+            if (_flickAt >= 0f && Time.time >= _flickAt)
+            {
+                AudioManager.Play2D(Snd.LighterFlick, 0.7f, Random.Range(0.94f, 1.06f));
+                if (_flickRetry) { _flickRetry = false; _flickAt = Time.time + 0.31f; try { if (_arms.HeldModel != null) PsxFx.Sparks(_arms.HeldModel.transform.position + _arms.HeldModel.transform.up * 0.05f, Vector3.up); } catch { } }
+                else _flickAt = -1f;
+            }
+            _lidOpen = Mathf.MoveTowards(_lidOpen, _lighterOn ? 1f : 0f, Time.deltaTime / 0.09f);
+            if (want == ItemType.Lighter) ItemMeshFactory.SetLighterLid(_arms.HeldModel, _lighterOn ? 1f - (1f - _lidOpen) * (1f - _lidOpen) : _lidOpen * _lidOpen);
+            SetHandLights(LighterLit && want == ItemType.Lighter && show, _flashOn && want == ItemType.Flashlight && show);
         }
 
         void SetHandLights(bool lighter, bool flash)
@@ -895,7 +962,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (_lighterLight == null && _arms != null)
                 {
                     var anchor = _arms.HeldModel != null ? (Avatar.FindDeep(_arms.HeldModel.transform, "Anchor_Flame") ?? _arms.HeldModel.transform) : _arms.HandSocket;
-                    _lighterLight = PsxLight.Create(anchor, Vector3.up * 0.03f, new Color(1f, 0.7f, 0.36f), 1.35f, 5.5f, PsxFlicker.Candle, "LocalLighter");
+                    _lighterLight = PsxLight.Create(anchor, Vector3.up * 0.03f, new Color(1f, 0.76f, 0.48f), 1.55f, 7.5f, PsxFlicker.Candle, "LocalLighter");
                     _lighterLight.Priority = 10;
                     try { _flame = PsxFx.CreateFlame(anchor, 1f); } catch { }
                     _flameLoop = AudioManager.Loop2D(Snd.FlameLoop, 0.18f, AudioCategory.Sfx, 0.2f);
@@ -969,7 +1036,7 @@ namespace PrisonersOfOmar.Gameplay
             AvatarFlags f = AvatarFlags.None;
             if (_crouch) f |= AvatarFlags.Crouch;
             if (_sprintingNow) f |= AvatarFlags.Sprint;
-            if (_lighterOn) f |= AvatarFlags.LighterOn;
+            if (LighterLit) f |= AvatarFlags.LighterOn;
             if (_flashOn) f |= AvatarFlags.FlashlightOn;
             if (_motor.Grounded) f |= AvatarFlags.Grounded;
             s.Flags = f;

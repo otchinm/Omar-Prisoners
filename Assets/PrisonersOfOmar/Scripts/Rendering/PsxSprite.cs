@@ -69,6 +69,8 @@ namespace PrisonersOfOmar.Rendering
             Velocity = Vector3.zero; Gravity = 0f; Drag = 0f; FloorY = float.NegativeInfinity;
             Lifetime = -1f;
             _age = 0f;
+            // a reused sprite must not keep the flipbook frame of its previous life over its new material
+            if (_mpb != null) { _mpb.Clear(); if (Renderer != null) Renderer.SetPropertyBlock(_mpb); }
         }
 
         /// <summary>Call after configuring: restarts the life and applies the first frame immediately.</summary>

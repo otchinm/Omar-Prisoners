@@ -430,6 +430,7 @@ namespace PrisonersOfOmar.Map
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(17.5f, F, -1f), 3f, 3f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("water_stain"), V(19.5f, F, 0.6f), 1.2f, 1.0f, 30f);
             ctx.Key(A, V(20.5f, F + Props.WorkbenchTop, -1.9f));
+            ctx.Gun(A, V(20.95f, F + Props.WorkbenchTop, -1.95f), 30f);
             ctx.Common(A, V(20.6f, F + Props.WorkbenchTop, -0.5f));
             ctx.Key(A, V(17.6f - 0.62f, F + Props.ShelfLevel(1), 1.52f));
             ctx.Common(A, V(14.5f, F, -3.55f));

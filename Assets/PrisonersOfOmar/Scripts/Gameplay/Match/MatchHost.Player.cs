@@ -364,6 +364,7 @@ namespace PrisonersOfOmar.Gameplay
             var h = W.Hiding[spot];
             if (!Near(omarId, h.InteractPoint, 3.8f)) return -1;
             int occ = h.Occupant;
+            if (h.IsBed) BroadcastAction(omarId, CharacterAction.BedLift);
             BroadcastHide(spot, -1, true);
             if (occ < 0) return -1;
             var st = Edit(occ);

@@ -75,19 +75,25 @@ namespace PrisonersOfOmar.UI
 
         float _staminaAlpha;
 
-        /// <summary>"STAMINA" + thin outlined bar, bottom left; shows while running / recovering, fades when full.</summary>
+        /// <summary>Like the reference: "STAMINA" and a long thin outlined bar along the bottom left; shows while
+        /// running / recovering, fades out when full.</summary>
         void DrawStamina(VhsUI ui, float stamina)
         {
             _staminaAlpha = Mathf.MoveTowards(_staminaAlpha, stamina < 0.985f ? 1f : 0f, Time.unscaledDeltaTime * (stamina < 0.985f ? 6f : 1.2f));
             if (_staminaAlpha <= 0.01f) return;
-            var font = ui.TinyFont;
-            float x = 12 + 3 * 24 + 8, y = ui.Height - 22;
-            var col = new Color(0.9f, 0.9f, 0.88f, _staminaAlpha);
-            ui.Text("STAMINA", x, y, col, 1, Align.Left, font);
-            float bx = x + ui.TextWidth("STAMINA", 1, font) + 4, bw = 56, bh = 5;
-            var frame = new Rect(bx, y + 1, bw, bh);
-            ui.Frame(frame, col);
-            ui.Rect(bx + 1, y + 2, (bw - 2) * Mathf.Clamp01(stamina), bh - 2, new Color(0.85f, 0.85f, 0.82f, 0.9f * _staminaAlpha));
+            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 15;
+            var col = new Color(0.92f, 0.92f, 0.9f, _staminaAlpha);
+            ui.Text("STAMINA", x + 1, y + 1, new Color(0f, 0f, 0f, 0.6f * _staminaAlpha));
+            ui.Text("STAMINA", x, y, col);
+            float bx = x + ui.TextWidth("STAMINA") + 6;
+            float bw = Mathf.Round(ui.Width * 0.3f), bh = 6;
+            float by = y + Mathf.Floor((ui.LineHeight() - bh) * 0.5f);
+            ui.Rect(bx, by, bw, bh, new Color(0f, 0f, 0f, 0.45f * _staminaAlpha));
+            ui.Frame(new Rect(bx, by, bw, bh), new Color(0.8f, 0.8f, 0.78f, 0.85f * _staminaAlpha));
+            float fill = (bw - 4) * Mathf.Clamp01(stamina);
+            ui.Rect(bx + 2, by + 2, fill, bh - 4, new Color(0.62f, 0.62f, 0.6f, 0.9f * _staminaAlpha));
+            // the little end marker of the reference bar
+            ui.Rect(bx + 2 + fill - 1, by + 1, 2, bh - 2, new Color(0.95f, 0.95f, 0.92f, _staminaAlpha));
         }
 
         static void DrawPrompt(VhsUI ui, bool has, InteractPrompt p, float progress)
@@ -104,7 +110,7 @@ namespace PrisonersOfOmar.UI
         static void DrawInventoryStrip(VhsUI ui, MatchWorld w)
         {
             var inv = w.Inventory;
-            float x = 12, y = ui.Height - 30, s = 20;
+            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 44, s = 20;
             for (int i = 0; i < 3; i++)
             {
                 var r = new Rect(x + i * (s + 4), y, s, s);

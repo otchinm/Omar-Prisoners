@@ -85,32 +85,52 @@ def text_lines(h, w, rng, x0, y0, x1, y1, rows, color, img, alpha=0.8, thick=1):
 
 # --------------------------------------------------------------------------------------------- items
 def lighter():
+    """Zippo like the first-person reference: olive case, pale brass perforated chimney, dark blue flint wheel."""
     c = Canvas(64, 64, 11)
     r = c.rng
-    brass = "#b08a3a"
-    front = metal(32 * S, 32 * S, brass, r, scratches=0.5)
-    # bevel highlight + dark edges
+    olive = "#59632e"
+
+    def case(h, w, light=1.0):
+        base = metal(h, w, olive, r, brushed=True, scratches=0.35)
+        base = shade(base, light)
+        # crackle-paint speckle + worn edges showing the brass underneath
+        n = fbm(h, w, 14, r, octaves=3)
+        base = mix(base, rgb("#3c4420"), smoothstep(0.62, 0.7, n) * 0.6)
+        u, v = uv_grid(h, w)
+        edge = np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v))
+        wear = smoothstep(0.07, 0.0, edge) * smoothstep(0.35, 0.65, fbm(h, w, 6, r, octaves=3))
+        base = mix(base, rgb("#b09650"), wear * 0.8)
+        return grime(base, r, 0.25, (0.12, 0.12, 0.06))
+
+    front = case(32 * S, 32 * S)
     u, v = uv_grid(32 * S, 32 * S)
-    front = shade(front, 1 + 0.25 * np.exp(-((u - 0.3) / 0.08) ** 2) - 0.25 * (np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v)) < 0.06))
-    front = mix(front, rgb("#5a4418"), text_mask(32 * S, 32 * S, "Z", 16 * S, 17 * S, 14 * S, stroke=1) * 0.35)
-    c.put(0, 0, grime(front, r, 0.2, (0.2, 0.15, 0.05)))
-    side = metal(32 * S, 16 * S, brass, r, scratches=0.4)
-    side = shade(side, 0.82)
-    c.put(32, 0, side)
-    lid = metal(16 * S, 32 * S, brass, r, scratches=0.4)
-    u, v = uv_grid(16 * S, 32 * S)
-    lid = shade(lid, 1 + 0.2 * np.exp(-((u - 0.3) / 0.08) ** 2))
+    front = shade(front, 1 + 0.18 * np.exp(-((u - 0.28) / 0.07) ** 2))      # rounded corner highlight
+    c.put(0, 0, front)
+    c.put(32, 0, case(32 * S, 16 * S, 0.8))
+    lid = case(16 * S, 32 * S)
+    lu, lv = uv_grid(16 * S, 32 * S)
+    lid = shade(lid, 1 + 0.18 * np.exp(-((lu - 0.28) / 0.07) ** 2))
     c.put(0, 32, lid)
-    chim = metal(16 * S, 16 * S, "#a8a8a0", r, scratches=0.2)
-    yy, xx = np.mgrid[0:16 * S, 0:16 * S]
-    holes = ((((xx // S) % 4) == 1) & (((yy // S) % 4) == 1)) | ((((xx // S) % 4) == 2) & (((yy // S) % 4) == 1))
-    holes = holes & (((yy // S) % 4) == 1)
-    chim = mix(chim, rgb("#101010"), holes.astype(np.float32))
-    c.put(32, 32, chim)
-    c.put(48, 0, metal(16 * S, 16 * S, brass, r, scratches=0.3))
-    c.put(48, 16, metal(16 * S, 16 * S, "#9a9a92", r, scratches=0.2))
-    c.put(48, 32, metal(16 * S, 16 * S, "#2a2622", r, brushed=False, scratches=0.0))
-    c.put(0, 48, fill(16 * S, 64 * S, rgb("#3a3a36")))
+
+    # chimney: pale brass sheet with big round holes in a 3 x 3 grid
+    chim = metal(16 * S, 16 * S, "#d8cf9a", r, scratches=0.15)
+    yy, xx = np.mgrid[0:16 * S, 0:16 * S] / float(S)
+    holes = np.zeros((16 * S, 16 * S), np.float32)
+    for cy in (3.2, 8.0, 12.8):
+        for cx in (2.8, 8.0, 13.2):
+            ox = 2.6 if cy == 8.0 else 0.0
+            d = np.sqrt((xx - cx - ox) ** 2 + (yy - cy) ** 2)
+            holes = np.maximum(holes, smoothstep(1.9, 1.3, d))
+    chim = shade(chim, 1 - 0.25 * smoothstep(2.6, 1.6, np.sqrt(0) + 0) * 0)
+    chim = mix(chim, rgb("#1a120a"), holes)
+    c.put(32, 32, grime(chim, r, 0.2, (0.3, 0.25, 0.1)))
+    c.put(48, 0, metal(16 * S, 16 * S, "#c8bc84", r, scratches=0.3))           # case / insert top
+    c.put(48, 16, metal(16 * S, 16 * S, "#bdb289", r, scratches=0.2))          # insert
+    wheel = metal(16 * S, 16 * S, "#1c2a6a", r, brushed=False, scratches=0.0)  # dark blue flint wheel
+    wheel = shade(wheel, 1 - 0.35 * ((np.mgrid[0:16 * S, 0:16 * S][1] // S) % 2 == 0))
+    c.put(48, 32, wheel)
+    c.put(0, 48, metal(16 * S, 32 * S, "#2c2a22", r, brushed=False, scratches=0.1))  # inside of the lid
+    c.put(32, 48, fill(16 * S, 32 * S, rgb("#3a3a36")))
     return c.done()
 
 
@@ -494,6 +514,34 @@ def beartrap():
     return c.done()
 
 
+def revolver():
+    """Old revolver: blued steel worn silver at the edges, dark wooden grip, brass cartridge rims."""
+    c = Canvas(64, 64, 41)
+    r = c.rng
+    blued = metal(32 * S, 32 * S, "#2b2e33", r, scratches=0.45, rust=0.15)
+    c.put(0, 0, grime(blued, r, 0.25, (0.08, 0.07, 0.06)))
+    worn = metal(32 * S, 32 * S, "#55585c", r, scratches=0.7, rust=0.25)
+    c.put(32, 0, grime(worn, r, 0.3, (0.1, 0.08, 0.06)))
+    wood = fill(32 * S, 32 * S, rgb("#4a2c18"))
+    u, v = uv_grid(32 * S, 32 * S)
+    grain = np.sin((u * 18 + fbm(32 * S, 32 * S, 5, r, octaves=3) * 3) * np.pi)
+    wood = shade(wood, 0.85 + 0.15 * grain)
+    # checkering
+    yy, xx = np.mgrid[0:32 * S, 0:32 * S]
+    chk = (((xx + yy) // (2 * S)) % 2 == 0) & (((xx - yy) // (2 * S)) % 2 == 0)
+    wood = shade(wood, 1 - 0.18 * chk)
+    c.put(0, 32, grime(wood, r, 0.35, (0.1, 0.06, 0.03)))
+    cyl = metal(16 * S, 16 * S, "#3a3d42", r, scratches=0.5)
+    cu, cv = uv_grid(16 * S, 16 * S)
+    cyl = shade(cyl, 1 - 0.35 * ((np.floor(cu * 8) % 2) == 0) * smoothstep(0.3, 0.5, cv) * smoothstep(0.9, 0.7, cv))  # flutes
+    c.put(32, 32, cyl)
+    c.put(48, 32, fill(16 * S, 16 * S, rgb("#0c0c0c")))
+    rim = metal(16 * S, 16 * S, "#a08040", r, brushed=False, scratches=0.2)
+    c.put(32, 48, rim)
+    c.put(0, 0, c.region(0, 0, 32, 32))
+    return c.done()
+
+
 ITEMS = {
     "lighter": lighter,
     "lighterfuel": lighterfuel,
@@ -511,6 +559,7 @@ ITEMS = {
     "crowbar": crowbar,
     "bottle": bottle,
     "pills": pills,
+    "revolver": revolver,
     "cleaver": cleaver,
     "tripwire_stake": tripwire_stake,
     "beartrap": beartrap,

@@ -172,6 +172,8 @@ namespace PrisonersOfOmar.Characters
             {
                 HeldModel = ItemMeshFactory.Build(item);
                 HeldModel.transform.SetParent(HandSocket, false);
+                // the Zippo sits close to the lens in the corner of the view, like the reference
+                if (item == ItemType.Lighter) HeldModel.transform.localScale = Vector3.one * 1.35f;
                 GeoUtil.SetLayerRecursive(HeldModel, Layers.ViewModel);
                 _gripL = HeldModel.transform.Find("Grip_L");
                 foreach (var r in HeldModel.GetComponentsInChildren<Renderer>(true)) r.enabled = _visible;
@@ -241,6 +243,8 @@ namespace PrisonersOfOmar.Characters
                     if (item == ItemType.CarBattery) return new Vector3(-0.02f, 0.06f, 0.08f);
                     return new Vector3(-0.03f, 0.04f, 0.02f);
                 case HoldPose.Flashlight: return new Vector3(0f, 0.02f, 0.02f);
+                case HoldPose.Lighter: return new Vector3(-0.05f, 0.05f, -0.13f);
+                case HoldPose.Pistol: return new Vector3(-0.07f, 0.075f, 0.04f);
                 case HoldPose.OneHandSmall: return new Vector3(-0.01f, 0.02f, 0f);
                 default: return Vector3.zero;
             }
@@ -254,6 +258,8 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Crowbar: return new Vector3(-25f, -20f, 20f);
                 case ItemType.GasCan: return new Vector3(0f, -25f, 0f);
                 case ItemType.Flashlight: return new Vector3(0f, -4f, 0f);
+                case ItemType.Lighter: return new Vector3(-2f, 26f, -3f);
+                case ItemType.Revolver: return new Vector3(2f, 4f, 0f);
                 default: return Vector3.zero;
             }
         }
@@ -525,6 +531,14 @@ namespace PrisonersOfOmar.Characters
                     left = k;
                     lp = new Vector3(-0.12f, -0.48f, 0.5f);
                     le = new Vector3(50f, 0f, 0f);
+                    break;
+                }
+                case CharacterAction.Shoot:
+                {
+                    // sharp kick up and back, slow settle
+                    float kick = t < 0.12f ? Smooth(t / 0.12f) : 1f - Smooth((t - 0.12f) / 0.88f);
+                    dp = new Vector3(0.01f, 0.05f, -0.07f) * kick;
+                    de = new Vector3(-28f, 3f, -6f) * kick;
                     break;
                 }
                 case CharacterAction.Wave:

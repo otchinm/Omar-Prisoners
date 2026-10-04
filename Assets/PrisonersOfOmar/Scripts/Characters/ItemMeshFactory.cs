@@ -40,6 +40,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Crowbar: Crowbar(mb, go.transform); break;
                 case ItemType.Bottle: Bottle(mb); break;
                 case ItemType.Pills: Pills(mb); break;
+                case ItemType.Revolver: Revolver(mb, go.transform); break;
                 default:
                     mb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.5f, 0.5f)));
                     mb.AddBox(Vector3.zero, new Vector3(0.06f, 0.06f, 0.06f), BoxUV.PerFace);
@@ -63,6 +64,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.BoltCutters:
                 case ItemType.Crowbar: return HoldPose.TwoHanded;
                 case ItemType.Bottle: return HoldPose.Bottle;
+                case ItemType.Revolver: return HoldPose.Pistol;
                 default: return HoldPose.OneHandSmall;
             }
         }
@@ -72,7 +74,7 @@ namespace PrisonersOfOmar.Characters
         {
             switch (type)
             {
-                case ItemType.Lighter: return new Vector3(0, 0.0185f, 0);
+                case ItemType.Lighter: return new Vector3(0, 0.0201f, 0);
                 case ItemType.LighterFuel: return new Vector3(0, 0.059f, 0);
                 case ItemType.Bandages: return new Vector3(0, 0.050f, 0);
                 case ItemType.Flashlight: return new Vector3(0, 0.0221f, 0f);
@@ -88,6 +90,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Crowbar: return new Vector3(0.043f, 0.013f, -0.093f);
                 case ItemType.Bottle: return new Vector3(0, 0.245f, 0);
                 case ItemType.Pills: return new Vector3(0, 0.0445f, 0);
+                case ItemType.Revolver: return new Vector3(0f, 0.0175f, -0.05f);
                 default: return new Vector3(0, 0.03f, 0);
             }
         }
@@ -99,6 +102,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Flashlight: return Quaternion.Euler(-3.2f, 0f, 0f);  // head is thicker than the body
                 case ItemType.SoundMeter: return Quaternion.Euler(90f, 0f, 0f);    // lying on its back, dial up
                 case ItemType.Crowbar: return Quaternion.Euler(0f, 0f, 90f);       // hook lies flat
+                case ItemType.Revolver: return Quaternion.Euler(0f, 0f, 90f);      // lying on its side
                 default: return Quaternion.identity;
             }
         }
@@ -169,28 +173,82 @@ namespace PrisonersOfOmar.Characters
         }
 
         // ============================================================================================ items
-        // lighter.png 64x64: body front (0,0,32,32) side (32,0,16,32) lid (0,32,32,16) chimney (32,32,16,16)
-        //                    top (48,0,16,16) insert (48,16,16,16) wick (48,32,16,16)
+        // lighter.png 64x64 (Zippo): case front (0,0,32,32) case side (32,0,16,32) lid (0,32,32,16) chimney (32,32,16,16)
+        //                   case top / insert top (48,0,16,16) insert (48,16,16,16) flint wheel (48,32,16,16) lid inside (0,48,32,16)
+        /// <summary>Lid hinge child of the Zippo model (rotate local Z: 0 = shut, <see cref="LighterLidOpen"/> = flipped open).</summary>
+        public const float LighterLidOpen = -128f;
+
         static void Lighter(MeshBuilder mb, Transform root)
         {
             const float W = 64, H = 64;
-            mb.SetMaterial(Mat("lighter"));
+            var mat = Mat("lighter");
+            mb.SetMaterial(mat);
             Rect front = R(0, 0, 32, 32, W, H), side = R(32, 0, 16, 32, W, H), lid = R(0, 32, 32, 16, W, H);
-            Rect chim = R(32, 32, 16, 16, W, H), top = R(48, 0, 16, 16, W, H), insert = R(48, 16, 16, 16, W, H), wick = R(48, 32, 16, 16, W, H);
-            // body (pivot = grip, middle of the case)
-            mb.AddBox(new Vector3(0, 0, 0), new Vector3(0.038f, 0.037f, 0.013f),
-                new BoxUVRects { PosZ = front, NegZ = front, PosX = side, NegX = side, PosY = insert, NegY = top });
-            // chimney with holes
-            mb.AddBox(new Vector3(-0.002f, 0.0265f, 0), new Vector3(0.017f, 0.016f, 0.011f), BoxUVRects.All(chim));
-            // flint wheel + wick
-            Cyl(mb, new Vector3(0.0085f, 0.031f, -0.004f), new Vector3(0.0085f, 0.031f, 0.004f), 0.0035f, 0.0035f, 6, wick, wick, wick);
-            mb.AddBox(new Vector3(-0.002f, 0.0355f, 0), new Vector3(0.003f, 0.003f, 0.003f), BoxUVRects.All(wick));
-            // open lid hinged on the right edge, swung open ~125 degrees
-            mb.Push(new Vector3(0.019f, 0.0185f, 0), Quaternion.Euler(0, 0, -125f));
-            mb.AddBox(new Vector3(-0.019f, 0.0105f, 0), new Vector3(0.038f, 0.021f, 0.013f),
-                new BoxUVRects { PosZ = lid, NegZ = lid, PosX = side, NegX = side, PosY = top, NegY = insert });
-            mb.Pop();
-            Child(root, "Anchor_Flame", new Vector3(-0.002f, 0.039f, 0), Quaternion.identity);
+            Rect chim = R(32, 32, 16, 16, W, H), top = R(48, 0, 16, 16, W, H), insert = R(48, 16, 16, 16, W, H), wheel = R(48, 32, 16, 16, W, H);
+            Rect lidIn = R(0, 48, 32, 16, W, H);
+            const float w = 0.038f, d = 0.013f, caseH = 0.040f, lidH = 0.022f;
+            // lower case (pivot = grip, middle of the case)
+            mb.AddBox(new Vector3(0, 0, 0), new Vector3(w, caseH, d),
+                new BoxUVRects { PosZ = front, NegZ = front, PosX = side, NegX = side, PosY = top, NegY = top });
+            // insert rim sticking out of the case
+            mb.AddBox(new Vector3(0, caseH * 0.5f + 0.002f, 0), new Vector3(w - 0.003f, 0.004f, d - 0.002f), BoxUVRects.All(insert));
+            // perforated chimney (wind guard) on the left, flint wheel + cam on the right
+            mb.AddBox(new Vector3(-0.0045f, caseH * 0.5f + 0.012f, 0), new Vector3(0.021f, 0.016f, 0.0115f),
+                new BoxUVRects { PosZ = chim, NegZ = chim, PosX = chim, NegX = chim, PosY = insert, NegY = insert });
+            Cyl(mb, new Vector3(0.0105f, caseH * 0.5f + 0.0125f, -0.0042f), new Vector3(0.0105f, caseH * 0.5f + 0.0125f, 0.0042f), 0.0042f, 0.0042f, 8, wheel, wheel, wheel);
+            mb.AddBox(new Vector3(0.0115f, caseH * 0.5f + 0.006f, 0), new Vector3(0.006f, 0.008f, 0.0016f), BoxUVRects.All(insert));
+            // wick tip inside the chimney
+            mb.AddBox(new Vector3(-0.0045f, caseH * 0.5f + 0.019f, 0), new Vector3(0.0028f, 0.0025f, 0.0028f), BoxUVRects.All(wheel));
+
+            // hinged lid as its own child so it can flip open / shut (hinge on the right edge of the case top)
+            var hinge = Child(root, "Lid", new Vector3(w * 0.5f, caseH * 0.5f, 0), Quaternion.identity);
+            var lm = new MeshBuilder();
+            lm.SetMaterial(mat);
+            lm.AddBox(new Vector3(-w * 0.5f, lidH * 0.5f, 0), new Vector3(w, lidH, d),
+                new BoxUVRects { PosZ = lid, NegZ = lid, PosX = side, NegX = side, PosY = top, NegY = lidIn });
+            lm.AddBox(new Vector3(0.0008f, 0.002f, 0), new Vector3(0.0022f, 0.006f, 0.006f), BoxUVRects.All(insert)); // hinge barrel
+            lm.Build("LidMesh", hinge, Layers.Item);
+
+            Child(root, "Anchor_Flame", new Vector3(-0.0045f, caseH * 0.5f + 0.0205f, 0), Quaternion.identity);
+        }
+
+        /// <summary>Open the Zippo lid of a lighter model (0 = shut, 1 = open). Safe on any model.</summary>
+        public static void SetLighterLid(GameObject model, float open01)
+        {
+            if (model == null) return;
+            var lid = model.transform.Find("Lid");
+            if (lid == null) return;
+            float k = Mathf.Clamp01(open01);
+            lid.localRotation = Quaternion.Euler(0f, 0f, LighterLidOpen * k);
+        }
+
+        // revolver.png 64x64: blued steel (0,0,32,32) worn steel (32,0,32,32) wooden grip (0,32,32,32) cylinder (32,32,16,16)
+        //                     bore / dark (48,32,16,16) brass rims (32,48,16,16)
+        static void Revolver(MeshBuilder mb, Transform root)
+        {
+            const float W = 64, H = 64;
+            mb.SetMaterial(Mat("revolver"));
+            Rect steel = R(0, 0, 32, 32, W, H), worn = R(32, 0, 32, 32, W, H), wood = R(0, 32, 32, 32, W, H);
+            Rect cyl = R(32, 32, 16, 16, W, H), dark = R(48, 32, 16, 16, W, H), brass = R(32, 48, 16, 16, W, H);
+            // grip (pivot = where the hand closes), raked back
+            Box(mb, new Vector3(0f, -0.035f, -0.012f), Quaternion.Euler(18f, 0f, 0f), new Vector3(0.026f, 0.075f, 0.032f), BoxUVRects.All(wood));
+            Box(mb, new Vector3(0f, -0.072f, -0.024f), Quaternion.Euler(18f, 0f, 0f), new Vector3(0.028f, 0.008f, 0.036f), BoxUVRects.All(steel)); // butt cap
+            // frame
+            Box(mb, new Vector3(0f, 0.012f, 0.022f), Quaternion.identity, new Vector3(0.02f, 0.03f, 0.075f), BoxUVRects.All(worn));
+            // cylinder with chambers (brass rims at the back)
+            Cyl(mb, new Vector3(0f, 0.014f, 0.004f), new Vector3(0f, 0.014f, 0.046f), 0.0175f, 0.0175f, 8, cyl, brass, dark);
+            // barrel + ejector rod
+            Cyl(mb, new Vector3(0f, 0.022f, 0.046f), new Vector3(0f, 0.022f, 0.17f), 0.0072f, 0.0068f, 7, steel, null, dark);
+            Cyl(mb, new Vector3(0f, 0.008f, 0.05f), new Vector3(0f, 0.008f, 0.13f), 0.0032f, 0.0032f, 5, worn, null, worn);
+            Box(mb, new Vector3(0f, 0.031f, 0.163f), Quaternion.identity, new Vector3(0.003f, 0.006f, 0.008f), BoxUVRects.All(steel)); // front sight
+            // top strap + hammer
+            Box(mb, new Vector3(0f, 0.034f, 0.02f), Quaternion.identity, new Vector3(0.012f, 0.006f, 0.06f), BoxUVRects.All(steel));
+            Box(mb, new Vector3(0f, 0.032f, -0.018f), Quaternion.Euler(-35f, 0f, 0f), new Vector3(0.007f, 0.016f, 0.008f), BoxUVRects.All(worn));
+            // trigger guard + trigger
+            Bar(mb, new Vector3(0f, -0.004f, 0.026f), new Vector3(0f, -0.022f, 0.02f), 0.004f, 0.004f, steel);
+            Bar(mb, new Vector3(0f, -0.022f, 0.02f), new Vector3(0f, -0.02f, -0.002f), 0.004f, 0.004f, steel);
+            Bar(mb, new Vector3(0f, -0.002f, 0.012f), new Vector3(0f, -0.014f, 0.008f), 0.0035f, 0.003f, worn);
+            Child(root, "Anchor_Muzzle", new Vector3(0f, 0.022f, 0.172f), Quaternion.identity);
         }
 
         // lighterfuel.png 128x64: front (0,0,64,64) back (64,0,32,64) side (96,0,16,64) top (112,0,16,16) nozzle (112,16,16,16) neck (112,32,16,16)

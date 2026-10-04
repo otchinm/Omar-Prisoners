@@ -14,7 +14,8 @@ def room(y, rng, rt=0.4, wet=0.1):
 
 
 def fin(y, rng, rt=0.4, wet=0.1, bits=11):
-    return dsp.lofi(room(dsp.norm(y), rng, rt, wet), bits, 1.4, 1.2, 10000)
+    # iteration 2: no more clean / cartoonish items - everything goes through the worn tape
+    return dsp.vhs(room(dsp.norm(y), rng, rt + 0.1, wet + 0.05), rng, bits=min(bits, 9))
 
 
 def small_metal(rng, n, f0, tau=(0.05, 0.2), count=8, hard=0.9):
@@ -36,8 +37,8 @@ def lighter_open(rng):
 def lighter_flick(rng):
     n = N(0.9)
     y = np.zeros(n)
-    m = N(0.045)
-    wheel, _ = dsp.pulse_train(np.linspace(900, 400, m), m, rng, 0.4, 0.5)
+    m = N(0.08)
+    wheel, _ = dsp.pulse_train(np.linspace(1100, 350, m), m, rng, 0.5, 0.6)
     wheel = dsp.bp(wheel + 0.3 * rng.standard_normal(m) * dsp.perc(m, 0.002, 0.02), 2000, 9000)
     dsp.place(y, dsp.norm(wheel), 0)
     sparks = sfx.grains(N(0.12), rng, np.full(N(0.12), 300.0), 4000, 10000, (0.0005, 0.0015))
@@ -310,4 +311,41 @@ def pills(rng):
     dsp.place(y, twist, N(0.6), 0.25)
     pop = sfx.strike(N(0.2), rng, [(1500, 0.02, 1), (2600, 0.015, 0.6), (700, 0.02, 0.5)], 0.9, noise_mix=0.4)
     dsp.place(y, dsp.norm(pop), N(0.85), 0.8)
+    return fin(y, rng, 0.35, 0.08)
+
+
+# --------------------------------------------------------------------------------------------- revolver (iteration 2)
+@sound("Items/gun_shot", desc="old revolver shot indoors: huge distorted crack, room boom, ringing tail", ch=1, norm=("loud", -0.3))
+def gun_shot(rng):
+    n = N(2.4)
+    y = np.zeros(n)
+    crack = dsp.hp(rng.standard_normal(N(0.02)), 900) * dsp.perc(N(0.02), 0.0002, 0.006)
+    dsp.place(y, crack, 0, 1.5)
+    boom = sfx.thud(N(1.2), rng, 62, 0.22, 0.8, noise=0.9, noise_lp=1800)
+    dsp.place(y, boom, 0, 1.4)
+    body = dsp.bp(rng.standard_normal(N(0.35)), 300, 5000) * dsp.perc(N(0.35), 0.0005, 0.06)
+    dsp.place(y, body, 0, 1.0)
+    for k in range(3):  # slap back off the walls
+        dsp.place(y, dsp.lp(body, 2500) * 0.4, N(0.035 + 0.03 * k), 0.5 ** (k + 1))
+    y = dsp.reverb(dsp.norm(y), rng, 1.6, 0.45, bright=3500, dark=700)
+    y = dsp.sat(dsp.norm(y) * 3.0, 3.0)
+    return dsp.vhs(y, rng, bits=8, factor=2.2, drive=2.6, lp_hz=5500, hiss=0.025)
+
+
+@sound("Items/gun_empty", desc="revolver dry fire: hammer falls on a spent chamber", **ONE)
+def gun_empty(rng):
+    n = N(0.4)
+    y = np.zeros(n)
+    dsp.place(y, small_metal(rng, N(0.2), 1900, (0.01, 0.05), 8, 1.0), 0, 0.9)
+    dsp.place(y, small_metal(rng, N(0.2), 1150, (0.02, 0.06), 6, 0.8), N(0.006), 0.6)
+    return fin(y, rng, 0.35, 0.08)
+
+
+@sound("Items/gun_cock", desc="hammer pulled back, cylinder ratchets round", **ONE)
+def gun_cock(rng):
+    n = N(0.6)
+    y = np.zeros(n)
+    for k, t in enumerate((0.0, 0.07, 0.13)):
+        dsp.place(y, small_metal(rng, N(0.15), rng.uniform(1500, 2400), (0.01, 0.04), 7, 0.9), N(t), 0.5 + 0.2 * k)
+    dsp.place(y, latch_clack(rng, N(0.25), 1300), N(0.2), 0.8)
     return fin(y, rng, 0.35, 0.08)

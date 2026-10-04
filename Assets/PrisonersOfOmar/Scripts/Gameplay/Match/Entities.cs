@@ -28,7 +28,8 @@ namespace PrisonersOfOmar.Gameplay
     public sealed class WorldItem : MonoBehaviour, IInteractable
     {
         public ItemEntity Entity;
-        float _glintPhase;
+        /// <summary>Pixelated halo around the pickup (set Highlighted while aimed at).</summary>
+        public PsxItemGlow Glow;
 
         public Vector3 InteractPoint => transform.position;
 
@@ -68,6 +69,7 @@ namespace PrisonersOfOmar.Gameplay
             wi.Entity = e;
             e.World = wi;
             InteractableRef.Attach(col, wi);
+            try { wi.Glow = PsxItemGlow.Attach(root, Mathf.Max(size.x, size.z) * 0.5f); } catch (System.Exception ex) { Debug.LogException(ex); }
             return wi;
         }
 

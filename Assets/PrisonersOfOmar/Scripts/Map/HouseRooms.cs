@@ -227,11 +227,13 @@ namespace PrisonersOfOmar.Map
             Dyn.Figure(ctx, bedLift, FigureKind.Corpse, FigurePose.LyingOnBack, bedPos + Vector3.up * Props.BedTop, MapMath.Yaw(90f), ctx.Seed ^ 0x51);
             Dyn.UnderBed(ctx, "ClockBedroom.Bed", bedPos, 90f, Vector3.back, 0.5f, 2.0f, 0.36f, bedLift);
             Props.Nightstand(ctx, mb, V(10.62f, F, 6.15f), 90f);
+            ctx.Gun(A, V(10.66f, F + Props.NightstandTop, 6.0f), 75f);
             Props.Candle(mb, null, V(10.55f, F + Props.NightstandTop, 6.25f));
             // grandfather clock + radiator on the north wall (like Ddf9Y0Y)
             GrandfatherClock(ctx, mb, V(7.5f, F, 7.72f));
             Radiator(ctx, mb, V(6.2f, F, 7.8f));
             Props.Dresser(ctx, mb, V(7.0f, F, 3.33f), 180f, 1.0f);
+            ctx.Gun(A, V(6.75f, F + Props.DresserTop, 3.36f), 200f);
             Dyn.Wardrobe(ctx, "ClockBedroom.Wardrobe", V(3.39f, F, 4.2f), -90f);
             // black occult scrawls
             Arch.Decal(mb, Mat.Decal("graffiti_scrawl_1"), V(10.89f, F + 2.0f, 5.2f), Vector3.left, 1.7f, 1.7f, 0f);
@@ -495,6 +497,7 @@ namespace PrisonersOfOmar.Map
             Arch.Decal(mb, Mat.Decal("water_stain"), V(10.89f, F + 2.2f, 6.6f), Vector3.left, 1.6f, 2.0f, 0f);
             // desk items like Ddf9Z9 (band-aids / lighter fuel)
             ctx.Key(A, V(8.45f, F + Props.DeskTop, 7.48f));
+            ctx.Gun(A, V(7.95f, F + Props.DeskTop, 7.5f), 110f);
             ctx.Common(A, V(9.0f, F + Props.DeskTop, 7.42f));
             ctx.Common(A, V(10.74f - 0.12f, F + Props.BookshelfLevel(2), 4.0f));
             ctx.Common(A, V(10.4f, F, 6.6f));

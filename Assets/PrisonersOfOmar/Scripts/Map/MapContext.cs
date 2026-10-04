@@ -239,6 +239,9 @@ namespace PrisonersOfOmar.Map
 
         public void Key(string area, Vector3 p) => Item(area, p, ItemSpawnTier.Key);
         public void Common(string area, Vector3 p) => Item(area, p, ItemSpawnTier.Common);
+        /// <summary>A place where the single revolver may lie (one of these is chosen per match).</summary>
+        public void Gun(string area, Vector3 p, float yaw = 0f)
+            => Data.GunSpots.Add(new ItemSpawnInfo { Position = p, Yaw = yaw, Area = area, Tier = ItemSpawnTier.Key });
 
         public void Tripwire(string area, Vector3 a, Vector3 b)
             => Data.TrapSpots.Add(new TrapSpotInfo { Kind = TrapKind.Tripwire, A = a, B = b, Area = area });

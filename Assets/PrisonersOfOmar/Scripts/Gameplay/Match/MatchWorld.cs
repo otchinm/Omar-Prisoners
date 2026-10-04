@@ -321,6 +321,7 @@ namespace PrisonersOfOmar.Gameplay
             if (Running && Ending == null) _clock += dt;
 
             TickPlayer(dt);
+            TickWorld(dt);
             for (int i = 0; i < Cages.Length; i++) Cages[i].Tick(dt);
             for (int i = 0; i < Traps.Count; i++) Traps[i].Tick(dt);
 

@@ -568,6 +568,25 @@ def tape(x, rng, amount=1.0, hiss=0.0, circular=False):
     return y
 
 
+def vhs(x, rng, bits=9, factor=2.0, drive=1.8, lp_hz=6200, hiss=0.03, wow=0.0012, mids=3.0):
+    """Puppet Combo tape look for one-shots (iteration 2): wobbly tape, cheap-speaker mid push, saturation,
+    crushed bits + rate reduction (aliasing), dull top and a hiss bed under everything."""
+    y = norm(x)
+    y = wowflutter(y, rng, wow=wow, flutter=0.0005)
+    y = hp(y, 110)
+    y = bq(y, "peak", 1300, 0.8, mids)
+    y = lofi(y, bits, factor, drive, lp_hz)
+    y = norm(y)
+    n = len(y)
+    if hiss > 0:
+        bed = norm(band_noise(n, rng, 1500, 8500)) * hiss
+        bed *= 0.85 + 0.15 * smooth_rand(n, rng, 3.0, circular=False)
+        # the hiss rides on the sound (like a recorded clip) instead of hanging on after it
+        follow = np.clip(lp(np.abs(y), 25.0) * 6.0, 0.0, 1.0)
+        y = y + bed * (0.2 + 0.8 * follow)
+    return y
+
+
 def am(x, rate, depth, n=None, shape="sine", ph0=0.0):
     n = len(x)
     if shape == "sine":

@@ -229,6 +229,7 @@ namespace PrisonersOfOmar.Gameplay
             if (!W.Running || _ended) return;
             float t = W.Time;
             TickPlayer(dt);
+            TickWorld(dt);
             if (_screamAt >= 0f && t >= _screamAt)
             {
                 _screamAt = -1f;

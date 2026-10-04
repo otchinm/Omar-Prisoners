@@ -237,7 +237,7 @@ namespace PrisonersOfOmar.Gameplay
     {
         // prisoners
         public const float WalkSpeed = 2.1f, RunSpeed = 4.6f, CrouchSpeed = 1.15f, InjuredSpeedMul = 0.82f;
-        public const float StaminaSeconds = 6f, StaminaRegenDelay = 1.6f, StaminaRegenRate = 0.22f;
+        public const float StaminaSeconds = 7f, StaminaRegenDelay = 1.2f, StaminaRegenRate = 0.2f;
         public const float EyeHeight = 1.58f, CrouchEyeHeight = 0.95f;
         public const float InteractRange = 2.3f;
         public static float LighterBurnSeconds = 170f, FlashlightBurnSeconds = 260f;

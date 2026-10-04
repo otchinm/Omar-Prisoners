@@ -316,21 +316,46 @@ def icon(name):
 
 @icon("lighter")
 def _lighter(ctx):
+    """Zippo like the first-person view: olive case, pale brass perforated chimney, blue flint wheel, flame."""
     W = H = 256
-    body = rrect(W, H, 78, 96, 178, 232, 14)
-    lid = rrect(W, H, 78, 52, 178, 100, 12)
-    img = solid(H, W, "#b89a3a") * shade_lr(H, W, 78, 178, 0.45)[..., None] * tex_noise(ctx, H, W)[..., None]
-    img = mix(img, "#3a2c10", ((np.abs(np.arange(H) - 99) < 3)[:, None] * np.ones((1, W))).astype(np.float32))
-    # chimney with holes and flame
-    chim = rrect(W, H, 96, 26, 160, 56, 4)
-    img = mix(img, "#c8c8c0", chim)
-    for hx in (108, 128, 148):
-        for hy in (36, 48):
-            img = mix(img, "#202020", ellipse_mask(W, H, hx, hy, 5, 4) * chim)
-    flame = ellipse_mask(W, H, 128, 12, 12, 22)
+    body = rrect(W, H, 70, 112, 170, 236, 14)
+    img = solid(H, W, "#5c662e") * shade_lr(H, W, 70, 170, 0.45)[..., None] * tex_noise(ctx, H, W, 0.1)[..., None]
+    rim = rrect(W, H, 74, 104, 166, 116, 3)
+    img = mix(img, "#c8bc84", rim)
+    chim = rrect(W, H, 80, 52, 140, 106, 4)
+    img = mix(img, "#d8cf9a", chim)
+    for hx in (92, 110, 128):
+        for hy in (64, 80, 96):
+            img = mix(img, "#1a120a", ellipse_mask(W, H, hx + (9 if hy == 80 else 0), hy, 6, 5) * chim)
+    wheel = ellipse_mask(W, H, 154, 82, 12, 12)
+    img = mix(img, "#1c2a6a", wheel)
+    # open lid hanging on the right
+    lid = rrect(W, H, 168, 60, 204, 112, 8, rot=0.35)
+    img = mix(img, "#4e5828", lid)
+    flame = ellipse_mask(W, H, 110, 24, 13, 28)
     img = mix(img, "#ffb030", flame)
-    img = mix(img, "#fff0b0", ellipse_mask(W, H, 128, 18, 5, 10))
-    a = clamp01(body + lid + chim + flame)
+    img = mix(img, "#fff0b0", ellipse_mask(W, H, 110, 32, 6, 14))
+    a = clamp01(body + rim + chim + wheel + lid + flame)
+    return img, a
+
+
+@icon("revolver")
+def _revolver(ctx):
+    W = H = 256
+    rot = -0.1
+    barrel = rrect(W, H, 96, 92, 236, 112, 4, rot)
+    frame = rrect(W, H, 60, 84, 132, 132, 8, rot)
+    cyl = rrect(W, H, 92, 80, 140, 138, 10, rot)
+    grip = poly(W, H, [(58, 116), (96, 120), (82, 214), (34, 204)], rot)
+    hammer = poly(W, H, [(52, 82), (68, 70), (76, 88)], rot)
+    guard = rrect(W, H, 92, 128, 120, 156, 10, rot) * (1 - rrect(W, H, 98, 132, 114, 150, 6, rot))
+    img = solid(H, W, "#34373c") * tex_noise(ctx, H, W, 0.1)[..., None]
+    img = mix(img, "#565a60", cyl)
+    for k in range(3):
+        img = mix(img, "#1e2024", rrect(W, H, 100 + k * 14, 86, 104 + k * 14, 132, 2, rot) * cyl)
+    img = mix(img, "#5a3420", grip * tex_noise(ctx, H, W, 0.2, 3))
+    img = mix(img, "#8a8e94", ((np.arange(H) > 93) & (np.arange(H) < 97))[:, None] * np.ones((1, W)) * barrel)
+    a = clamp01(barrel + frame + cyl + grip + hammer + guard)
     return img, a
 
 
