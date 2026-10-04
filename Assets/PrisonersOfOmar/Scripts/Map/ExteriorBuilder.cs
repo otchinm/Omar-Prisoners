@@ -430,7 +430,7 @@ namespace PrisonersOfOmar.Map
             Arch.FloorDecal(mb, Mat.Decal("grime"), V(17.5f, F, -1f), 3f, 3f, 0f);
             Arch.FloorDecal(mb, Mat.Decal("water_stain"), V(19.5f, F, 0.6f), 1.2f, 1.0f, 30f);
             ctx.Key(A, V(20.5f, F + Props.WorkbenchTop, -1.9f));
-            ctx.Gun(A, V(20.95f, F + Props.WorkbenchTop, -1.95f), 30f);
+            ctx.Gun(A, V(20.6f, F + Props.WorkbenchTop, -2.18f), 30f);
             ctx.Common(A, V(20.6f, F + Props.WorkbenchTop, -0.5f));
             ctx.Key(A, V(17.6f - 0.62f, F + Props.ShelfLevel(1), 1.52f));
             ctx.Common(A, V(14.5f, F, -3.55f));
@@ -506,6 +506,15 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(-65.64f, F + 1.9f, 3.2f));
             ctx.Key(A, V(-58.6f, F, 7.5f));
             ctx.WallNote(A, V(-62f, F + 1.6f, 7.89f), Vector3.back);
+            // a cell in the far restroom: one cage slot (a random start / lock-up room)
+            {
+                int room = ctx.CellRoom("Restroom", A, V(-62f, F, 5f));
+                var c = V(-61.2f, F, 6.75f);
+                var cage = Dyn.Cage(ctx, mb, room, c, 0f);
+                var inside = Dyn.CageDressing(ctx, cage);
+                Props.Bucket(inside, c + V(0.62f, 0, 0.6f), 30f, false, 0.5f, false);
+                Arch.FloorDecal(inside, Mat.Decal("blood_splatter_2"), c + V(-0.1f, 0.035f, 0.1f), 1.1f, 1.1f, 40f);
+            }
             // fluorescent tube (green-white, buzzing)
             mb.Material = Mat.Lit(Tex.MetalDark);
             mb.AddBox(V(-62f, 2.9f, 5f), V(0.25f, 0.06f, 1.3f), BoxUV.Local, 0.5f);

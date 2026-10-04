@@ -599,7 +599,7 @@ namespace PrisonersOfOmar.Map
             Arch.Decal(mb, Mat.Decal("water_stain"), V(10.89f, F + 2.2f, 6.6f), Vector3.left, 1.6f, 2.0f, 0f);
             // desk items like Ddf9Z9 (band-aids / lighter fuel)
             ctx.Key(A, V(8.45f, F + Props.DeskTop, 7.48f));
-            ctx.Gun(A, V(7.95f, F + Props.DeskTop, 7.5f), 110f);
+            ctx.Gun(A, V(8.26f, F + Props.DeskTop, 7.73f), 110f);
             ctx.Common(A, V(9.0f, F + Props.DeskTop, 7.42f));
             ctx.Common(A, V(10.74f - 0.12f, F + Props.BookshelfLevel(2), 4.0f));
             ctx.Common(A, V(10.4f, F, 6.6f));

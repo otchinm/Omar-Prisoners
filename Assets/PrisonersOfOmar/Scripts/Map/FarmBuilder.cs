@@ -209,7 +209,7 @@ namespace PrisonersOfOmar.Map
             Props.HayStack(ctx, mb, V(28.4f, 0.02f, 55.6f), 90f, 2101, 9);
             Props.HayStack(ctx, mb, V(28.4f, 0.02f, 59.6f), 90f, 2102, 6);
             Props.HayBale(ctx, mb, V(13.8f, 0.02f, 53.6f), 10f);
-            Props.HayBale(ctx, mb, V(13.0f, 0.02f, 64.85f), 10f);
+            Props.HayBale(ctx, mb, V(13.1f, 0.02f, 67.25f), 10f);
             var hayDecal = Mat.Cutout(Tex.GrassTall2, new Color(0.85f, 0.75f, 0.5f));
             var rng = ctx.Rng("barn");
             for (int i = 0; i < 26; i++)
@@ -232,7 +232,7 @@ namespace PrisonersOfOmar.Map
             // gameplay
             ctx.Key(A, V(16.4f, 0.02f + Props.WorkbenchTop, 67.45f));
             ctx.Common(A, V(28.4f, 0.02f + Props.HayH * 2f, 55.0f));
-            ctx.Common(A, V(13.4f, 0.02f, 56.9f));
+            ctx.Common(A, V(15.05f, 0.02f, 55.45f));
             ctx.Key(A, V(23.3f, 0.02f, 66.6f));
             ctx.Common(A, V(19.0f, 0.02f + Props.BarrelTop, 66.9f));
             ctx.Key(A, V(13.4f, 0.02f, 60.4f) + V(0, 0, 0.9f));
@@ -250,7 +250,22 @@ namespace PrisonersOfOmar.Map
             ctx.Nav.Add(V(17.3f, 0, 55.5f), A);
             ctx.Nav.Add(V(25.4f, 0, 57.4f), A);
             ctx.Nav.Add(V(21f, 0, 50.5f), "Yard");
-            foreach (float oz in openings) { ctx.Nav.Add(V(13.9f, 0, oz), A); ctx.Nav.Add(V(16.7f, 0, oz), A); }
+            // the first and last stall are cells: a cage slot each (inactive until a prisoner is put in it)
+            int cells = ctx.CellRoom("BarnStalls", A, V(14.5f, 0.02f, 60.25f));
+            var hayIn = Mat.Cutout(Tex.GrassTall2, new Color(0.8f, 0.7f, 0.5f));
+            foreach (float oz in new[] { openings[0], openings[2] })
+            {
+                var c = V(13.55f, 0.02f, oz);
+                var cage = Dyn.Cage(ctx, mb, cells, c, -90f);
+                var inside = Dyn.CageDressing(ctx, cage);
+                Props.Billboard(inside, hayIn, c + V(-0.45f, 0, 0.35f), 0.9f, 0.3f, 2, oz * 13f, 0.5f, 0.8f);
+                Props.Bucket(inside, c + V(-0.6f, 0, -0.62f), oz * 7f, false, 0.5f, false);
+                Arch.FloorDecal(inside, Mat.Decal("grime"), c + V(0.1f, 0.035f, 0), 1.2f, 1.2f, oz * 11f);
+            }
+            Arch.Decal(mb, Mat.Decal("graffiti_scrawl_2"), V(12.12f, 1.0f, openings[0]), Vector3.right, 0.7f, 0.7f, 12f);
+            Arch.Decal(mb, Mat.Decal("writing_let_me_out"), V(12.12f, 1.25f, openings[2]), Vector3.right, 1.1f, 0.55f, -4f);
+            // stalls with a cage only keep the node outside it
+            for (int k = 0; k < openings.Length; k++) { if (k == 1) ctx.Nav.Add(V(13.9f, 0, openings[k]), A); ctx.Nav.Add(V(16.7f, 0, openings[k]), A); }
             ctx.Nav.Add(V(13.6f, 0, 66.7f), A);
             ctx.Nav.Add(V(17.0f, 0, 66.2f), A);
         }
