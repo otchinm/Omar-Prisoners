@@ -179,21 +179,29 @@ Generated (Tools/AssetPipeline/audio):
 
 * UI: `Audio/UI/ui_move`, `ui_select`, `ui_back`, `ui_error`, `ui_type`, `tape_insert`, `tape_eject`, `tape_play`, `tape_stop`, `tape_rewind_loop`, `inventory_open`, `inventory_close`, `inventory_scroll`.
 * Ambience loops (seamless): `Audio/Ambience/amb_exterior_loop`, `amb_house_loop`, `amb_basement_loop`, `amb_barn_loop`, `amb_tunnel_loop`, `amb_restroom_loop`, `amb_menu_loop`,
-  `static_loop` (low quality analog static, Omar proximity), `static_heavy_loop`, `chase_loop`, `anomaly_loop`,
+  `static_loop` (quiet dirty-tape hum, crackle and faint garbled radio, only while Omar is in sight), `static_heavy_loop` (denser, when he is close), `chase_loop`, `anomaly_loop`,
   `fluorescent_buzz_loop`, `tv_static_loop`, `radio_static_loop`, `generator_loop`, `fire_loop`, `car_idle_loop`,
   `helicopter_loop`, `flame_loop`, `omar_breath_loop`, `wind_gust_loop`, `windmill_creak_loop`.
 * Ambience one-shots: `Audio/Ambience/creak_1`…`creak_4`, `distant_scream_1`…`distant_scream_3`, `thump_1`…`thump_3`,
   `metal_scrape_1`, `metal_scrape_2`, `whisper_1`, `whisper_2`, `thunder_1`, `thunder_2`, `drip_1`…`drip_3`, `phone_ring`, `dog_howl`.
-* Footsteps: `Audio/Steps/<surface>_<1..4>` for surface ∈ {wood, concrete, dirt, grass, metal, asphalt, tile, carpet, gravel}; `Audio/Steps/omar_<1..4>` (heavy boots).
-* Player: `Audio/Player/heartbeat`, `breath_heavy_1`…`3`, `hurt_1`…`3`, `body_fall`, `cage_rattle`, `struggle`, `gasp`.
+* Footsteps: `Audio/Steps/<surface>_<1..4>` for surface ∈ {wood, concrete, dirt, grass, metal, asphalt, tile, carpet, gravel}; `Audio/Steps/omar_<1..4>` (muffled, heavy body thumps that carry through walls).
+* Player: `Audio/Player/heartbeat`, `breath_heavy_1`…`3`, `hurt_1`…`3`, `body_fall`, `cage_rattle`, `struggle`, `gasp`, `bed_crawl_in`, `bed_crawl_out`.
+* Character voices (gen_voices.py): `Audio/Voices/prisoner1`…`prisoner7/` each with `hurt_1`…`3`, `scream_1`, `scream_2`, `breath_1`…`3`,
+  `gasp_1`, `gasp_2`, `struggle_1`, `struggle_2`, `death_1` — seven distinct degraded VHS voices cut from the human screams in
+  the user's recording (never Omar's), re-pitched / coloured per character (`Snd.Voice(skin, line)`).
 * Items: `Audio/Items/lighter_open`, `lighter_flick`, `lighter_close`, `fuel_pour`, `bandage_rip`, `flashlight_click`, `battery_insert`,
   `item_pickup`, `item_drop`, `item_equip`, `bottle_throw`, `glass_break`, `key_unlock`, `locked_rattle`, `lockpick`, `crowbar_pry`,
-  `wood_break`, `bolt_cut`, `chain_drop`, `soundmeter_tick`, `pills`.
+  `wood_break`, `bolt_cut`, `chain_drop`, `soundmeter_tick`, `pills`, `gun_shot`, `gun_empty`, `gun_cock` (the revolver).
 * World: `Audio/World/door_open_1`, `door_open_2`, `door_close_1`, `door_close_2`, `door_slam`, `metal_door_open`, `metal_door_close`,
   `wardrobe_open`, `wardrobe_close`, `gate_creak`, `cage_open`, `cage_close`, `keypad_beep`, `keypad_wrong`, `keypad_ok`,
   `shelter_door_open`, `fuse_insert`, `power_on`, `power_off`, `radio_tune`, `radio_sos`, `radio_voice`, `car_door`, `car_crank_fail`,
-  `car_start`, `car_drive_away`, `gas_pour`, `hood_open`, `explosion`, `fire_whoosh`, `helicopter_flyby`, `fence_breach`, `tv_on`.
+  `car_start`, `car_drive_away`, `gas_pour`, `hood_open`, `explosion`, `fire_whoosh`, `helicopter_flyby`, `fence_breach`, `tv_on`,
+  `door_creak_loop_1`, `door_creak_loop_2`, `metal_door_creak_loop` (pitch follows the door speed), `door_latch_1`, `door_latch_2`,
+  `door_bump_1`, `door_bump_2`, `door_unlock`, `wardrobe_enter`, `wardrobe_exit`.
 * Omar: `Audio/Omar/cleaver_swing_1`, `cleaver_swing_2`, `cleaver_hit_1`, `cleaver_hit_2`, `cleaver_hit_wall`, `growl_1`, `growl_2`,
-  `trap_place`, `trap_snap`, `tripwire_snap`, `hiding_rip`, `grab`.
+  `trap_place`, `trap_snap`, `tripwire_snap`, `hiding_rip`, `grab`, `chop_1`…`3` (cleaver into meat on the butcher block),
+  `meat_squelch_1`, `meat_squelch_2`, `windup_1`, `windup_2` (attack wind-up grunt), `stunned`, `door_push`, `bed_lift`.
+* Grandmother (gen_grandma.py): `Audio/Grandma/scream_1`…`3`, `spot`, `mutter_1`…`3`, `death` (from the women's screams in the
+  user's recording: natural pitch, uneven old vibrato, wet rasp, VHS), `wheelchair_loop`, `tv_loop`.
 * Stingers: `Audio/Stingers/sting_spotted`, `sting_jumpscare`, `sting_capture`, `sting_death`, `sting_anomaly_1`, `sting_anomaly_2`,
   `sting_escape`, `sting_ending_bad`, `sting_ending_good`, `static_burst_1`…`3`, `vhs_glitch_1`…`3`, `drone_hit_1`, `drone_hit_2`, `heartbeat_fast`.

@@ -40,7 +40,9 @@ who hunts them. If nobody plays Omar, an AI controls him.
 | **Alone** | *PLAY ALONE (VS AI OMAR)*. |
 
 In the lobby, each player picks one of the 4 prisoners or Omar (**◀ ▶**) and marks *READY*. The host sets the
-night length (10–40 min) and whether the AI plays Omar when no human does, then presses **START**.
+night length (10–40 min), the **difficulty** (Easy / Normal / Hard / Nightmare: Omar's speed and senses, supplies,
+how dark it is — Hard and Nightmare also switch to the sickly olive tape lighting of the reference video) and whether
+the AI plays Omar when no human does, then presses **START**. The VHS filter has presets in the settings.
 Only one person can be Omar. You can't join a match already in progress. If Omar's player disconnects, the AI
 takes over his body.
 
@@ -51,8 +53,9 @@ takes over his body.
 | WASD | move | WASD | move |
 | Shift | sprint (stamina) | Shift | run (stamina) |
 | C / Ctrl | crouch (quiet, harder to see) | LMB | cleaver |
-| E | interact (hold for long actions) | RMB | scream (one of 4 screams) |
-| F / LMB | use item (lighter / flashlight on-off, bandage, throw bottle...) | E | open / unlock doors, **search** hiding spots, smash boards |
+| E | interact (hold for long actions), hide in wardrobes / lockers / **under beds** | RMB | scream (one of 4 screams) |
+| hold LMB on a door + move the mouse | swing the door open / shut (physical doors) | walk into a door | shove it open |
+| F / LMB | use item (Zippo open + strike / close, flashlight, bandage, throw bottle, fire the revolver...) | E | unlock doors, **search** hiding spots (lifts beds), smash boards |
 | 1 2 3 / wheel | select slot | T | string a tripwire across a doorway |
 | G | drop item | G | set a bear trap |
 | Tab | inventory | Q | sense nearby prisoners |
@@ -62,9 +65,10 @@ takes over his body.
 
 ## How it plays
 
-**The night.** A match lasts one night, from 1:00 to 6:00 AM, shown on the VCR timecode. The prisoners start
-locked in the four cages upstairs. After a few seconds the locks fail. Omar spends the first ~20 seconds waking
-up in the furnace room in the basement.
+**The night.** A match lasts one night, from 1:00 to 6:00 AM, shown on the VCR timecode. Each prisoner starts
+locked in **their own cage in a random cell room** (the cage room upstairs, the barn stalls, the restroom by the
+parking lot); playing alone there is exactly one cage. After a few seconds the locks fail. Omar spends the first
+~20 seconds waking up in the furnace room in the basement.
 
 **Inventory.** Each prisoner carries **3 items**. Slot 1 always starts with a **lighter**: it is your light,
 it burns fuel, and Omar can see the flame from far away. Items lie around the whole map, and their positions are
@@ -88,14 +92,21 @@ it burns fuel, and Omar can see the flame from far away. Items lie around the wh
 through walls, and the AI comes to investigate. Darkness and crouching hide you; your own lighter or flashlight
 gives you away. Hide in **wardrobes, lockers and under beds**, but Omar can tear them open.
 
-**Omar.** When he sees you long enough, the **"find"** sound plays and the chase begins: a chase drone, his
-screams and a pounding heartbeat. When you've been **out of his line of sight for 4 seconds**, all of those
-sounds stop. Whenever Omar is near, the picture falls apart into **VHS static and interference** and you hear
-low-fi static.
+**Omar.** A 2.3 m giant who has to stoop through door frames, shoves doors open with his body and butchers meat
+in the kitchen now and then (you can watch him from the dining room vent — or hit him from behind while he is busy
+to stun him). When he sees you long enough, the **"find"** sound plays (sometimes followed by a scream) and the
+chase begins: a chase drone, his screams and a pounding heartbeat. When you've been **out of his line of sight for
+4 seconds**, all of those sounds stop. Walking around is quiet; the moment Omar **comes into view** the picture
+picks up some VHS interference and quiet tape static that grow as he gets closer.
+
+**The grandmother.** An old woman watches TV in her wheelchair in the living room. If she sees you she shrieks and
+calls Omar; later in the night she starts rolling through the ground floor. The **revolver** (2 rounds, one per
+match at a random spot) can kill her — or stun Omar.
 
 **Getting hurt.**
 * The first cleaver hit makes you **bleed**: you limp and leave a blood trail.
-* A second hit means Omar **drags you back to a cage** and takes everything except your lighter.
+* A second hit means Omar **drags you back to a cage** (your own if it is free, else the nearest one) and takes
+  everything except your lighter.
 * Friends can free you with the cage key, a lockpick or bolt cutters. You can also mash **E** to break the
   rusty lock.
 * The **third capture is final**.
@@ -111,17 +122,19 @@ One large map, built by code from every reference image in `SourceAssets/map`. A
 fence (about 125 × 130 m) surrounds it, with forest beyond.
 
 * **The farmhouse.** Three floors joined by a central hall and two staircases.
-  * *Upstairs:* the **cage room** where the prisoners wake up, a storage room, Omar's locked **radio room**,
+  * *Upstairs:* the **cage room** (one of the cell rooms prisoners can wake up in), a storage room, Omar's locked **radio room**,
     a study and a supply closet.
-  * *Ground floor:* the dining room, the kitchen / butchery, the living room with the TV, a boarded-up bathroom,
+  * *Ground floor:* the dining room (with a crawl vent looking into the kitchen), the kitchen / butchery with Omar's
+    butcher block, the **grandmother's TV room**, a boarded-up bathroom,
     the bedroom with the grandfather clock, and Omar's portrait in the hall.
   * *Basement:* the **furnace room** where Omar wakes up, the generator room with the fuse box, the exhibit of
     burnt mannequins, and the antechamber with the **fallout shelter** keypad. Behind the shelter door, a tunnel
     leads under the yard to a ladder past the west fence.
 * **The yard.** Gravel driveway, plastic flamingos, a dead tree, a floodlight, a pickup wreck, the **main gate**
   (padlocked) and the road beyond it.
-* **West side.** The **parking lot** with **the car** and three wrecks, the chained vehicle gate, and an outdoor restroom.
-* **North side.** The **corn field** with its clearing (the helicopter landing zone), the **barn**, the
+* **West side.** The **parking lot** with **the car** and three wrecks, the chained vehicle gate, and an outdoor restroom
+  (with a cell cage).
+* **North side.** The **corn field** with its clearing (the helicopter landing zone), the **barn** (two stalls are cells), the
   **fuel drums** against the north fence, the silo, the windmill and the water tower.
 * **East side.** A tool shed.
 
@@ -146,8 +159,10 @@ from a seed that the host shares, so every player builds the same map.
 * The ending screen lists each player's fate.
 
 Random events also happen during the night: power cuts, the phone ringing at 3 AM, a TV switching itself on,
-thunder, distant screams, and **anomalies**. During an anomaly the whole environment warps and tears like a
-failing PS1 renderer, and the mannequins in the basement are no longer where you left them.
+thunder and distant screams — and the mannequins in the basement are not always where you left them.
+
+**Admin panel (owner only).** F10 opens the owner's admin panel (password protected; the host verifies it for
+other peers). It is not needed to play.
 
 ---
 
