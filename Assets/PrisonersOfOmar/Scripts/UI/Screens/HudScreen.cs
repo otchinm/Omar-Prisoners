@@ -82,17 +82,20 @@ namespace PrisonersOfOmar.UI
         {
             _staminaAlpha = Mathf.MoveTowards(_staminaAlpha, stamina < 0.985f ? 1f : 0f, Time.unscaledDeltaTime * (stamina < 0.985f ? 6f : 1.2f));
             if (_staminaAlpha <= 0.01f) return;
-            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 15;
+            // raised off the bottom edge (VHS overscan eats the last lines) and a thick bar you can read at a glance
+            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 28;
             var col = new Color(0.92f, 0.92f, 0.9f, _staminaAlpha);
             ui.Text("STAMINA", x + 1, y + 1, new Color(0f, 0f, 0f, 0.6f * _staminaAlpha));
             ui.Text("STAMINA", x, y, col);
             float bx = x + ui.TextWidth("STAMINA") + 6;
-            float bw = Mathf.Round(ui.Width * 0.3f), bh = 6;
+            float bw = Mathf.Round(ui.Width * 0.32f), bh = 11;
             float by = y + Mathf.Floor((ui.LineHeight() - bh) * 0.5f);
-            ui.Rect(bx, by, bw, bh, new Color(0f, 0f, 0f, 0.45f * _staminaAlpha));
+            ui.Rect(bx + 1, by + 1, bw, bh, new Color(0f, 0f, 0f, 0.4f * _staminaAlpha));   // drop shadow
+            ui.Rect(bx, by, bw, bh, new Color(0f, 0f, 0f, 0.5f * _staminaAlpha));
             ui.Frame(new Rect(bx, by, bw, bh), new Color(0.8f, 0.8f, 0.78f, 0.85f * _staminaAlpha));
             float fill = (bw - 4) * Mathf.Clamp01(stamina);
             ui.Rect(bx + 2, by + 2, fill, bh - 4, new Color(0.62f, 0.62f, 0.6f, 0.9f * _staminaAlpha));
+            ui.Rect(bx + 2, by + 2, fill, 2, new Color(0.78f, 0.78f, 0.75f, 0.9f * _staminaAlpha));   // lighter top line of the fill
             // the little end marker of the reference bar
             ui.Rect(bx + 2 + fill - 1, by + 1, 2, bh - 2, new Color(0.95f, 0.95f, 0.92f, _staminaAlpha));
         }
@@ -111,7 +114,7 @@ namespace PrisonersOfOmar.UI
         static void DrawInventoryStrip(VhsUI ui, MatchWorld w)
         {
             var inv = w.Inventory;
-            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 44, s = 20;
+            float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 58, s = 20;   // above the stamina bar
             for (int i = 0; i < 3; i++)
             {
                 var r = new Rect(x + i * (s + 4), y, s, s);
