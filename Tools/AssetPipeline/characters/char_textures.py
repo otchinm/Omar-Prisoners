@@ -183,7 +183,7 @@ def paint_mask(spec, rng, th, y, X, Y):
     """Omar's sack hood: pale greenish cotton/burlap, two big black eye holes, dirt, gathered neck."""
     h, w = th.shape
     ath = np.abs(th)
-    base = rgb("#bdbf9e")
+    base = rgb("#a9ae8a")  # pale sickly green-grey like the reference
     img = fabric(h, w, base, rng, folds=0.16, grain=0.10, weave=0.05, fold_src=("camera", (0.3, 0.15, 0.75, 0.7)))
     burlap = photo_detail("grass", h, w, rng, zoom=2.0, sigma=1.2)
     img = shade(img, 1 + burlap * 0.06)
@@ -196,11 +196,11 @@ def paint_mask(spec, rng, th, y, X, Y):
     hole_y = 103.0
     for sx in (-1, 1):
         cx = 34.0 * sx
-        rim = ell(X, Y, cx, hole_y - 3, 30, 33, 14)
+        rim = ell(X, Y, cx, hole_y - 3, 34, 38, 14)
         img = mix(img, rgb("#3a3a2c"), rim * 0.55)
-        rim2 = ell(X, Y, cx, hole_y - 1, 23, 26, 6)
+        rim2 = ell(X, Y, cx, hole_y - 1, 27, 30, 6)
         img = mix(img, rgb("#1a1a14"), rim2 * 0.6)
-        hole = ell(X, Y, cx, hole_y, 17.5, 20.5, 2.0)
+        hole = ell(X, Y, cx, hole_y, 20.5, 24.5, 2.0)  # big hollow eye holes
         jag = (fbm(h, w, 30, rng, octaves=2) - 0.5) * 0.7
         hole = np.clip(hole + jag * hole * (1 - hole) * 4, 0, 1)
         img = mix(img, rgb("#020202"), hole)
@@ -210,8 +210,8 @@ def paint_mask(spec, rng, th, y, X, Y):
             streak = np.clip(1 - np.abs(X - xo) / rng.uniform(2.0, 4.0), 0, 1) * (Y < hole_y - 12) * smoothstep(hole_y - rng.uniform(40, 75), hole_y - 15, Y)
             img = mix(img, rgb("#4a4636"), streak * 0.45)
     # mouth area: a faint wet stain, nose bump shadow
-    img = mix(img, rgb("#6a5a44"), ell(X, Y, 0, 40, 22, 12, 8) * 0.35)
-    img = mix(img, rgb("#4a0808"), ell(X, Y, 6, 30, 7, 14, 4) * 0.35)
+    img = mix(img, rgb("#6a5a44"), ell(X, Y, 0, 40, 22, 12, 8) * 0.18)
+    img = mix(img, rgb("#4a0808"), ell(X, Y, 6, 30, 7, 14, 4) * 0.2)
     img = shade(img, 1 - 0.12 * ell(X, Y, 0, 68, 14, 6, 4))
     # blood spatter
     bm = blood(h, w, rng, amount=0.12, scale=10, splatter=0.6) * (Y < 90)
@@ -679,9 +679,10 @@ def paint_extra(spec, rng):
     u, v = uv_grid(h, w)
     kind = spec.get("extra", "hair")
     if kind == "apron":
-        img = fabric(h, w, rgb("#2c2424"), rng, folds=0.3, grain=0.1, fold_scale=0.8,
+        # black leather / rubber butcher's apron with blood splashed over it (not soaked red all over)
+        img = fabric(h, w, rgb("#1c1a1a"), rng, folds=0.3, grain=0.1, fold_scale=0.8,
                      fold_src=("camera", (0.3, 0.15, 0.75, 0.7)))
-        bm = blood(h, w, rng, amount=0.45, scale=6, splatter=2.5)
+        bm = blood(h, w, rng, amount=0.36, scale=7, splatter=4.0)
         img = mix(img, blood_color(rng, h, w), bm * 0.9)
         drip = np.zeros((h, w), np.float32)
         for _ in range(14):
@@ -915,7 +916,7 @@ CHARACTERS = {
         arm=sleeve("#1c1a1e", 0.045, folds=0.32), leg=leg_p4, shoe=sneaker("#2a2a30", "#e0e0e0", sole="#e0e0d8"),
         glasses="round", glasses_color="#0e0c0e", extra="hair", misc="hair", stubble=0.08, stubble_color="#4a3a30"),
     "omar": dict(
-        seed=505, head="mask", skin="#8a7a72", hand_skin="#7a6e6e", hand_blood=0.45, hand_grime=0.5,
+        seed=505, head="mask", skin="#4a403c", hand_skin="#3a3432", nails="#2a2422", hand_blood=0.55, hand_grime=0.6,
         hair_style="none", torso=torso_omar, arm=arm_omar, leg=leg_omar, shoe=boot(), extra="apron", misc="skirt",
         hair="#3a3428"),
     "mannequin_burnt": dict(

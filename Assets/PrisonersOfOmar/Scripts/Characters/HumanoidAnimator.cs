@@ -76,7 +76,7 @@ namespace PrisonersOfOmar.Characters
                 case CharacterAction.Pickup: return 1.0f;
                 case CharacterAction.Interact: return 0.8f;
                 case CharacterAction.UseItem: return 1.2f;
-                case CharacterAction.Attack: return 0.9f;
+                case CharacterAction.Attack: return 1.15f;
                 case CharacterAction.Scream: return 2.2f;
                 case CharacterAction.Search: return 2.5f;
                 case CharacterAction.Grab: return 1.2f;
@@ -108,7 +108,7 @@ namespace PrisonersOfOmar.Characters
                 case CharacterAction.Pickup: return 0.45f;    // hand reaches the item
                 case CharacterAction.Interact: return 0.45f;  // hand touches the handle / button
                 case CharacterAction.UseItem: return 0.5f;
-                case CharacterAction.Attack: return 0.48f;    // cleaver hits
+                case CharacterAction.Attack: return 0.58f;    // cleaver hits (after a long, heavy wind-up)
                 case CharacterAction.Scream: return 0.1f;     // scream starts
                 case CharacterAction.Search: return 0.5f;
                 case CharacterAction.Grab: return 0.42f;      // hands close on the victim
@@ -978,34 +978,36 @@ namespace PrisonersOfOmar.Characters
             // Omar's overhead cleaver chop: wind-up (arm high behind the head), fast swing down, follow-through.
             float s = _s;
             // key times
-            const float tUp = 0.36f, tHit = 0.48f, tFollow = 0.64f;
+            const float tUp = 0.42f, tHit = 0.58f, tFollow = 0.72f;
             float flex, abd, twist, elbow, hand, chestY, chestX, spineX, hipsDrop, hipsFwd, lFlex, lAbd, lElbow;
             if (t < tUp)
             {
                 float k = Smooth01(t / tUp);
-                flex = Mathf.Lerp(-12f, -172f, k); abd = Mathf.Lerp(12f, 38f, k); twist = Mathf.Lerp(0f, -10f, k);
-                elbow = Mathf.Lerp(22f, 72f, k); hand = Mathf.Lerp(38f, -45f, k);
-                chestY = Mathf.Lerp(0f, -22f, k); chestX = Mathf.Lerp(0f, -10f, k); spineX = Mathf.Lerp(0f, -5f, k);
-                hipsDrop = 0f; hipsFwd = Mathf.Lerp(0f, -0.04f, k);
+                // cocks the cleaver far back over his shoulder, twists away and leans back - you SEE it coming
+                float tremble = Mathf.Sin(t * 95f) * 3f * Smooth01((t - 0.3f) / 0.12f);
+                flex = Mathf.Lerp(-12f, -188f, k) + tremble; abd = Mathf.Lerp(12f, 46f, k); twist = Mathf.Lerp(0f, -16f, k);
+                elbow = Mathf.Lerp(22f, 96f, k); hand = Mathf.Lerp(38f, -60f, k);
+                chestY = Mathf.Lerp(0f, -38f, k); chestX = Mathf.Lerp(0f, -16f, k); spineX = Mathf.Lerp(0f, -9f, k);
+                hipsDrop = Mathf.Lerp(0f, -0.02f, k); hipsFwd = Mathf.Lerp(0f, -0.07f, k);
                 lFlex = Mathf.Lerp(0f, -50f, k); lAbd = Mathf.Lerp(5f, 20f, k); lElbow = Mathf.Lerp(10f, 50f, k);
             }
             else if (t < tHit)
             {
                 float k = (t - tUp) / (tHit - tUp);
-                k = k * k; // accelerate into the hit
-                flex = Mathf.Lerp(-172f, -55f, k); abd = Mathf.Lerp(38f, 10f, k); twist = Mathf.Lerp(-10f, 0f, k);
-                elbow = Mathf.Lerp(72f, 8f, k); hand = Mathf.Lerp(-45f, 25f, k);
-                chestY = Mathf.Lerp(-22f, 10f, k); chestX = Mathf.Lerp(-10f, 24f, k); spineX = Mathf.Lerp(-5f, 14f, k);
-                hipsDrop = Mathf.Lerp(0f, 0.05f, k); hipsFwd = Mathf.Lerp(-0.04f, 0.07f, k);
+                k = k * k * k; // hangs at the top, then whips down
+                flex = Mathf.Lerp(-188f, -50f, k); abd = Mathf.Lerp(46f, 10f, k); twist = Mathf.Lerp(-16f, 0f, k);
+                elbow = Mathf.Lerp(96f, 6f, k); hand = Mathf.Lerp(-60f, 28f, k);
+                chestY = Mathf.Lerp(-38f, 14f, k); chestX = Mathf.Lerp(-16f, 28f, k); spineX = Mathf.Lerp(-9f, 16f, k);
+                hipsDrop = Mathf.Lerp(-0.02f, 0.07f, k); hipsFwd = Mathf.Lerp(-0.07f, 0.09f, k);
                 lFlex = Mathf.Lerp(-50f, -15f, k); lAbd = Mathf.Lerp(20f, 26f, k); lElbow = Mathf.Lerp(50f, 30f, k);
             }
             else if (t < tFollow)
             {
                 float k = Smooth01((t - tHit) / (tFollow - tHit));
-                flex = Mathf.Lerp(-55f, -18f, k); abd = Mathf.Lerp(10f, 4f, k); twist = 0f;
-                elbow = Mathf.Lerp(8f, 25f, k); hand = Mathf.Lerp(25f, 40f, k);
-                chestY = Mathf.Lerp(10f, 14f, k); chestX = Mathf.Lerp(24f, 26f, k); spineX = Mathf.Lerp(14f, 16f, k);
-                hipsDrop = 0.05f; hipsFwd = 0.07f;
+                flex = Mathf.Lerp(-50f, -18f, k); abd = Mathf.Lerp(10f, 4f, k); twist = 0f;
+                elbow = Mathf.Lerp(6f, 25f, k); hand = Mathf.Lerp(28f, 40f, k);
+                chestY = Mathf.Lerp(14f, 14f, k); chestX = Mathf.Lerp(28f, 26f, k); spineX = Mathf.Lerp(16f, 16f, k);
+                hipsDrop = Mathf.Lerp(0.07f, 0.05f, k); hipsFwd = Mathf.Lerp(0.09f, 0.07f, k);
                 lFlex = -15f; lAbd = 26f; lElbow = 30f;
             }
             else

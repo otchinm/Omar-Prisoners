@@ -100,6 +100,12 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        System.Collections.IEnumerator SwingSoundLater(Avatar av, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (av != null) AudioManager.Play3D(AudioManager.Variant(Snd.CleaverSwing, 2), av.ChestPosition, 0.9f, Random.Range(0.9f, 1.05f), 2f, 18f, AudioCategory.Omar);
+        }
+
         void OnAction(int sender, NetReader r)
         {
             int id = r.ReadByte();
@@ -109,7 +115,11 @@ namespace PrisonersOfOmar.Gameplay
             if (av == null) return;
             av.PlayAction(a);
             if (av.IsOmar && a == CharacterAction.Attack)
-                AudioManager.Play3D(AudioManager.Variant(Snd.CleaverSwing, 2), av.ChestPosition, 0.9f, Random.Range(0.9f, 1.05f), 2f, 18f, AudioCategory.Omar);
+            {
+                // a heavy grunt as he cocks the cleaver, the whoosh comes with the downswing
+                AudioManager.Play3D(AudioManager.Variant(Snd.OmarWindup, 2), av.EyePosition, 1f, Random.Range(0.92f, 1.04f), 2.5f, 24f, AudioCategory.Omar);
+                StartCoroutine(SwingSoundLater(av, 0.45f));
+            }
         }
 
         void OnPlayerStatus(int sender, NetReader r)

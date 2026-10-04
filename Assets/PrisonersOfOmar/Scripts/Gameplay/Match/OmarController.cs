@@ -23,7 +23,7 @@ namespace PrisonersOfOmar.Gameplay
         float _stamina = 1f, _staminaDelay;
         bool _exhausted, _sprintingNow;
         float _bobPhase, _stepDist;
-        float _attackCooldown, _attackPending = -1f;
+        float _attackCooldown, _attackPending = -1f, _swingSoundAt = -1f;
         float _screamReadyAt, _senseReadyAt;
         float _stunUntil;
         byte _teleportSeq;
@@ -205,7 +205,13 @@ namespace PrisonersOfOmar.Gameplay
                 _attackPending = Tuning.AttackWindup;
                 _arms?.Play(CharacterAction.Attack);
                 _w.SendAction(CharacterAction.Attack);
-                AudioManager.Play2D(AudioManager.Variant(Snd.CleaverSwing, 2), 0.8f, Random.Range(0.9f, 1.05f), AudioCategory.Omar);
+                AudioManager.Play2D(AudioManager.Variant(Snd.OmarWindup, 2), 0.8f, Random.Range(0.92f, 1.04f), AudioCategory.Omar);
+                _swingSoundAt = Time.time + 0.45f;
+            }
+            if (_swingSoundAt > 0f && Time.time >= _swingSoundAt)
+            {
+                _swingSoundAt = -1f;
+                AudioManager.Play2D(AudioManager.Variant(Snd.CleaverSwing, 2), 0.85f, Random.Range(0.9f, 1.05f), AudioCategory.Omar);
             }
             if (_attackPending >= 0f)
             {
@@ -365,7 +371,13 @@ namespace PrisonersOfOmar.Gameplay
             if (!_prompt.Enabled) return;
             if (_prompt.HoldTime <= 0f)
             {
-                if (GameInput.InteractDown) { _target.Interact(_who); _arms?.Play(CharacterAction.Interact); }
+                if (GameInput.InteractDown)
+                {
+                    _target.Interact(_who);
+                    bool chop = _prompt.Text == "CHOP MEAT";
+                    _arms?.Play(chop ? CharacterAction.Attack : CharacterAction.Interact);
+                    if (chop) AudioManager.Play2D(AudioManager.Variant(Snd.CleaverSwing, 2), 0.7f, Random.Range(0.9f, 1.05f), AudioCategory.Omar);
+                }
                 return;
             }
             if (!GameInput.InteractHeld) { _hold = 0; _holdLock = false; return; }

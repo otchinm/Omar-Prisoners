@@ -178,6 +178,7 @@ namespace PrisonersOfOmar.Gameplay
             for (int i = 0; i < Hiding.Length; i++) Hiding[i] = new HidingEntity(i, Map.HidingSpots[i]);
             BuildCages();
             try { BuildGrandma(); } catch (Exception e) { Debug.LogException(e); }
+            try { BuildKitchen(); } catch (Exception e) { Debug.LogException(e); }
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();

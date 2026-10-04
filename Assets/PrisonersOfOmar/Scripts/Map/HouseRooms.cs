@@ -77,9 +77,10 @@ namespace PrisonersOfOmar.Map
             ctx.Key(A, V(-7.9f, F + Props.TableTop, -3.95f));
             ctx.Common(A, V(-6.1f, F + Props.TableTop, -4.45f));
             Props.ChinaCabinet(ctx, mb, V(-10.65f, F, -3.6f), -90f);
-            Props.Sideboard(ctx, mb, V(-9.6f, F, -0.33f), 0f, 1.6f);
-            Props.Bottles(mb, V(-10.0f, F + Props.SideboardTop, -0.35f), 203, 2, 0.15f);
-            ctx.Key(A, V(-9.2f, F + Props.SideboardTop, -0.33f));
+            Props.Sideboard(ctx, mb, V(-5.25f, F, -0.33f), 0f, 1.5f);
+            Props.Bottles(mb, V(-5.6f, F + Props.SideboardTop, -0.35f), 203, 2, 0.15f);
+            ctx.Key(A, V(-4.85f, F + Props.SideboardTop, -0.33f));
+            VentDuct(ctx, mb);
             Props.WallPicture(mb, V(-7f, F + 1.8f, -7.9f), Vector3.forward, 1.0f, 0.55f, Mat.Lit(Tex.PaintingLandscape), Mat.Lit(Tex.WoodFurniture, new Color(0.7f, 0.55f, 0.3f)), 0.07f);
             Arch.Decal(mb, Mat.Decal("blood_splatter_1"), V(-5.5f, F + 1.4f, -0.08f), Vector3.back, 1.2f, 1.2f, 10f);
             Arch.FloorDecal(mb, Mat.Decal("blood_pool"), V(-6.6f, F, -4.6f), 1.4f, 1.1f, 50f);
@@ -90,6 +91,85 @@ namespace PrisonersOfOmar.Map
             ctx.Nav.Add(V(-7.2f, F, -1.7f), A);
             ctx.Nav.Add(V(-4.2f, F, -2.1f), A);
             ctx.Nav.Add(V(-9.8f, F, -6.2f), A);
+        }
+
+        /// <summary>Hole in the dining / kitchen wall (z = 0) at crouch height: the vent grate.</summary>
+        internal static readonly Opening VentGrate = new Opening { Level = 1, AlongX = true, C = 0f, Along = -9.3f, W = 0.7f, H = 0.95f, Sill = 0.42f };
+
+        /// <summary>
+        /// A crouch-only sheet-metal duct boxed in along the dining room's north wall (inside 2.3 x 0.9 x 1.25 m,
+        /// Omar's 1.95 m capsule does not fit). Floor-level entrance at its east end; from the far end a grate in the
+        /// wall looks across the kitchen onto the butcher table where Omar chops meat.
+        /// </summary>
+        static void VentDuct(MapContext ctx, MeshBuilder mb)
+        {
+            float F = FG;
+            float x0 = -10.9f, x1 = -8.45f, z0 = -1.05f, z1 = -0.07f, top = F + 1.25f, t = 0.05f;
+            var sheet = Mat.Lit(Tex.Galvanized, new Color(0.62f, 0.62f, 0.6f));
+            var dark = Mat.Lit(Tex.MetalDark);
+            mb.Color = Shade.Gray(0.7f);
+            mb.Material = sheet;
+            // south side, lid, and the inside faces of both (dark, dented)
+            mb.AddBox(V((x0 + x1) * 0.5f, (F + top) * 0.5f, z0 + t * 0.5f), V(x1 - x0, top - F, t), BoxUV.Local, 0.9f);
+            mb.AddBox(V((x0 + x1) * 0.5f, top + t * 0.5f, (z0 + z1) * 0.5f + 0.01f), V(x1 - x0, t, z1 - z0 + 0.02f), BoxUV.Local, 0.9f);
+            mb.Material = dark;
+            mb.Color = Shade.Gray(0.45f);
+            mb.AddBox(V((x0 + x1) * 0.5f, F + 0.012f, (z0 + z1) * 0.5f), V(x1 - x0, 0.024f, z1 - z0 - t), BoxUV.Local, 0.9f); // duct floor
+            // rivet seams every 0.6 m
+            mb.Material = sheet;
+            mb.Color = Shade.Gray(0.55f);
+            for (float x = x0 + 0.6f; x < x1 - 0.1f; x += 0.6f)
+            {
+                mb.AddBox(V(x, (F + top) * 0.5f, z0 - 0.004f), V(0.03f, top - F, 0.012f), BoxUV.Local, 0.5f);
+                mb.AddBox(V(x, top + t + 0.004f, (z0 + z1) * 0.5f), V(0.03f, 0.012f, z1 - z0), BoxUV.Local, 0.5f);
+            }
+            // the grate taken off the entrance, leaning against the duct
+            mb.Material = dark;
+            mb.Color = Shade.Gray(0.6f);
+            mb.Push(V(x1 - 0.55f, F + 0.45f, z0 - 0.09f), Quaternion.Euler(-12f, 0f, 0f));
+            mb.AddBox(Vector3.zero, V(0.8f, 0.9f, 0.02f), BoxUV.Local, 0.5f, 0f, BoxFaces.PosX | BoxFaces.NegX | BoxFaces.PosY | BoxFaces.NegY);
+            for (float bx = -0.35f; bx <= 0.36f; bx += 0.07f) mb.AddBox(V(bx, 0f, 0f), V(0.012f, 0.88f, 0.012f), BoxUV.Local, 0.3f);
+            mb.Pop();
+            // grate in the wall hole (kitchen side) with bars you peer through
+            var g = VentGrate;
+            float gy0 = F + g.Sill, gy1 = F + g.H;
+            for (float bx = g.Along - g.W * 0.5f + 0.06f; bx < g.Along + g.W * 0.5f - 0.03f; bx += 0.085f)
+                mb.AddBox(V(bx, (gy0 + gy1) * 0.5f, 0.05f), V(0.014f, gy1 - gy0, 0.014f), BoxUV.Local, 0.3f);
+            mb.AddBox(V(g.Along, gy0 + 0.01f, 0.05f), V(g.W, 0.02f, 0.03f), BoxUV.Local, 0.3f);
+            mb.AddBox(V(g.Along, gy1 - 0.01f, 0.05f), V(g.W, 0.02f, 0.03f), BoxUV.Local, 0.3f);
+            // reveal of the hole (the wall is 14 cm thick)
+            mb.Material = Mat.Lit(Tex.PlasterDirty, new Color(0.6f, 0.58f, 0.52f));
+            mb.AddBox(V(g.Along, gy0 - 0.005f, 0f), V(g.W, 0.01f, IntT), BoxUV.Local, 0.5f);
+            mb.AddBox(V(g.Along, gy1 + 0.005f, 0f), V(g.W, 0.01f, IntT), BoxUV.Local, 0.5f);
+            mb.AddBox(V(g.Along - g.W * 0.5f - 0.005f, (gy0 + gy1) * 0.5f, 0f), V(0.01f, gy1 - gy0, IntT), BoxUV.Local, 0.5f);
+            mb.AddBox(V(g.Along + g.W * 0.5f + 0.005f, (gy0 + gy1) * 0.5f, 0f), V(0.01f, gy1 - gy0, IntT), BoxUV.Local, 0.5f);
+            mb.Color = Shade.Gray(1f);
+            // colliders: side + lid (crouch only inside), bars so nothing passes through the grate
+            ctx.Solid(V((x0 + x1) * 0.5f, (F + top) * 0.5f, z0 + t * 0.5f), V(x1 - x0, top - F, t), SurfaceType.Metal, "VentDuctSide");
+            ctx.Solid(V((x0 + x1) * 0.5f, top + 0.15f, (z0 + z1) * 0.5f), V(x1 - x0, 0.3f, z1 - z0 + 0.06f), SurfaceType.Metal, "VentDuctLid");
+            // the bars stop things but not eyes (Corpse layer: solid for bodies, not a sight blocker)
+            ctx.Solid(V(g.Along, (gy0 + gy1) * 0.5f, 0.05f), V(g.W, gy1 - gy0, 0.02f), SurfaceType.Metal, "VentGrateBars").gameObject.layer = Layers.Corpse;
+            ctx.Data.CrawlSpaces.Add(MapMath.MinMax(V(x0, F, z0), V(x1, top, z1)));
+        }
+
+        /// <summary>Omar's butcher routine at the kitchen table, watched through the vent grate.</summary>
+        static void KitchenRoutine(MapContext ctx, MeshBuilder mb)
+        {
+            float F = FG;
+            var interact = GeoUtil.AddBox(ctx.Dynamic, V(-7.4f, F + Props.ButcherTop + 0.15f, 4.4f), V(2.1f, 0.45f, 1.1f), Quaternion.identity,
+                Layers.Interactable, SurfaceType.Default, true, "ChopInteract");
+            var g = VentGrate;
+            Vector3 eye = V(g.Along, F + g.Sill + 0.25f, -0.35f);
+            Vector3 table = V(-7.4f, F + 1.1f, 4.4f);
+            ctx.Data.Kitchen = new KitchenInfo
+            {
+                Area = "House.Kitchen",
+                ChopPose = new Pose(V(-7.45f, F, 5.4f), MapMath.Yaw(180f)),
+                BlockTop = V(-7.55f, F + Props.ButcherTop + 0.1f, 4.45f),
+                ChopInteract = interact,
+                VentArea = ctx.Data.CrawlSpaces.Count > 0 ? ctx.Data.CrawlSpaces[ctx.Data.CrawlSpaces.Count - 1] : new Bounds(eye, Vector3.one),
+                VentView = new Pose(eye, Quaternion.LookRotation(table - eye)),
+            };
         }
 
         static void Kitchen(MapContext ctx, MeshBuilder mb)
@@ -103,6 +183,7 @@ namespace PrisonersOfOmar.Map
             BuildTvScreen(ctx, "TvKitchen", tvPos, 0f, out var tvLight);
             ctx.Emitter(tvPos, "Audio/Ambience/tv_static_loop", 0.45f, 9f, true);
             Props.ButcherTable(ctx, mb, V(-7.4f, F, 4.4f), 0f, 301);
+            KitchenRoutine(ctx, mb);
             Props.MeatHooks(mb, V(-7.0f, CG, 7.35f), 0f, 3.4f, 6, 302);
             Props.Counter(ctx, mb, V(-10.58f, F, 1.65f), -90f, 2.4f, true);
             Props.Counter(ctx, mb, V(-5.0f, F, 0.39f), 180f, 2.2f);

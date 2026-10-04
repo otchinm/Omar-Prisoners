@@ -246,8 +246,8 @@ namespace PrisonersOfOmar.Gameplay
         public const float OmarStaminaSeconds = 9f;
         /// <summary>m/s per second: the AI Omar accelerates from walk to full run over ~1.2 s.</summary>
         public const float OmarAcceleration = 3f;
-        public const float OmarEyeHeight = 1.82f;
-        public const float AttackRange = 1.9f, AttackCooldown = 1.25f, AttackWindup = 0.42f;
+        public const float OmarEyeHeight = 1.9f;
+        public const float AttackRange = 1.9f, AttackCooldown = 1.45f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
         public const float ScreamCooldown = 22f, SenseCooldown = 30f, SenseRadius = 16f;
         public const int TripwireCharges = 3, BearTrapCharges = 2;
         public const float TrapRecharge = 100f;

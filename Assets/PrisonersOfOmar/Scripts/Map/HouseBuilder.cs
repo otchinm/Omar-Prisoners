@@ -38,6 +38,8 @@ namespace PrisonersOfOmar.Map
         internal struct Opening
         {
             public int Level; public bool AlongX; public float C, Along, W, H;
+            /// <summary>Height of the bottom of the hole above the floor (0 = doorway; &gt; 0 = a grate / hatch in the wall).</summary>
+            public float Sill;
         }
 
         /// <summary>Inner (finished) rect of a room = centerline rect minus half wall thicknesses.</summary>
@@ -170,6 +172,7 @@ namespace PrisonersOfOmar.Map
                 openings.Add(new Opening { Level = lvl, AlongX = s.AlongX, C = s.AlongX ? s.Center.z : s.Center.x, Along = s.AlongX ? s.Center.x : s.Center.z, W = s.HoleW, H = s.HoleH });
             }
             openings.Add(new Opening { Level = 0, AlongX = false, C = -11f, Along = -4f, W = 1.1f, H = 2.2f }); // fallout shelter door
+            openings.Add(VentGrate); // the duct in the dining room looks into the kitchen through this grate
             var rooms = Rooms();
 
             Safe("house shells", () =>
@@ -205,7 +208,7 @@ namespace PrisonersOfOmar.Map
                 var o = ops[i];
                 if (o.Level != level || o.AlongX != alongX || Mathf.Abs(o.C - c) > 0.01f) continue;
                 if (o.Along < lo || o.Along > hi) continue;
-                list.Add(new Hole(o.Along - o.W * 0.5f, o.Along + o.W * 0.5f, FloorY[level], FloorY[level] + o.H));
+                list.Add(new Hole(o.Along - o.W * 0.5f, o.Along + o.W * 0.5f, FloorY[level] + o.Sill, FloorY[level] + o.H));
             }
             return list;
         }
@@ -235,6 +238,7 @@ namespace PrisonersOfOmar.Map
 
         static void Baseboard(MeshBuilder mb, Material m, bool alongX, float c, float lo, float hi, float fy, List<Hole> holes)
         {
+            holes.RemoveAll(h => h.V0 > fy + 0.15f); // grates / hatches above the floor keep the baseboard
             holes.Sort((a, b) => a.U0.CompareTo(b.U0));
             float cur = lo;
             mb.Material = m;

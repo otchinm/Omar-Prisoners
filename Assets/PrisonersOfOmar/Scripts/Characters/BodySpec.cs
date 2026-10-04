@@ -206,21 +206,26 @@ namespace PrisonersOfOmar.Characters
 
         void Omar()
         {
-            Skeleton(1.95f, false);
+            // big, broad and heavy like the reference: a head taller than everyone, wide shoulders and gut,
+            // long arms that hang down past the hips, huge hands
+            Skeleton(2.05f, false);
             Heavy = true;
             float s = Scale;
             Torso = Rings(s,
-                new Ring(0.165f, 0.095f, 0.105f), new Ring(0.195f, 0.115f, 0.125f), new Ring(0.198f, 0.135f, 0.112f),
-                new Ring(0.196f, 0.142f, 0.106f), new Ring(0.200f, 0.140f, 0.108f), new Ring(0.214f, 0.132f, 0.114f),
-                new Ring(0.224f, 0.120f, 0.118f), new Ring(0.246f, 0.090f, 0.090f), new Ring(0.072f, 0.064f, 0.070f, -0.01f));
-            MaleLimbs(s, 1.22f);
-            ShoulderX = 0.198f * s; ElbowX = 0.224f * s; WristX = 0.236f * s;
+                new Ring(0.182f, 0.104f, 0.115f), new Ring(0.214f, 0.128f, 0.138f), new Ring(0.220f, 0.152f, 0.124f),
+                new Ring(0.220f, 0.162f, 0.118f), new Ring(0.224f, 0.158f, 0.120f), new Ring(0.240f, 0.146f, 0.128f),
+                new Ring(0.252f, 0.132f, 0.132f), new Ring(0.282f, 0.100f, 0.100f), new Ring(0.080f, 0.072f, 0.078f, -0.01f));
+            Belly = 0.014f * s;
+            MaleLimbs(s, 1.34f);
+            ShoulderX = 0.226f * s; ElbowX = 0.252f * s; WristX = 0.262f * s;
+            ElbowY = ShoulderY - 0.182f * Height;
+            WristY = ElbowY - 0.158f * Height;
             HeadShape = HeadShape.Sack;
             HeadRings = SackHead;
             HeadSquare = 3.2f;
             Nose = 0.02f;
-            HeadH = 0.15f * Height;
-            HandScale = 1.25f;
+            HeadH = 0.148f * Height;
+            HandScale = 1.4f;
             FootLen = 0.30f; FootW = 0.11f; ShoeH = 0.17f;
             Apron = true; Noose = true; Skirt = true;
         }

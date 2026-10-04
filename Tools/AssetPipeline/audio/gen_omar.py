@@ -253,3 +253,70 @@ def stunned(rng):
     dsp.place(y, omar_voice(rng, "scream_3", 0.2, 1.2, 0.62, 0.7, 0.7), 0, 1.0)
     dsp.place(y, sfx.breath(N(0.9), rng, [(0.0, 0.35, "in", 0.9), (0.45, 0.4, "out", 1.0)], voice=0.4, f0=72, sack=True), N(1.25), 0.6)
     return dsp.vhs(fin(y, rng, 0.9, 0.22, sat=2.2), rng, bits=8, drive=2.2, lp_hz=5000)
+
+
+# ---- iteration 2: butcher routine + the heavy wind-up
+def _chop(rng, f_body, wet):
+    n = N(1.0)
+    y = np.zeros(n)
+    dsp.place(y, sfx.whoosh(N(0.18), rng, 300, 1800, 0.8, 1.2, 0.3), 0, 0.35)
+    hit = sfx.strike(N(0.5), rng, sfx.wood_modes(rng, 140, 9, 0.06), 0.9, noise_mix=0.6)   # cleaver into the block
+    dsp.place(y, dsp.norm(hit), N(0.15), 0.9)
+    dsp.place(y, sfx.thud(N(0.5), rng, f_body, 0.07, 0.6, noise=0.8, noise_lp=1400), N(0.15), 0.9)
+    m = N(0.45)  # meat: wet slap + squelch
+    slap = dsp.bp(rng.standard_normal(m), 400, 3500) * dsp.perc(m, 0.001, 0.05)
+    dsp.place(y, slap, N(0.152), 0.8)
+    dsp.place(y, sfx.liquid(m, rng, 220 * dsp.env([(0, 1), (0.45, 0)], m), 300, 1400, 0.4), N(0.16), wet)
+    dsp.place(y, small_metal(rng, N(0.3), rng.uniform(1700, 2300), (0.03, 0.12)), N(0.155), 0.25)  # blade ring
+    return dsp.vhs(fin(y, rng, 0.6, 0.18, sat=1.8), rng, bits=8, drive=2.0, lp_hz=6000)
+
+
+@sound("Omar/chop_1", desc="cleaver slams through meat into the butcher block", **LOUD)
+def chop_1(rng):
+    return _chop(rng, 85, 0.5)
+
+
+@sound("Omar/chop_2", desc="cleaver chop, wetter", **LOUD)
+def chop_2(rng):
+    return _chop(rng, 75, 0.8)
+
+
+@sound("Omar/chop_3", desc="cleaver chop hitting bone", **LOUD)
+def chop_3(rng):
+    y = _chop(rng, 95, 0.4)
+    crack = dsp.hp(rng.standard_normal(N(0.04)), 1500) * dsp.perc(N(0.04), 0.0005, 0.008)
+    dsp.place(y, crack, N(0.15), 0.6)
+    return y
+
+
+def _squelch(rng, dur):
+    n = N(dur)
+    y = sfx.liquid(n, rng, 160 * dsp.env([(0, 0.3), (0.1, 1), (dur, 0)], n), 250, 1200, 0.5)
+    y += 0.4 * dsp.lp(sfx.cloth(n, rng, dsp.env([(0, 0), (0.05, 1), (dur, 0)], n), 300, 2000, 300), 2000)
+    return dsp.vhs(fin(y, rng, 0.4, 0.12), rng, bits=8, drive=1.8, lp_hz=5000)
+
+
+@sound("Omar/meat_squelch_1", desc="wet meat squelch as the pile is pushed around", **ONE)
+def meat_squelch_1(rng):
+    return _squelch(rng, 0.6)
+
+
+@sound("Omar/meat_squelch_2", desc="longer wet squelch", **ONE)
+def meat_squelch_2(rng):
+    return _squelch(rng, 0.9)
+
+
+@sound("Omar/windup_1", desc="heavy grunt through the sack as he raises the cleaver", **LOUD)
+def windup_1(rng):
+    y = omar_voice(rng, "scream_2", 0.6, 0.55, 0.5, 0.8, 0.8)
+    y = dsp.pad(y, N(0.8)) * dsp.env([(0, 0), (0.05, 1), (0.5, 0.7), (0.8, 0)], N(0.8))
+    return dsp.vhs(fin(y, rng, 0.5, 0.15, sat=2.0), rng, bits=8, drive=2.2, lp_hz=5000)
+
+
+@sound("Omar/windup_2", desc="strained inhale-grunt before the swing", **LOUD)
+def windup_2(rng):
+    n = N(0.9)
+    y = np.zeros(n)
+    dsp.place(y, sfx.breath(N(0.4), rng, [(0.0, 0.3, "in", 1.0)], sack=True), 0, 0.6)
+    dsp.place(y, omar_voice(rng, "scream_4", 0.2, 0.5, 0.52, 0.9, 0.7), N(0.28), 1.0)
+    return dsp.vhs(fin(y, rng, 0.5, 0.15, sat=2.0), rng, bits=8, drive=2.2, lp_hz=5000)

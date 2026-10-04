@@ -23,6 +23,9 @@ namespace PrisonersOfOmar.Gameplay
 
         public DetectionSystem(MatchWorld w) { _w = w; }
 
+        /// <summary>Multiplier on how far he sees (1 = normal; lower while he is busy, e.g. chopping meat).</summary>
+        public float SightScale = 1f;
+
         public float Meter(int id) => _meter.TryGetValue(id, out var m) ? m : 0f;
         public bool IsSpotted(int id) => _spotted.Contains(id);
         public IEnumerable<int> Spotted => _spotted;
@@ -54,7 +57,7 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 to = chest - eye;
             distance = to.magnitude;
             if (distance < 0.01f) return true;
-            float range = VisibilityRange(target);
+            float range = VisibilityRange(target) * SightScale;
             if (distance > range && distance > 2.2f) return false;
             float angle = Vector3.Angle(forward, to);
             if (angle > Tuning.SightConeHalfAngle && distance > 1.8f) return false;
@@ -82,7 +85,7 @@ namespace PrisonersOfOmar.Gameplay
                 float m = Meter(id);
                 if (seen)
                 {
-                    float range = Mathf.Max(3f, VisibilityRange(a));
+                    float range = Mathf.Max(3f, VisibilityRange(a) * SightScale);
                     float rate = d < 3.5f ? 10f : Mathf.Lerp(2.2f, 0.6f, Mathf.Clamp01(d / range));
                     if (a.Sprinting) rate *= 1.4f;
                     rate *= Tuning.DetectFillMul;

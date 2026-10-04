@@ -442,11 +442,12 @@ namespace PrisonersOfOmar.Characters
                     // Omar's chop: big and violent, the cleaver comes over the top of the screen and slams down through the view
                     Vector3 up = new Vector3(0.0f, 0.34f, -0.12f), hit = new Vector3(-0.15f, -0.02f, 0.16f), fol = new Vector3(-0.17f, -0.46f, 0.08f);
                     Vector3 eUp = new Vector3(-70f, 10f, -15f), eHit = new Vector3(28f, -10f, 25f), eFol = new Vector3(85f, -5f, 15f);
-                    if (t < 0.36f) { float k = Smooth(t / 0.36f); dp = up * k; de = eUp * k; }
-                    else if (t < 0.48f) { float k = (t - 0.36f) / 0.12f; k *= k; dp = Vector3.Lerp(up, hit, k); de = Vector3.Lerp(eUp, eHit, k); }
-                    else if (t < 0.62f) { float k = Smooth((t - 0.48f) / 0.14f); dp = Vector3.Lerp(hit, fol, k); de = Vector3.Lerp(eHit, eFol, k); }
-                    else { float k = Smooth((t - 0.62f) / 0.38f); dp = Vector3.Lerp(fol, Vector3.zero, k); de = Vector3.Lerp(eFol, Vector3.zero, k); }
-                    float shake = t > 0.46f && t < 0.56f ? Mathf.Sin(_time * 90f) * 0.01f : 0f;
+                    if (t < 0.42f) { float k = Smooth(t / 0.42f); dp = up * k; de = eUp * k; dp += new Vector3(0f, 0f, -0.05f) * k; }
+                    else if (t < 0.58f) { float k = (t - 0.42f) / 0.16f; k = k * k * k; dp = Vector3.Lerp(up + new Vector3(0f, 0f, -0.05f), hit, k); de = Vector3.Lerp(eUp, eHit, k); }
+                    else if (t < 0.72f) { float k = Smooth((t - 0.58f) / 0.14f); dp = Vector3.Lerp(hit, fol, k); de = Vector3.Lerp(eHit, eFol, k); }
+                    else { float k = Smooth((t - 0.72f) / 0.28f); dp = Vector3.Lerp(fol, Vector3.zero, k); de = Vector3.Lerp(eFol, Vector3.zero, k); }
+                    if (t > 0.3f && t < 0.46f) dp += new Vector3(Mathf.Sin(_time * 80f), Mathf.Sin(_time * 67f), 0f) * 0.004f; // straining at the top
+                    float shake = t > 0.56f && t < 0.66f ? Mathf.Sin(_time * 90f) * 0.01f : 0f;
                     dp += new Vector3(shake, shake, 0f);
                     break;
                 }

@@ -629,6 +629,8 @@ namespace PrisonersOfOmar.Gameplay
 
             // holding a door: the hand is busy
             if (_drag != null) { _target = _drag; _hold = 0; return; }
+            // Omar is busy at the butcher table: sneak up behind him and smash him
+            if (_w.KitchenBusy && HitOmarPrompt()) { _target = null; _hold = 0; return; }
 
             // look-at target
             IInteractable target = null;
@@ -888,6 +890,29 @@ namespace PrisonersOfOmar.Gameplay
                 return true;
             }
             return false;
+        }
+
+        bool HitOmarPrompt()
+        {
+            var omar = _w.AvatarOf(_w.KitchenOmar);
+            var rig = PsxCameraRig.Instance;
+            if (omar == null || rig == null) return false;
+            Vector3 to = _avatar.Position - omar.Position; to.y = 0f;
+            if (to.magnitude > 2.1f || Vector3.Angle(omar.Forward, to) < 100f) return false;
+            Vector3 look = omar.ChestPosition - rig.transform.position;
+            if (Vector3.Angle(rig.transform.forward, look) > 40f) return false;
+            var held = _w.Inventory.Held;
+            bool weapon = held != null && (held.Type == ItemType.Bottle || held.Type == ItemType.Crowbar);
+            _hasPrompt = true;
+            if (!weapon) { _prompt = InteractPrompt.Info("HE HASN'T NOTICED YOU... (BOTTLE / CROWBAR)"); return true; }
+            _prompt = InteractPrompt.Press(held.Type == ItemType.Bottle ? "SMASH THE BOTTLE ON HIS HEAD" : "HIT HIM WITH THE CROWBAR");
+            if (GameInput.InteractDown)
+            {
+                _w.SendOmarHit(held.Id);
+                _arms?.Play(CharacterAction.Throw);
+                AudioManager.Play2D(AudioManager.Variant(Snd.CleaverSwing, 2), 0.5f, 1.3f);
+            }
+            return true;
         }
 
         WorldItem _glowItem;

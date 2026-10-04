@@ -12,7 +12,7 @@ namespace PrisonersOfOmar.Gameplay
     /// </summary>
     public sealed class OmarAI : MonoBehaviour
     {
-        enum Mode { Waking, Patrol, Investigate, Chase, Search }
+        enum Mode { Waking, Patrol, Investigate, Chase, Search, Chop }
 
         MatchWorld W;
         MatchHost H;
@@ -46,6 +46,11 @@ namespace PrisonersOfOmar.Gameplay
         int _smashDoor = -1;
         float _stepDist, _bob;
         float _speedCur;
+        // butcher routine at the kitchen table
+        float _nextChopAt = 140f, _chopUntil, _chopNext, _chopLook;
+        bool _chopping;
+        int _revenge = -1;
+        float _revengeAt;
 
         public static OmarAI Attach(Avatar a, MatchWorld w)
         {
@@ -65,9 +70,18 @@ namespace PrisonersOfOmar.Gameplay
 
         public void Stun(float seconds) => _stunUntil = Mathf.Max(_stunUntil, W.Time + seconds);
 
+        /// <summary>A prisoner smashed him from behind: once he can see straight again he goes for them.</summary>
+        public void OnHitBy(int prisoner, float stunSeconds)
+        {
+            _revenge = prisoner;
+            _revengeAt = W.Time + stunSeconds;
+            _chopUntil = 0f;
+        }
+
         public void OnNoise(Vector3 pos, float radius)
         {
             if (_mode == Mode.Chase || _mode == Mode.Waking) return;
+            if (_chopping) radius *= 0.5f; // the chopping drowns out small sounds
             float d = Vector3.Distance(pos, A.Position);
             if (d > radius * 1.3f) return;
             float score = radius / Mathf.Max(1f, d);
@@ -105,9 +119,17 @@ namespace PrisonersOfOmar.Gameplay
 
             Vector3 eye = A.EyePosition;
             Vector3 fwd = Quaternion.Euler(_pitch, _yaw, 0) * Vector3.forward;
+            D.SightScale = _chopping ? 0.45f : 1f; // busy with the meat, eyes on the block
             D.Tick(dt, eye, fwd, false, OnDetect);
 
             if (W.Time < _stunUntil) { Publish(M.Move(Vector3.zero, dt)); return; }
+            if (_revenge >= 0 && W.Time >= _revengeAt)
+            {
+                var av = W.AvatarOf(_revenge);
+                var rs = W.StatusOf(_revenge);
+                if (av != null && rs != null && rs.Life == LifeState.Free && !rs.Hidden) D.ForceSpot(_revenge, av.Position, OnDetect);
+                _revenge = -1;
+            }
 
             _attackCooldown -= dt;
             if (_windup >= 0f)
@@ -122,7 +144,9 @@ namespace PrisonersOfOmar.Gameplay
                 case Mode.Investigate: TickInvestigate(dt); break;
                 case Mode.Chase: TickChase(dt); break;
                 case Mode.Search: TickSearch(dt); break;
+                case Mode.Chop: TickChop(dt); break;
             }
+            if (_chopping && _mode != Mode.Chop) { _chopping = false; H.StopChopping(A.Id); }
 
             _trapTimer -= dt;
             if (_trapTimer <= 0f) { _trapTimer = Random.Range(70f, 130f); if (!TryPlaceTrap()) _trapTimer = Random.Range(10f, 18f); }
@@ -180,6 +204,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             var nav = W.Map.Nav;
             _running = false;
+            // now and then he goes back to the kitchen to butcher meat
+            if (W.Map.Kitchen != null && W.Time >= _nextChopAt && Random.value < 0.4f) { StartChop(); return; }
             if (nav == null || nav.Nodes.Count == 0) { SetGoal(A.Position + Random.insideUnitSphere.WithY(0) * 10f); return; }
             Vector3 dest = A.Position;
             // sometimes check on the pens or the objectives
@@ -229,6 +255,50 @@ namespace PrisonersOfOmar.Gameplay
                 int spot = NearestHidingSpot(5f);
                 if (spot >= 0 && Random.value < 0.25f) { _searchQueue.Add(spot); StartSearch(A.Position); }
             }
+        }
+
+        void StartChop()
+        {
+            _mode = Mode.Chop;
+            _running = false;
+            _chopping = false;
+            _nextChopAt = W.Time + Random.Range(150f, 260f);
+            SetGoal(W.Map.Kitchen.ChopPose.position);
+        }
+
+        void TickChop(float dt)
+        {
+            var k = W.Map.Kitchen;
+            Vector3 to = k.ChopPose.position - A.Position; to.y = 0f;
+            if (!_chopping)
+            {
+                if (to.magnitude < 0.7f || (Arrived() && to.magnitude < 1.6f))
+                {
+                    _chopping = true;
+                    _path.Clear();
+                    H.StartChopping(A.Id);
+                    _chopUntil = W.Time + Random.Range(25f, 45f);
+                    _chopNext = W.Time + 0.8f;
+                    _chopLook = W.Time + Random.Range(6f, 11f);
+                }
+                else if (Arrived()) { _mode = Mode.Patrol; PickPatrol(); }
+                return;
+            }
+            float tableYaw = k.ChopPose.rotation.eulerAngles.y;
+            if (W.Time < _chopLook - 1.8f || W.Time > _chopLook) _yaw = Mathf.MoveTowardsAngle(_yaw, tableYaw, 220f * dt);
+            if (W.Time > _chopLook)
+            {
+                // straightens up and looks around the kitchen for a moment
+                _chopLook = W.Time + Random.Range(7f, 13f);
+                _chopNext = W.Time + 2.2f;
+                H.BroadcastAction(A.Id, CharacterAction.Search);
+            }
+            if (W.Time >= _chopNext)
+            {
+                _chopNext = W.Time + Random.Range(1.05f, 1.6f);
+                H.Chop(A.Id);
+            }
+            if (W.Time >= _chopUntil) { _mode = Mode.Patrol; PickPatrol(); }
         }
 
         void StartInvestigate(Vector3 pos, bool run)

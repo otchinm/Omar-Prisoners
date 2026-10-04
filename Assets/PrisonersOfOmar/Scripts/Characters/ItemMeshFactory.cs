@@ -549,12 +549,14 @@ namespace PrisonersOfOmar.Characters
             var mb = new MeshBuilder();
             mb.SetMaterial(Mat("cleaver"));
             Rect blade = R(0, 0, 64, 32, W, H), handle = R(0, 32, 32, 16, W, H), edge = R(32, 32, 32, 8, W, H), wood = R(0, 48, 32, 16, W, H);
-            // handle: z -0.07 .. 0.045
-            mb.AddBox(new Vector3(0, -0.002f, -0.012f), new Vector3(0.017f, 0.026f, 0.115f),
+            // a heavy butcher's cleaver like the reference: long taped handle, big square blade
+            // handle: z -0.1 .. 0.045
+            mb.AddBox(new Vector3(0, -0.002f, -0.027f), new Vector3(0.021f, 0.03f, 0.145f),
                 new BoxUVRects { PosX = handle, NegX = handle, PosY = wood, NegY = wood, PosZ = wood, NegZ = wood });
-            // blade: z 0.045 .. 0.245, spine at y +0.016, edge at y -0.072 (slightly curved belly via 2 segments)
-            float z0 = 0.045f, z1 = 0.245f, ySpine = 0.016f, yEdge0 = -0.062f, yEdge1 = -0.076f;
-            float th = 0.0035f;
+            mb.AddBox(new Vector3(0, 0.0f, 0.047f), new Vector3(0.016f, 0.036f, 0.012f), BoxUVRects.All(edge)); // bolster
+            // blade: z 0.05 .. 0.31, spine at y +0.022, edge sagging from -0.088 to -0.104
+            float z0 = 0.05f, z1 = 0.31f, ySpine = 0.022f, yEdge0 = -0.088f, yEdge1 = -0.104f;
+            float th = 0.0055f;
             Vector3 a = new Vector3(0, yEdge0, z0), b = new Vector3(0, ySpine, z0), c = new Vector3(0, ySpine + 0.004f, z1), d = new Vector3(0, yEdge1, z1);
             // +X side (seen from +X: right = +Z)
             mb.AddQuad(a + Vector3.right * th, b + Vector3.right * th, c + Vector3.right * th, d + Vector3.right * th,
@@ -569,8 +571,8 @@ namespace PrisonersOfOmar.Characters
             // rivets
             for (int i = 0; i < 3; i++)
             {
-                float z = -0.05f + i * 0.033f;
-                mb.AddBox(new Vector3(0, -0.002f, z), new Vector3(0.019f, 0.006f, 0.006f), BoxUVRects.All(edge));
+                float z = -0.075f + i * 0.042f;
+                mb.AddBox(new Vector3(0, -0.002f, z), new Vector3(0.023f, 0.007f, 0.007f), BoxUVRects.All(edge));
             }
             mb.Build("Mesh", go.transform, Layers.Item);
             return go;
