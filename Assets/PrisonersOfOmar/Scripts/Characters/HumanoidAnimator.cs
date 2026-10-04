@@ -753,12 +753,16 @@ namespace PrisonersOfOmar.Characters
                 case CharacterAction.Attack: AttackPose(p, t); break;
                 case CharacterAction.ChopMeat:
                 {
-                    // the overhead chop, bent over the butcher table
+                    // the overhead chop, bent over the butcher table: the swing comes down IN FRONT of him onto the block
+                    // (the plain attack ends with the arm hanging; over the table it has to reach forward, past the bent torso)
                     AttackPose(p, t);
                     float k = HoldCurve(t, 0.0f, 0.2f, 0.8f, 1f);
-                    p.Rot[(int)BoneId.Spine].x += 12f * k;
-                    p.Rot[(int)BoneId.Chest].x += 8f * k;
-                    p.Rot[(int)BoneId.Head].x += 18f * k;
+                    p.Rot[(int)BoneId.Spine].x += ChopSpine * k;
+                    p.Rot[(int)BoneId.Chest].x += ChopChest * k;
+                    p.Rot[(int)BoneId.Head].x += 14f * k;
+                    float reach = HoldCurve(t, 0.44f, 0.58f, 0.74f, 0.98f);
+                    p.Rot[(int)BoneId.RUpperArm].x += ChopReach * reach;
+                    p.Rot[(int)BoneId.RLowerArm].x += -ChopElbow * reach;
                     break;
                 }
                 case CharacterAction.Shoot:
@@ -979,6 +983,8 @@ namespace PrisonersOfOmar.Characters
                 }
             }
         }
+
+        const float ChopSpine = 10f, ChopChest = 6f, ChopReach = -40f, ChopElbow = 12f; // cleaver meets the block ~0.85 m ahead at ~1 m height
 
         void AttackPose(PoseBuffer p, float t)
         {

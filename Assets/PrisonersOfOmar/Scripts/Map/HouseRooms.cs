@@ -164,7 +164,7 @@ namespace PrisonersOfOmar.Map
             ctx.Data.Kitchen = new KitchenInfo
             {
                 Area = "House.Kitchen",
-                ChopPose = new Pose(V(-7.45f, F, 5.4f), MapMath.Yaw(180f)),
+                ChopPose = new Pose(V(-7.45f, F, 5.28f), MapMath.Yaw(180f)), // right against the table edge (z 4.9) + his radius
                 BlockTop = V(-7.55f, F + Props.ButcherTop + 0.1f, 4.45f),
                 ChopInteract = interact,
                 VentArea = ctx.Data.CrawlSpaces.Count > 0 ? ctx.Data.CrawlSpaces[ctx.Data.CrawlSpaces.Count - 1] : new Bounds(eye, Vector3.one),

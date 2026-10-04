@@ -47,7 +47,8 @@ namespace PrisonersOfOmar.Gameplay
         float _stepDist, _bob;
         float _speedCur;
         // butcher routine at the kitchen table
-        float _nextChopAt = 140f, _chopUntil, _chopNext, _chopLook;
+        float _nextChopAt = 75f, _chopUntil, _chopNext, _chopLook, _chopApproachT;
+        bool _chopApproach;
         bool _chopping;
         int _revenge = -1;
         float _revengeAt;
@@ -229,7 +230,7 @@ namespace PrisonersOfOmar.Gameplay
             var nav = W.Map.Nav;
             _running = false;
             // now and then he goes back to the kitchen to butcher meat
-            if (W.Map.Kitchen != null && W.Time >= _nextChopAt && Random.value < 0.4f) { StartChop(); return; }
+            if (W.Map.Kitchen != null && W.Time >= _nextChopAt && Random.value < 0.7f) { StartChop(); return; }
             if (nav == null || nav.Nodes.Count == 0) { SetGoal(A.Position + Random.insideUnitSphere.WithY(0) * 10f); return; }
             Vector3 dest = A.Position;
             // sometimes check on the pens or the objectives
@@ -288,7 +289,8 @@ namespace PrisonersOfOmar.Gameplay
             _mode = Mode.Chop;
             _running = false;
             _chopping = false;
-            _nextChopAt = W.Time + Random.Range(150f, 260f);
+            _chopApproach = false;
+            _nextChopAt = W.Time + Random.Range(70f, 120f);
             SetGoal(W.Map.Kitchen.ChopPose.position);
         }
 
@@ -298,14 +300,25 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 to = k.ChopPose.position - A.Position; to.y = 0f;
             if (!_chopping)
             {
-                if (to.magnitude < 0.7f || (Arrived() && to.magnitude < 1.6f))
+                // the nav arrival radius would leave him a metre short of the table: the last steps go straight to the block
+                if (!_chopApproach && to.magnitude < 2.6f && Mathf.Abs(k.ChopPose.position.y - A.Position.y) < 1f)
                 {
-                    _chopping = true;
+                    _chopApproach = true;
+                    _chopApproachT = 0f;
                     _path.Clear();
-                    H.StartChopping(A.Id);
-                    _chopUntil = W.Time + Random.Range(25f, 45f);
-                    _chopNext = W.Time + 0.8f;
-                    _chopLook = W.Time + Random.Range(6f, 11f);
+                }
+                if (_chopApproach)
+                {
+                    _chopApproachT += dt;
+                    if (to.magnitude < 0.1f || _chopApproachT > 3.5f)
+                    {
+                        _chopApproach = false;
+                        _chopping = true;
+                        H.StartChopping(A.Id);
+                        _chopUntil = W.Time + Random.Range(30f, 50f);
+                        _chopNext = W.Time + 0.8f;
+                        _chopLook = W.Time + Random.Range(6f, 11f);
+                    }
                 }
                 else if (Arrived()) { _mode = Mode.Patrol; PickPatrol(); }
                 return;
@@ -528,6 +541,7 @@ namespace PrisonersOfOmar.Gameplay
 
         float FollowPath(float dt)
         {
+            if (_mode == Mode.Chop && (_chopApproach || _chopping) && W.Map.Kitchen != null) return SettleAtTable(dt);
             Vector3 target = _goal;
             if (_path.Count > 0 && _pathIdx < _path.Count)
             {
@@ -582,6 +596,26 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             // footsteps (host local audio is handled by the avatar's animator footstep events)
+            _stepDist += moved * dt;
+            _bob += moved * dt;
+            return moved;
+        }
+
+        /// <summary>Walks the last steps right up to the butcher block and keeps him there (pressed against the table) while he chops.</summary>
+        float SettleAtTable(float dt)
+        {
+            Vector3 to = W.Map.Kitchen.ChopPose.position - A.Position; to.y = 0f;
+            float d = to.magnitude;
+            Vector3 vel = Vector3.zero;
+            if (d > 0.05f)
+            {
+                float speed = _chopping ? Mathf.Min(0.5f, d * 3f) : Mathf.Min(Tuning.OmarWalkSpeed * 0.8f, 0.35f + d * 1.5f);
+                vel = to / d * speed;
+                if (!_chopping) _yaw = Mathf.MoveTowardsAngle(_yaw, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 300f * dt);
+            }
+            _speedCur = Tuning.OmarWalkSpeed * 0.6f;
+            float moved = M.Move(vel, dt);
+            A.transform.rotation = Quaternion.Euler(0, _yaw, 0);
             _stepDist += moved * dt;
             _bob += moved * dt;
             return moved;
