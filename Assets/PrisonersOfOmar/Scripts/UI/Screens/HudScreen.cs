@@ -38,16 +38,10 @@ namespace PrisonersOfOmar.UI
                 float a = 0.45f + 0.2f * Mathf.Sin(Time.time * 3f);
                 if (blood != null) ui.ImageCover(blood, new Color(1, 1, 1, a));
             }
-            if (st.Hidden)
-            {
-                var dark = UITex.Get("Textures/UI/vignette_dark");
-                if (dark != null) ui.ImageCover(dark, new Color(1, 1, 1, 0.85f));
-            }
-
             UIStyle.Osd(ui, "PLAY ▶", UIStyle.NightClock(w.NightProgress));
 
-            // crosshair dot
-            ui.Rect(ui.Width * 0.5f - 0.5f, ui.Height * 0.5f - 0.5f, 1, 1, new Color(1, 1, 1, 0.45f));
+            // crosshair: a solid white square, easy to see
+            if (!st.Hidden) DrawCrosshair(ui);
 
             DrawPrompt(ui, c.HasPrompt, c.Prompt, c.HoldProgress);
             if (c.UseHoldItem != ItemType.None)
@@ -61,14 +55,10 @@ namespace PrisonersOfOmar.UI
 
             if (w.Inventory.HeldType == ItemType.SoundMeter) DrawSoundMeter(ui, c.NoiseLevel);
 
-            if (c.Stamina < 0.98f)
-            {
-                float sw = 60f;
-                ui.Rect(ui.Width * 0.5f - sw * 0.5f, ui.Height - 8, sw * c.Stamina, 2, new Color(0.8f, 0.8f, 0.75f, 0.5f));
-            }
+            DrawStamina(ui, c.Stamina);
 
             if (st.Life == LifeState.Caged && w.Time > Tuning.CagesOpenAt + 2f)
-                ui.Text("YOU ARE LOCKED IN A CAGE. STRUGGLE (E) OR WAIT FOR SOMEONE WITH A KEY.", ui.Width * 0.5f, 28, VhsUI.Dim, 1, Align.Center);
+                ui.TextWrapped("YOU ARE LOCKED IN A CAGE. STRUGGLE (E) OR WAIT FOR SOMEONE WITH A KEY.", ui.Width * 0.5f, 28, ui.Width - 24, VhsUI.Dim, 1, Align.Center, ui.TinyFont);
             if (w.Objectives.IgniteAt > 0 && !w.Objectives.Exploded)
             {
                 float left = Mathf.Max(0f, w.Objectives.IgniteAt - w.Time);
@@ -76,10 +66,35 @@ namespace PrisonersOfOmar.UI
             }
         }
 
+        public static void DrawCrosshair(VhsUI ui)
+        {
+            float cx = Mathf.Round(ui.Width * 0.5f), cy = Mathf.Round(ui.Height * 0.5f);
+            ui.Rect(cx - 2, cy - 2, 4, 4, new Color(0, 0, 0, 0.35f));
+            ui.Rect(cx - 1, cy - 1, 3, 3, Color.white);
+        }
+
+        float _staminaAlpha;
+
+        /// <summary>"STAMINA" + thin outlined bar, bottom left; shows while running / recovering, fades when full.</summary>
+        void DrawStamina(VhsUI ui, float stamina)
+        {
+            _staminaAlpha = Mathf.MoveTowards(_staminaAlpha, stamina < 0.985f ? 1f : 0f, Time.unscaledDeltaTime * (stamina < 0.985f ? 6f : 1.2f));
+            if (_staminaAlpha <= 0.01f) return;
+            var font = ui.TinyFont;
+            float x = 12 + 3 * 24 + 8, y = ui.Height - 22;
+            var col = new Color(0.9f, 0.9f, 0.88f, _staminaAlpha);
+            ui.Text("STAMINA", x, y, col, 1, Align.Left, font);
+            float bx = x + ui.TextWidth("STAMINA", 1, font) + 4, bw = 56, bh = 5;
+            var frame = new Rect(bx, y + 1, bw, bh);
+            ui.Frame(frame, col);
+            ui.Rect(bx + 1, y + 2, (bw - 2) * Mathf.Clamp01(stamina), bh - 2, new Color(0.85f, 0.85f, 0.82f, 0.9f * _staminaAlpha));
+        }
+
         static void DrawPrompt(VhsUI ui, bool has, InteractPrompt p, float progress)
         {
             if (!has || string.IsNullOrEmpty(p.Text)) return;
-            float y = ui.Height * 0.5f + 14;
+            // right under the crosshair, like the label on the thing you look at
+            float y = ui.Height * 0.5f + 6;
             string key = !p.Enabled ? "" : p.HoldTime > 0 ? "[HOLD E] " : "[E] ";
             ui.Text(key + p.Text, ui.Width * 0.5f, y, p.Enabled ? VhsUI.White : new Color(0.6f, 0.58f, 0.55f), 1, Align.Center);
             if (p.Enabled && p.HoldTime > 0 && progress > 0f)
@@ -188,8 +203,9 @@ namespace PrisonersOfOmar.UI
 
             if (c.Waking)
             {
-                ui.Text("YOU ARE WAKING UP...", ui.Width * 0.5f, ui.Height * 0.38f, VhsUI.Red, 2, Align.Center, ui.BigFont);
-                ui.Text(Mathf.CeilToInt(c.WakeRemaining).ToString(), ui.Width * 0.5f, ui.Height * 0.38f + ui.BigFont.LineHeight * 2 + 4, VhsUI.White, 1, Align.Center);
+                int wsc = ui.FitScale("YOU ARE WAKING UP...", 2, ui.Width - 16, ui.BigFont);
+                ui.Text("YOU ARE WAKING UP...", ui.Width * 0.5f, ui.Height * 0.38f, VhsUI.Red, wsc, Align.Center, ui.BigFont);
+                ui.Text(Mathf.CeilToInt(c.WakeRemaining).ToString(), ui.Width * 0.5f, ui.Height * 0.38f + ui.BigFont.LineHeight * wsc + 4, VhsUI.White, 1, Align.Center);
             }
 
             // abilities (compact font)

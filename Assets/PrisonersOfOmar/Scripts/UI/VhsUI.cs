@@ -158,6 +158,13 @@ namespace PrisonersOfOmar.UI
 
         // ------------------------------------------------------------------ text
 
+        /// <summary>Largest scale (≤ maxScale) at which <paramref name="s"/> fits in <paramref name="maxWidth"/> pixels (at least 1).</summary>
+        public int FitScale(string s, int maxScale, float maxWidth, VhsFont font = null)
+        {
+            for (int sc = maxScale; sc > 1; sc--) if (TextWidth(s, sc, font) <= maxWidth) return sc;
+            return 1;
+        }
+
         public int TextWidth(string s, int scale = 1, VhsFont font = null)
         {
             font = font ?? Font;

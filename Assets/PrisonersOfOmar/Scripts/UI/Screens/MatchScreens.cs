@@ -264,7 +264,7 @@ namespace PrisonersOfOmar.UI
             AudioManager.Play2D(good ? Snd.StingEndingGood : Snd.StingEndingBad, 1f, 1f, AudioCategory.Stinger);
             if (_r.OmarWon) AudioManager.Play2D(Snd.ScreamsLong, 0.35f, 1f, AudioCategory.Stinger);
             VhsEffect.Mode = VhsMode.Menu;
-            VhsEffect.Interference = 0f; VhsEffect.Damage = 0f; VhsEffect.Hiding = 0f;
+            VhsEffect.Interference = 0f; VhsEffect.Damage = 0f; VhsEffect.Hiding = 0f; VhsEffect.Desaturate = 0f;
             AudioManager.SetMuffle(0f);
             AudioManager.SetDistortion(0f);
             GameInput.SetCursorLocked(false);
@@ -291,8 +291,9 @@ namespace PrisonersOfOmar.UI
             bool omarView = w != null && w.LocalIsOmar;
             string sub = omarView ? (_r.OmarWon ? "YOU KEPT THEM ALL" : _r.Escaped == 1 ? "ONE OF THEM GOT AWAY" : "THEY GOT AWAY") : "";
             ui.Text("ENDING:", ui.Width * 0.5f, 10, VhsUI.Dim, 1, Align.Center);
-            ui.Text(_r.Title, ui.Width * 0.5f, 22, VhsUI.Red, 2, Align.Center, ui.BigFont);
-            float y = 22 + ui.BigFont.LineHeight * 2 + 4;
+            int tsc = ui.FitScale(_r.Title, 2, ui.Width - 16, ui.BigFont);
+            ui.Text(_r.Title, ui.Width * 0.5f, 22, VhsUI.Red, tsc, Align.Center, ui.BigFont);
+            float y = 22 + ui.BigFont.LineHeight * tsc + 4;
             if (sub.Length > 0) { ui.Text(sub, ui.Width * 0.5f, y, VhsUI.White, 1, Align.Center); y += ui.LineHeight() + 4; }
 
             string text = _r.Text;

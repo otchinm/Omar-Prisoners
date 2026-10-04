@@ -234,6 +234,10 @@ namespace PrisonersOfOmar.Characters
             }
         }
 
+        /// <summary>Skins whose body + texture atlas exist (the lobby only offers these).</summary>
+        public static bool HasSkin(CharacterSkin skin)
+            => skin == CharacterSkin.Omar || (skin >= CharacterSkin.Prisoner1 && skin <= CharacterSkin.Prisoner4);
+
         public static string DisplayName(CharacterSkin skin)
         {
             switch (skin)

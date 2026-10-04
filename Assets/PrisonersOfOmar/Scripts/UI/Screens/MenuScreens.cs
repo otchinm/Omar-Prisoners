@@ -209,7 +209,9 @@ namespace PrisonersOfOmar.UI
     {
         int _sel;
         string _name;
-        const int Rows = 12;
+        const int Rows = 13;
+        const int NameRow = 11;
+        static readonly string[] PresetNames = { "DEFAULT", "CLEAN", "WORN TAPE", "CAMCORDER", "BLACK & WHITE", "SEPIA", "OFF" };
 
         public override void OnOpen() { _name = Settings.PlayerName; }
         public override void OnClose()
@@ -225,11 +227,11 @@ namespace PrisonersOfOmar.UI
             UIStyle.Dim(ui, 0.78f);
             UIStyle.Header(ui, "SETTINGS", 6);
             float x = ui.Width * 0.5f - 150, w = 300, y = 28;
-            int lh = Mathf.Max(ui.LineHeight(), Mathf.Min(ui.LineHeight() + 3, Mathf.FloorToInt((ui.Height - 28 - 18) / 13f)));
+            int lh = Mathf.Max(ui.LineHeight(), Mathf.Min(ui.LineHeight() + 3, Mathf.FloorToInt((ui.Height - 28 - 18) / 14f)));
             if (input)
             {
-                if (Input.GetKeyDown(KeyCode.DownArrow) || (Input.GetKeyDown(KeyCode.S) && _sel != 10)) { _sel = (_sel + 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
-                if (Input.GetKeyDown(KeyCode.UpArrow) || (Input.GetKeyDown(KeyCode.W) && _sel != 10)) { _sel = (_sel + Rows - 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
+                if (Input.GetKeyDown(KeyCode.DownArrow) || (Input.GetKeyDown(KeyCode.S) && _sel != NameRow)) { _sel = (_sel + 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
+                if (Input.GetKeyDown(KeyCode.UpArrow) || (Input.GetKeyDown(KeyCode.W) && _sel != NameRow)) { _sel = (_sel + Rows - 1) % Rows; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
             }
             for (int i = 0; i < Rows; i++)
             {
@@ -247,15 +249,19 @@ namespace PrisonersOfOmar.UI
             d = ui.Stepper("RESOLUTION", Settings.InternalHeight + "P", x, y, w, _sel == 6, input);
             if (d != 0) { ri = Mathf.Clamp(ri + d, 0, Settings.InternalHeights.Length - 1); Settings.InternalHeight = Settings.InternalHeights[ri]; Settings.ApplyDisplay(); }
             y += lh;
-            d = ui.Stepper("VHS DISTORTION", Pct(Settings.VhsIntensity), x, y, w, _sel == 7, input);
+            int pi = Mathf.Clamp((int)Settings.VhsPreset, 0, PresetNames.Length - 1);
+            d = ui.Stepper("VHS FILTER", PresetNames[pi], x, y, w, _sel == 7, input);
+            if (d != 0) { Settings.VhsPreset = (VhsPreset)((pi + d + PresetNames.Length) % PresetNames.Length); VhsEffect.Preset = Settings.VhsPreset; }
+            y += lh;
+            d = ui.Stepper("VHS DISTORTION", Pct(Settings.VhsIntensity), x, y, w, _sel == 8, input);
             if (d != 0) { Settings.VhsIntensity = Mathf.Clamp(Settings.VhsIntensity + d * 0.25f, 0.25f, 1.5f); VhsEffect.UserIntensity = Settings.VhsIntensity; }
             y += lh;
-            d = ui.Stepper("FULLSCREEN", Settings.Fullscreen ? "ON" : "OFF", x, y, w, _sel == 8, input); if (d != 0) { Settings.Fullscreen = !Settings.Fullscreen; Settings.ApplyDisplay(); } y += lh;
-            d = ui.Stepper("VSYNC", Settings.VSync ? "ON" : "OFF", x, y, w, _sel == 9, input); if (d != 0) { Settings.VSync = !Settings.VSync; Settings.ApplyDisplay(); } y += lh;
-            ui.Text((_sel == 10 ? "▶ " : "  ") + "NAME", x, y, _sel == 10 ? VhsUI.White : VhsUI.Dim);
-            ui.TextField(ref _name, x + 120, y, (int)w - 120, input && _sel == 10, 14, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- .");
+            d = ui.Stepper("FULLSCREEN", Settings.Fullscreen ? "ON" : "OFF", x, y, w, _sel == 9, input); if (d != 0) { Settings.Fullscreen = !Settings.Fullscreen; Settings.ApplyDisplay(); } y += lh;
+            d = ui.Stepper("VSYNC", Settings.VSync ? "ON" : "OFF", x, y, w, _sel == 10, input); if (d != 0) { Settings.VSync = !Settings.VSync; Settings.ApplyDisplay(); } y += lh;
+            ui.Text((_sel == NameRow ? "▶ " : "  ") + "NAME", x, y, _sel == NameRow ? VhsUI.White : VhsUI.Dim);
+            ui.TextField(ref _name, x + 120, y, (int)w - 120, input && _sel == NameRow, 14, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- .");
             y += lh;
-            bool backSel = _sel == 11;
+            bool backSel = _sel == 12;
             ui.Text(backSel ? "▶ BACK ◀" : "BACK", ui.Width * 0.5f, y, backSel ? VhsUI.White : VhsUI.Dim, 1, Align.Center);
             bool back = input && (Input.GetKeyDown(KeyCode.Escape) || (backSel && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)))
                 || (ui.Click && ui.Hover(new Rect(ui.Width * 0.5f - 40, y - 2, 80, lh))));
@@ -273,28 +279,17 @@ namespace PrisonersOfOmar.UI
     public sealed class HowToPlayScreen : UIScreen
     {
         int _page;
-        static readonly string[] Titles = { "THE PRISONERS", "OMAR", "GETTING OUT" };
+        static readonly string[] Titles = { "PRISONERS", "OMAR" };
         static readonly string[] Pages =
         {
-            "WASD MOVE   SHIFT SPRINT   C CROUCH   E INTERACT (HOLD FOR LONG ACTIONS)\n" +
-            "F / LMB USE ITEM   1-3 / WHEEL SELECT   G DROP   TAB INVENTORY\n\n" +
-            "YOU CARRY 3 THINGS. YOUR LIGHTER IS YOUR ONLY LIGHT - AND HE SEES THE FLAME.\n" +
-            "RUNNING, DOORS AND BROKEN GLASS MAKE NOISE. DARKNESS AND CROUCHING HIDE YOU.\n" +
-            "HIDE IN WARDROBES, LOCKERS, UNDER BEDS. WATCH YOUR FEET: WIRES TRIGGER HIS SIREN.\n" +
-            "ONE HIT AND YOU BLEED. TWO AND HE DRAGS YOU BACK TO THE CAGE. THE THIRD TIME IS THE LAST.\n" +
-            "WHEN THE PICTURE HISSES AND TEARS, HE IS CLOSE.",
-            "WASD MOVE   SHIFT RUN   LMB CLEAVER   RMB SCREAM\n" +
-            "E OPEN / UNLOCK / SEARCH HIDING SPOTS / SMASH BOARDS\n" +
-            "T STRING A TRIPWIRE ACROSS A DOORWAY   G SET A BEAR TRAP   Q SENSE NEARBY PRISONERS\n\n" +
-            "YOU SEE THEIR NOISE AS RIPPLES THROUGH THE WALLS. A SIREN MEANS SOMEONE HIT YOUR WIRE.\n" +
-            "LOOK AT THEM LONG ENOUGH AND THEY KNOW YOU SAW THEM.\n" +
-            "KEEP EVERY ONE OF THEM UNTIL DAWN.",
-            "THE GATE: BOLT CUTTERS ON THE PADLOCK, THEN DOWN THE ROAD.\n" +
-            "THE CAR: GAS, KEYS - MAYBE A NEW BATTERY. EVERYONE WHO GETS IN LEAVES.\n" +
-            "THE SHELTER: 4 NUMBERS ARE WRITTEN SOMEWHERE IN THE BASE. THE KEYPAD IS IN THE BASEMENT.\n" +
-            "THE RADIO: A FUSE FOR THE FUSE BOX, THEN CALL FOR HELP AND REACH THE CORN FIELD IN TIME.\n" +
-            "THE DRUMS BEHIND THE BARN: LIGHTER FUEL AND A FLAME. RUN.\n\n" +
-            "FREE YOUR FRIENDS WITH THE CAGE KEY, A LOCKPICK OR BOLT CUTTERS. EVERY NIGHT IS DIFFERENT.",
+            "GET OUT BEFORE 6 AM. THE GATE, THE CAR, THE SHELTER, THE RADIO OR THE FUEL DRUMS.\n\n" +
+            "WASD  MOVE        SHIFT  RUN        C  CROUCH\n" +
+            "E  INTERACT / HIDE        HOLD LMB  DRAG A DOOR\n" +
+            "F  USE ITEM        1-3  SELECT        G  DROP        TAB  ITEMS",
+            "NOBODY LEAVES BEFORE DAWN.\n\n" +
+            "WASD  MOVE        SHIFT  RUN        LMB  CLEAVER        RMB  SCREAM\n" +
+            "E  UNLOCK / SEARCH / SMASH        Q  SENSE\n" +
+            "T  TRIPWIRE        G  BEAR TRAP",
         };
 
         public override void Draw(VhsUI ui, bool input)
@@ -364,7 +359,7 @@ namespace PrisonersOfOmar.UI
             VhsEffect.StaticOverride = 0.55f + 0.2f * Mathf.Sin(Time.unscaledTime * 3f);
             var s = NetSession.Instance;
             string dots = new string('.', 1 + (int)(Time.unscaledTime * 2f) % 3);
-            ui.Text("TRACKING" + dots, ui.Width * 0.5f, ui.Height * 0.42f, VhsUI.White, 2, Align.Center, ui.BigFont);
+            ui.Text("TRACKING" + dots, ui.Width * 0.5f, ui.Height * 0.42f, VhsUI.White, ui.FitScale("TRACKING...", 2, ui.Width - 16, ui.BigFont), Align.Center, ui.BigFont);
             ui.Text(s != null && s.State == SessionState.Loading ? "WAITING FOR THE OTHER TAPES" : "LOADING THE BASE OF THE SECOND CLASS", ui.Width * 0.5f, ui.Height * 0.62f, VhsUI.Dim, 1, Align.Center);
             UIStyle.Osd(ui, "▶▶ FF", UIStyle.TapeCounter());
         }

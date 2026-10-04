@@ -134,7 +134,7 @@ namespace PrisonersOfOmar.Gameplay
             LocalId = 0;
             Players.Clear();
             Players.Add(new PlayerInfo { Id = 0, Name = Settings_PlayerName(playerName), Role = PlayerRole.Prisoner, Skin = CharacterSkin.Prisoner1, Ready = true });
-            Settings = new MatchSettings { NightMinutes = Gameplay.Settings.NightMinutes, AiOmar = Gameplay.Settings.AiOmar };
+            Settings = new MatchSettings { NightMinutes = Gameplay.Settings.NightMinutes, AiOmar = true, Difficulty = Gameplay.Settings.Difficulty };
             SetState(SessionState.Lobby);
             if (!practice)
             {
@@ -208,7 +208,6 @@ namespace PrisonersOfOmar.Gameplay
             if (!IsHost) { why = "ONLY THE HOST CAN START"; return false; }
             if (State != SessionState.Lobby) { why = "NOT IN LOBBY"; return false; }
             if (PrisonerCount == 0) { why = "NEED AT LEAST ONE PRISONER"; return false; }
-            if (FindOmar() == null && !Settings.AiOmar) { why = "NOBODY PLAYS OMAR (ENABLE AI OMAR)"; return false; }
             foreach (var p in Players) if (!p.Ready && !p.IsBot) { why = "WAITING FOR " + p.Name; return false; }
             return true;
         }
@@ -345,11 +344,14 @@ namespace PrisonersOfOmar.Gameplay
 
         void AssignDefaultRole(PlayerInfo p)
         {
-            for (int s = 0; s < 4; s++)
-            {
-                var skin = (CharacterSkin)s;
-                if (!Players.Exists(o => o.IsPrisoner && o.Skin == skin && o.Id != p.Id)) { p.Role = PlayerRole.Prisoner; p.Skin = skin; return; }
-            }
+            int prisoners = 0;
+            foreach (var o in Players) if (o.IsPrisoner && o.Id != p.Id) prisoners++;
+            if (prisoners < GameInfo.MaxPrisoners)
+                foreach (var skin in GameInfo.PrisonerSkins)
+                {
+                    if (!Characters.HumanoidFactory.HasSkin(skin)) continue;
+                    if (!Players.Exists(o => o.IsPrisoner && o.Skin == skin && o.Id != p.Id)) { p.Role = PlayerRole.Prisoner; p.Skin = skin; return; }
+                }
             if (FindOmar() == null) { p.Role = PlayerRole.Omar; p.Skin = CharacterSkin.Omar; return; }
             p.Role = PlayerRole.Spectator;
         }
@@ -419,6 +421,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             Gameplay.Settings.NightMinutes = Settings.NightMinutes;
             Gameplay.Settings.AiOmar = Settings.AiOmar;
+            Gameplay.Settings.Difficulty = Settings.Difficulty;
             BroadcastRoster();
         }
 
