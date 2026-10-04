@@ -70,10 +70,16 @@ namespace PrisonersOfOmar.Rendering
 
         // ------------------------------------------------------------------ persistent effects
 
+        /// <summary>Hand-drawn states of the lighter flame flipbook (Textures/FX/flame_0..N-1).</summary>
+        public const int FlameFrames = 6;
+
         /// <summary>
-        /// Lighter flame (persistent; destroy or SetActive(false) to hide): one tall tongue with a white-yellow core
-        /// that sways and trails behind motion, plus a soft warm glow. ~5 cm tall at scale 1.
+        /// Lighter flame (persistent; destroy or SetActive(false) to hide): one upright pixel tongue stepping through
+        /// <see cref="FlameFrames"/> hand-drawn states. ~5.5 cm tall at scale 1. In first person (ViewModel layer) it is
+        /// screen aligned so it always stands straight on the Zippo whatever way the player looks; on other players it
+        /// only turns about the vertical axis so it keeps burning upwards.
         /// </summary>
+
         public static GameObject CreateFlame(Transform parent, float scale = 1f)
         {
             int layer = parent != null ? parent.gameObject.layer : Layers.Default;
@@ -82,28 +88,18 @@ namespace PrisonersOfOmar.Rendering
             go.transform.SetParent(parent, false);
             go.transform.localScale = Vector3.one * scale;
 
-            var frames = PsxFxAssets.Frames("flame_", 4);
+            var frames = PsxFxAssets.Frames("flame_", FlameFrames);
             var mat = PsxFxAssets.Material(frames[0], PsxSurface.Additive);
             var flame = go.AddComponent<PsxFlame>();
-            var t = PersistentSprite(go.transform, "Tongue", Vector3.zero, layer, PsxFxAssets.QuadBottom, mat, true);
+            var t = PersistentSprite(go.transform, "Tongue", Vector3.zero, layer, PsxFxAssets.QuadBottom, mat, layer != Layers.ViewModel);
             t.Frames = frames;
-            t.Fps = 13f;
+            t.Frame = 0; // stepped by PsxFlame, not by Fps
             t.StartSize = t.EndSize = new Vector2(flame.Width, flame.Height);
-            t.StartColor = t.EndColor = new Color(1f, 0.97f, 0.9f, 1f);
-            t.Flicker = 0.12f;
-            t.SizeJitter = 0.15f;
+            t.StartColor = t.EndColor = Color.white;
+            t.Flicker = 0.05f;
             t.Play();
             flame.Tongue = t;
             flame.Bill = t.GetComponent<PsxBillboard>();
-
-            var glow = PersistentSprite(go.transform, "FlameGlow", new Vector3(0f, 0.02f, 0f), layer, PsxFxAssets.QuadCenter,
-                PsxFxAssets.Material("glow", PsxSurface.Additive), false);
-            glow.StartSize = glow.EndSize = new Vector2(0.13f, 0.13f);
-            glow.StartColor = glow.EndColor = new Color(1f, 0.6f, 0.25f, 0.3f);
-            glow.Flicker = 0.3f;
-            glow.SizeJitter = 0.12f;
-            glow.Play();
-            flame.Glow = glow;
             return go;
         }
 
@@ -160,7 +156,7 @@ namespace PrisonersOfOmar.Rendering
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPosition;
 
-            var frames = PsxFxAssets.Frames("flame_", 4);
+            var frames = PsxFxAssets.Frames("flame_", FlameFrames);
             var core = PersistentSprite(go.transform, "FlareFlame", Vector3.zero, layer, PsxFxAssets.QuadBottom,
                 PsxFxAssets.Material(frames[0], PsxSurface.Additive), true);
             core.Frames = frames;

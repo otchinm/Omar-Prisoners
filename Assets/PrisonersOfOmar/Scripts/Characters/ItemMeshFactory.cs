@@ -74,7 +74,7 @@ namespace PrisonersOfOmar.Characters
         {
             switch (type)
             {
-                case ItemType.Lighter: return new Vector3(0, 0.0201f, 0);
+                case ItemType.Lighter: return new Vector3(0, 0.0236f, 0);
                 case ItemType.LighterFuel: return new Vector3(0, 0.059f, 0);
                 case ItemType.Bandages: return new Vector3(0, 0.050f, 0);
                 case ItemType.Flashlight: return new Vector3(0, 0.0221f, 0f);
@@ -186,19 +186,21 @@ namespace PrisonersOfOmar.Characters
             Rect front = R(0, 0, 32, 32, W, H), side = R(32, 0, 16, 32, W, H), lid = R(0, 32, 32, 16, W, H);
             Rect chim = R(32, 32, 16, 16, W, H), top = R(48, 0, 16, 16, W, H), insert = R(48, 16, 16, 16, W, H), wheel = R(48, 32, 16, 16, W, H);
             Rect lidIn = R(0, 48, 32, 16, W, H);
-            const float w = 0.038f, d = 0.013f, caseH = 0.040f, lidH = 0.022f;
+            // slim and upright (narrower and taller than a stock Zippo, about the same overall size)
+            const float w = 0.031f, d = 0.013f, caseH = 0.047f, lidH = 0.025f;
+            const float top0 = caseH * 0.5f, chimX = -0.0036f, wheelX = 0.0087f;
             // lower case (pivot = grip, middle of the case)
             mb.AddBox(new Vector3(0, 0, 0), new Vector3(w, caseH, d),
                 new BoxUVRects { PosZ = front, NegZ = front, PosX = side, NegX = side, PosY = top, NegY = top });
             // insert rim sticking out of the case
-            mb.AddBox(new Vector3(0, caseH * 0.5f + 0.002f, 0), new Vector3(w - 0.003f, 0.004f, d - 0.002f), BoxUVRects.All(insert));
+            mb.AddBox(new Vector3(0, top0 + 0.002f, 0), new Vector3(w - 0.003f, 0.004f, d - 0.002f), BoxUVRects.All(insert));
             // perforated chimney (wind guard) on the left, flint wheel + cam on the right
-            mb.AddBox(new Vector3(-0.0045f, caseH * 0.5f + 0.012f, 0), new Vector3(0.021f, 0.016f, 0.0115f),
+            mb.AddBox(new Vector3(chimX, top0 + 0.012f, 0), new Vector3(0.017f, 0.016f, 0.0115f),
                 new BoxUVRects { PosZ = chim, NegZ = chim, PosX = chim, NegX = chim, PosY = insert, NegY = insert });
-            Cyl(mb, new Vector3(0.0105f, caseH * 0.5f + 0.0125f, -0.0042f), new Vector3(0.0105f, caseH * 0.5f + 0.0125f, 0.0042f), 0.0042f, 0.0042f, 8, wheel, wheel, wheel);
-            mb.AddBox(new Vector3(0.0115f, caseH * 0.5f + 0.006f, 0), new Vector3(0.006f, 0.008f, 0.0016f), BoxUVRects.All(insert));
+            Cyl(mb, new Vector3(wheelX, top0 + 0.0125f, -0.0042f), new Vector3(wheelX, top0 + 0.0125f, 0.0042f), 0.0038f, 0.0038f, 8, wheel, wheel, wheel);
+            mb.AddBox(new Vector3(wheelX + 0.0009f, top0 + 0.006f, 0), new Vector3(0.005f, 0.008f, 0.0016f), BoxUVRects.All(insert));
             // wick tip inside the chimney
-            mb.AddBox(new Vector3(-0.0045f, caseH * 0.5f + 0.019f, 0), new Vector3(0.0028f, 0.0025f, 0.0028f), BoxUVRects.All(wheel));
+            mb.AddBox(new Vector3(chimX, top0 + 0.019f, 0), new Vector3(0.0028f, 0.0025f, 0.0028f), BoxUVRects.All(wheel));
 
             // hinged lid as its own child so it can flip open / shut (hinge on the right edge of the case top)
             var hinge = Child(root, "Lid", new Vector3(w * 0.5f, caseH * 0.5f, 0), Quaternion.identity);
@@ -209,7 +211,8 @@ namespace PrisonersOfOmar.Characters
             lm.AddBox(new Vector3(0.0008f, 0.002f, 0), new Vector3(0.0022f, 0.006f, 0.006f), BoxUVRects.All(insert)); // hinge barrel
             lm.Build("LidMesh", hinge, Layers.Item);
 
-            Child(root, "Anchor_Flame", new Vector3(-0.0045f, caseH * 0.5f + 0.0205f, 0), Quaternion.identity);
+            // the tongue starts just inside the chimney so its round base is half hidden, like the reference
+            Child(root, "Anchor_Flame", new Vector3(chimX, top0 + 0.0175f, 0), Quaternion.identity);
         }
 
         /// <summary>Open the Zippo lid of a lighter model (0 = shut, 1 = open). Safe on any model.</summary>

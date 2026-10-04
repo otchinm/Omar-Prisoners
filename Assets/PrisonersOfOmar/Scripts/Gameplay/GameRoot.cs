@@ -243,6 +243,7 @@ namespace PrisonersOfOmar.Gameplay
                 {
                     _arms = FirstPersonArms.Create(CharacterSkin.Prisoner1, rig.transform);
                     _arms.SetHeld(ItemType.Lighter);
+                    ItemMeshFactory.SetLighterLid(_arms.HeldModel, 1f); // it is lit, so the lid is flipped open
                     var anchor = _arms.HeldModel != null ? (Avatar.FindDeep(_arms.HeldModel.transform, "Anchor_Flame") ?? _arms.HeldModel.transform) : _arms.HandSocket;
                     _light = PsxLight.Create(anchor, Vector3.up * 0.03f, new Color(1f, 0.68f, 0.34f), 1.4f, 6f, PsxFlicker.Candle, "MenuLighter");
                     _light.Priority = 10;

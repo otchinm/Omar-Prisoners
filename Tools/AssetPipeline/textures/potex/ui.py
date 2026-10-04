@@ -316,25 +316,26 @@ def icon(name):
 
 @icon("lighter")
 def _lighter(ctx):
-    """Zippo like the first-person view: olive case, pale brass perforated chimney, blue flint wheel, flame."""
+    """Slim upright Zippo like the first-person view: olive case, pale brass perforated chimney, blue flint wheel,
+    open lid, the pixel flame tongue."""
     W = H = 256
-    body = rrect(W, H, 70, 112, 170, 236, 14)
-    img = solid(H, W, "#5c662e") * shade_lr(H, W, 70, 170, 0.45)[..., None] * tex_noise(ctx, H, W, 0.1)[..., None]
-    rim = rrect(W, H, 74, 104, 166, 116, 3)
+    body = rrect(W, H, 84, 104, 160, 244, 12)
+    img = solid(H, W, "#5c662e") * shade_lr(H, W, 84, 160, 0.45)[..., None] * tex_noise(ctx, H, W, 0.1)[..., None]
+    rim = rrect(W, H, 87, 96, 157, 108, 3)
     img = mix(img, "#c8bc84", rim)
-    chim = rrect(W, H, 80, 52, 140, 106, 4)
+    chim = rrect(W, H, 90, 50, 134, 98, 4)
     img = mix(img, "#d8cf9a", chim)
-    for hx in (92, 110, 128):
-        for hy in (64, 80, 96):
-            img = mix(img, "#1a120a", ellipse_mask(W, H, hx + (9 if hy == 80 else 0), hy, 6, 5) * chim)
-    wheel = ellipse_mask(W, H, 154, 82, 12, 12)
+    for hx in (99, 113):
+        for hy in (60, 74, 88):
+            img = mix(img, "#1a120a", ellipse_mask(W, H, hx + (7 if hy == 74 else 0), hy, 5, 4) * chim)
+    wheel = ellipse_mask(W, H, 146, 78, 10, 10)
     img = mix(img, "#1c2a6a", wheel)
     # open lid hanging on the right
-    lid = rrect(W, H, 168, 60, 204, 112, 8, rot=0.35)
+    lid = rrect(W, H, 162, 50, 192, 104, 8, rot=0.35)
     img = mix(img, "#4e5828", lid)
-    flame = ellipse_mask(W, H, 110, 24, 13, 28)
-    img = mix(img, "#ffb030", flame)
-    img = mix(img, "#fff0b0", ellipse_mask(W, H, 110, 32, 6, 14))
+    flame = ellipse_mask(W, H, 112, 26, 11, 30)
+    img = mix(img, "#ffa030", flame)
+    img = mix(img, "#fff4c8", ellipse_mask(W, H, 112, 32, 6, 20))
     a = clamp01(body + rim + chim + wheel + lid + flame)
     return img, a
 

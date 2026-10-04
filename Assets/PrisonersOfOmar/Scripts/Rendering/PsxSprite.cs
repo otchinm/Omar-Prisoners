@@ -16,6 +16,8 @@ namespace PrisonersOfOmar.Rendering
         public float Fps = 12f;
         /// <summary>false: play the frames once over the lifetime.</summary>
         public bool LoopFrames = true;
+        /// <summary>&gt;= 0: show this flipbook frame (driven by another component, e.g. the lighter flame), ignoring Fps.</summary>
+        public int Frame = -1;
         public Color StartColor = Color.white;
         public Color EndColor = Color.white;
         /// <summary>Fraction of the life after which the color starts going from StartColor to EndColor.</summary>
@@ -63,7 +65,7 @@ namespace PrisonersOfOmar.Rendering
         /// <summary>Resets every setting to its default (pooled sprites are reused).</summary>
         internal void ResetSettings()
         {
-            Frames = null; Fps = 12f; LoopFrames = true;
+            Frames = null; Fps = 12f; LoopFrames = true; Frame = -1;
             StartColor = EndColor = Color.white; FadeStart = 0f;
             StartSize = EndSize = Vector2.one; Flicker = 0f; SizeJitter = 0f;
             Velocity = Vector3.zero; Gravity = 0f; Drag = 0f; FloorY = float.NegativeInfinity;
@@ -124,7 +126,8 @@ namespace PrisonersOfOmar.Rendering
             if (frames != null && frames.Length > 0)
             {
                 int idx;
-                if (!LoopFrames && Lifetime > 0f) idx = Mathf.Min(frames.Length - 1, (int)(life * frames.Length));
+                if (Frame >= 0) idx = Frame % frames.Length;
+                else if (!LoopFrames && Lifetime > 0f) idx = Mathf.Min(frames.Length - 1, (int)(life * frames.Length));
                 else idx = (int)((_age + _frameOffset) * Fps) % frames.Length;
                 if (idx < 0) idx = 0;
                 var tex = frames[idx];

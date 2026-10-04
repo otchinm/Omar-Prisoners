@@ -3,53 +3,45 @@ using UnityEngine;
 namespace PrisonersOfOmar.Rendering
 {
     /// <summary>
-    /// A lighter / candle flame like the first-person reference: one tall tongue with a white-yellow core that trails
-    /// behind every movement (turning the head swings it), sways lazily and flickers in height.
+    /// A lighter / candle flame like the Nun Massacre first-person lighter: one upright pixel tongue that steps through a
+    /// few hand-drawn states (Textures/FX/flame_N) at a moderate, slightly irregular pace. It never leans with the
+    /// player's turning or walking: the animation is the frames alone, chunky and readable rather than realistic.
     /// Built by <see cref="PsxFx.CreateFlame"/>.
     /// </summary>
     [AddComponentMenu("")]
     public sealed class PsxFlame : MonoBehaviour
     {
-        internal PsxSprite Tongue, Glow;
+        internal PsxSprite Tongue;
         internal PsxBillboard Bill;
-        internal float Width = 0.016f, Height = 0.05f;
+        internal float Width = 0.029f, Height = 0.058f;
+        /// <summary>Average frame changes per second (the tempo of the flipbook).</summary>
+        internal float Rate = 8f;
 
-        Vector3 _lastPos;
-        bool _hasLast;
-        float _lean, _leanVel, _stretch = 1f, _stretchVel;
-        float _seed;
+        float _next;
+        int _frame;
 
         void OnEnable()
         {
-            _seed = Random.value * 50f;
-            _hasLast = false;
+            _frame = Random.Range(0, 6);
+            _next = 0f;
         }
 
         void LateUpdate()
         {
-            float dt = Time.deltaTime;
-            if (dt <= 0f || Tongue == null) return;
-            float s = transform.lossyScale.y;
-            Vector3 p = transform.position;
-            Vector3 v = _hasLast ? (p - _lastPos) / dt : Vector3.zero;
-            _lastPos = p; _hasLast = true;
-            if (v.sqrMagnitude > 400f) v = Vector3.zero;
-
-            var cam = PsxRenderDriver.WorldCamera();
-            Vector3 right = cam != null ? cam.transform.right : Vector3.right;
-            float lateral = Vector3.Dot(v, right) / Mathf.Max(s, 0.2f);
-            float rise = v.y / Mathf.Max(s, 0.2f);
-
-            // trails behind the motion + a slow lazy sway
+            if (Tongue == null) return;
+            var frames = Tongue.Frames;
+            int n = frames != null ? frames.Length : 0;
             float t = Time.time;
-            float sway = (Mathf.PerlinNoise(_seed, t * 1.7f) - 0.5f) * 8f + (Mathf.PerlinNoise(_seed + 9f, t * 7f) - 0.5f) * 2.5f;
-            float targetLean = Mathf.Clamp(lateral * 14f, -38f, 38f) + sway;
-            _lean = Mathf.SmoothDamp(_lean, targetLean, ref _leanVel, 0.07f, 900f, dt);
-            float targetStretch = Mathf.Clamp(1f - rise * 0.25f, 0.75f, 1.25f) * (0.93f + 0.14f * Mathf.PerlinNoise(_seed + 3f, t * 9f));
-            _stretch = Mathf.SmoothDamp(_stretch, targetStretch, ref _stretchVel, 0.05f, 50f, dt);
-
-            if (Bill != null) Bill.Roll = _lean;
-            Tongue.StartSize = Tongue.EndSize = new Vector2(Width * (1.05f - 0.1f * (_stretch - 1f)), Height * _stretch);
+            if (n > 1 && t >= _next)
+            {
+                // a different state every step, never the same one twice in a row; the hold time wanders a little
+                int step = Random.Range(1, n);
+                _frame = (_frame + step) % n;
+                _next = t + Random.Range(0.75f, 1.3f) / Mathf.Max(Rate, 1f);
+            }
+            Tongue.Frame = n > 0 ? _frame % n : -1;
+            if (Bill != null) Bill.Roll = 0f;
+            Tongue.StartSize = Tongue.EndSize = new Vector2(Width, Height);
         }
     }
 }

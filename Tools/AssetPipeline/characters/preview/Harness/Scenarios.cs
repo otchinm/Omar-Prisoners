@@ -207,6 +207,7 @@ namespace PreviewHarness
             var cam = new GameObject("Camera");
             var arms = FirstPersonArms.Create(skin, cam.transform);
             arms.SetHeld(item);
+            if (item == ItemType.Lighter) ItemMeshFactory.SetLighterLid(arms.HeldModel, 1f); // shown lit / open
             const float dt = 1f / 60f;
             for (int i = 0; i < 60; i++) Runtime.Tick(dt);
             if (a.Count > 2 && a[2] != "none")

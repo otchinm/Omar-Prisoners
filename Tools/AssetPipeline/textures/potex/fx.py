@@ -12,34 +12,86 @@ FXDEG = dict(jpeg=False, desat=0.0, dark=1.0, maxv=1.0, sharpen=0.2, bits=5, dit
 # --------------------------------------------------------------------------------------
 # flames / fire (4-frame loops)
 # --------------------------------------------------------------------------------------
-def lighter_flame(ctx, frame):
-    W, H = ctx.W, ctx.H
-    r = rng_for("flame_shared")
-    turb = fft_noise(r, H, W, beta=2.2, ax=1.0, ay=2.0)
+# Lighter flame flipbook (Nun Massacre style): a handful of hand-shaped states the game switches between at a moderate,
+# irregular pace. Native-resolution pixels, a five-tone warm palette and hard edges: chunky and readable, not cartoony
+# (no outline, no blue base, the white-hot core fills most of the tongue like the VHS reference).
+FLAME_FRAMES = 6
+FLAME_PALETTE = [  # (rgb, alpha) from the outer fringe to the core
+    ((160, 48, 14), 0.78),
+    ((228, 104, 28), 1.0),
+    ((255, 170, 56), 1.0),
+    ((255, 224, 140), 1.0),
+    ((255, 249, 230), 1.0),
+]
+#            tip  width  widest  lean   bow
+FLAME_SHAPES = [
+    (0.95, 0.60, 0.27, 0.00, 0.00),   # calm, tall
+    (0.86, 0.66, 0.25, 0.17, 0.03),   # squats, tip drifts right
+    (0.97, 0.55, 0.29, -0.10, -0.02),  # stretches thin, leans left
+    (0.91, 0.61, 0.26, 0.22, -0.06),  # S-bend to the right
+    (0.83, 0.68, 0.24, -0.04, 0.04),  # short and round (gulps air)
+    (0.93, 0.58, 0.28, -0.19, 0.05),  # bends left
+]
+
+
+def lighter_flame_pixels(w, h, frame):
+    tip, width, widest, lean, bow = FLAME_SHAPES[frame % len(FLAME_SHAPES)]
+    k = 4  # coverage is measured on a 4x grid, then each texel takes one palette tone
+    H, W = h * k, w * k
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    v = 1.0 - (yy + 0.5) / H  # 0 bottom .. 1 top
+    v = 1.0 - (yy + 0.5) / H
     u = (xx + 0.5) / W * 2 - 1
-    ph = frame / 4.0 * 2 * np.pi
-    sway = (np.sin(v * 5.0 + ph) * 0.07 + np.sin(v * 9.0 - ph * 2) * 0.03) * v
-    turb_s = np.roll(turb, int(frame * H / 4), axis=0)
-    width = 0.62 * np.clip(np.sin(np.pi * np.clip(v * 1.15 + 0.05, 0, 1)), 0, 1) ** 0.8 * (1 - v) ** 0.35
-    width = width * (1.0 + 0.08 * np.sin(ph))
-    d = np.abs(u - sway - turb_s * 0.05 * v) / np.maximum(width, 1e-3)
-    inten = clamp01(1.0 - d) * smoothstep(0.02, 0.12, v) * (1 - smoothstep(0.85, 0.98, v))
-    inten = inten ** 0.7
-    img = gradient_map(clamp01(inten * 1.1), [(0, "#3a0802"), (0.3, "#c03008"), (0.6, "#ff9020"), (0.85, "#ffe090"), (1, "#fffbe8")])
-    # blue base
-    blue = ellipse_mask(W, H, W * 0.5 + sway[int(H * 0.85), 0] * W * 0.5, H * 0.86, W * 0.18, H * 0.06, soft=0.9)
-    img = mix(img, "#2a40c0", blue * 0.55 * (inten > 0.05))
-    a = smoothstep(0.03, 0.35, inten)
-    return img, a
+    vb = 0.5 / h  # one texel of breathing room under the base
+    t = clamp01((v - vb) / (tip - vb))
+    tp = (widest - vb) / (tip - vb)
+    round_bottom = np.sqrt(clamp01(1.0 - ((tp - t) / tp) ** 2))
+    s = clamp01((t - tp) / (1.0 - tp))
+    taper = np.cos(np.pi * 0.5 * s) ** 1.15
+    f = np.where(t < tp, round_bottom, taper) * (v >= vb) * (v <= tip)
+    # a little ragged edge so the silhouette is not a perfect geometric drop (fixed per frame)
+    r = rng_for("flame_px", frame)
+    rag = fft_noise(r, H, W, beta=2.4, ax=1.0, ay=2.5) * 0.06
+    centre = lean * t ** 2 + bow * np.sin(np.pi * t)
+    d = np.abs(u - centre) / np.maximum(width * f, 1e-4) * (1.0 + rag)
+    inside = (d < 1.0) & (f > 0.0)
+    heat = (1.0 - d ** 1.35) * (1.0 - 0.55 * smoothstep(0.42, 1.0, t)) * (0.84 + 0.16 * smoothstep(0.0, 0.18, t))
+    heat = np.where(inside, heat, 0.0)
+
+    def down(a):
+        return a.reshape(h, k, w, k).mean(axis=(1, 3))
+
+    cov = down(inside.astype(np.float32))
+    hm = down(heat) / np.maximum(cov, 1e-4)
+    out = np.zeros((h, w, 4), np.uint8)
+    bayer2 = ((0.0, 0.5), (0.75, 0.25))
+    for y in range(h):
+        for x in range(w):
+            c = cov[y, x]
+            if c < 0.3:
+                continue
+            e = hm[y, x] + (bayer2[y & 1][x & 1] - 0.375) * 0.1  # mottled, not flat bands
+            if c < 0.62:
+                lvl = 0
+            elif e > 0.6:
+                lvl = 4
+            elif e > 0.4:
+                lvl = 3
+            elif e > 0.22:
+                lvl = 2
+            elif e > 0.08:
+                lvl = 1
+            else:
+                lvl = 0
+            rgb, a = FLAME_PALETTE[lvl]
+            out[y, x] = (rgb[0], rgb[1], rgb[2], int(round(a * 255)))
+    return Image.fromarray(out, "RGBA")
 
 
-for _i in range(4):
+for _i in range(FLAME_FRAMES):
     def _mk(i):
-        @texture("FX/flame_%d" % i, (32, 64), k=8, alpha="soft", **FXDEG)
+        @texture("FX/flame_%d" % i, (16, 32), alpha="soft")
         def _f(ctx):
-            return lighter_flame(ctx, i)
+            return lighter_flame_pixels(ctx.w, ctx.h, i)
         return _f
     _mk(_i)
 

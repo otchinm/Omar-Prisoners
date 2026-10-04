@@ -221,7 +221,7 @@ namespace PrisonersOfOmar.Characters
         {
             switch (item)
             {
-                case ItemType.Lighter: return new Vector3(-0.004f, 0.052f, 0.006f);
+                case ItemType.Lighter: return new Vector3(-0.004f, 0.056f, 0.006f);
                 case ItemType.LighterFuel: return new Vector3(-0.006f, 0.035f, 0.01f);
                 case ItemType.Bandages: return new Vector3(-0.01f, 0.03f, 0.02f);
                 case ItemType.Pills: return new Vector3(-0.006f, 0.02f, 0.01f);
