@@ -54,6 +54,7 @@ namespace PrisonersOfOmar.Gameplay
             var st = _w.StatusOf(target.Id);
             if (st == null || st.Life != LifeState.Free || st.Hidden) return false;
             if (AdminState.Invisible.Contains(target.Id)) return false;
+            if (target.Peeking && _w.PeekHides(target, eye)) return false; // watching him through a crack in the door
             Vector3 chest = target.ChestPosition;
             Vector3 to = chest - eye;
             distance = to.magnitude;

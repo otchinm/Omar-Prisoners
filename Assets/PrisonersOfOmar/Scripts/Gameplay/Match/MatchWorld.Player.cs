@@ -52,6 +52,31 @@ namespace PrisonersOfOmar.Gameplay
             Session.SendToHost(NetChannel.Reliable);
         }
 
+        /// <summary>
+        /// A prisoner peeking (AvatarFlags.Peek) next to a door that is open only a crack is hidden from an eye on the
+        /// other side of that door's wall.
+        /// </summary>
+        public bool PeekHides(Avatar target, Vector3 eye)
+        {
+            if (target == null || !target.Peeking || Doors == null) return false;
+            Vector3 p = target.Position;
+            for (int i = 0; i < Doors.Length; i++)
+            {
+                var d = Doors[i];
+                if (d.Angle > PrisonerController.PeekMaxAngle) continue;
+                Vector3 c = d.Info.Center;
+                if (Mathf.Abs(p.y - c.y) > 1.5f) continue;
+                Vector3 flat = p - c; flat.y = 0f;
+                if (flat.magnitude > 1.8f) continue;
+                Vector3 n = d.Info.SwingDirection; n.y = 0f;
+                if (n.sqrMagnitude < 0.01f) continue;
+                n.Normalize();
+                float sp = Vector3.Dot(p - c, n), se = Vector3.Dot(eye - c, n);
+                if (sp * se < 0f && Mathf.Abs(se) > 0.25f) return true;
+            }
+            return false;
+        }
+
         public void SendDoorGrab(int door, bool grab, float angle, float velocity)
         {
             var w = Session.Begin(Msg.DoorGrabReq);

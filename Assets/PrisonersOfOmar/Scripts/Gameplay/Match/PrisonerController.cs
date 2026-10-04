@@ -155,6 +155,7 @@ namespace PrisonersOfOmar.Gameplay
 
             HandleMenus();
             HandleDoorDrag(st, dt);
+            HandleDoorPeek(st, dt);
             Look(st);
             bool canMove = _w.Running && st.Life != LifeState.Dead && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f && !CamPathActive && !AdminFreeCam.Active;
             Move(st, dt, canMove);
@@ -808,6 +809,74 @@ namespace PrisonersOfOmar.Gameplay
             if (Mathf.Abs(d.Velocity) > 180f) MakeNoise(3f);
         }
 
+        // ================================================================== peeking (RMB on a door)
+
+        /// <summary>A door opened no more than this is "a crack": peeking through it is silent and hides you.</summary>
+        public const float PeekMaxAngle = 14f;
+        const float PeekAngle = 9f, PeekSpeed = 16f;
+        DoorEntity _peek;
+        float _peekGoal;
+        int _peekDoor = -1;
+
+        /// <summary>
+        /// RMB on a shut door eases it open just a crack (silently) so you can watch the other side; RMB again eases it
+        /// shut. While you stay right at the crack Omar on the other side can not see you.
+        /// </summary>
+        void HandleDoorPeek(PlayerStatus st, float dt)
+        {
+            bool can = _w.Running && !GameInput.GameplayBlocked && st.Life == LifeState.Free && !st.Hidden && !st.Trapped && !st.InCar && _captureFx <= 0f && _drag == null;
+            var rig = PsxCameraRig.Instance;
+            if (_peek == null)
+            {
+                if (!can || rig == null || !GameInput.SecondaryDown) return;
+                var door = _target as DoorEntity;
+                if (door == null || door.Boarded || door.Locked || door.Info.Pivot == null || door.Angle > PeekMaxAngle + 1f) return;
+                if (door.Grabber >= 0 && door.Grabber != _avatar.Id) return;
+                if (Vector3.Distance(rig.transform.position, _targetPoint) > Tuning.InteractRange + 0.3f) return;
+                _peek = door;
+                _peekDoor = door.Index;
+                _peekGoal = door.Angle < PeekAngle * 0.5f ? PeekAngle : 0f;   // shut: crack it open; cracked: ease it shut
+                door.LocalDrive = true;
+                door.PredictUntil = 0f;
+                door.Grabber = _avatar.Id;
+                door.Velocity = 0f;
+                _dragSendTimer = 0.05f;
+                _w.SendDoorGrab(door.Index, true, door.Angle, 0f);
+                return;
+            }
+            var d = _peek;
+            if (!can || !d.LocalDrive || d.Locked || d.Boarded || GeoUtil.FlatDistance(_avatar.Position, d.Info.Center) > 2.6f) { EndPeek(); return; }
+            float prev = d.Angle;
+            float next = Mathf.MoveTowards(prev, _peekGoal, PeekSpeed * dt);
+            if (Mathf.Abs(next - prev) > 0.0001f && d.Blocked(next, DragBlockMask) && !d.Blocked(prev, DragBlockMask)) next = prev;
+            d.Angle = next;
+            d.Velocity = dt > 0f ? (next - prev) / dt : 0f;
+            _dragSendTimer -= dt;
+            if (_dragSendTimer <= 0f) { _dragSendTimer = 0.05f; _w.SendDoorDrag(d.Index, d.Angle, d.Velocity); }
+            if (Mathf.Abs(next - _peekGoal) < 0.01f || next == prev) EndPeek();
+        }
+
+        void EndPeek()
+        {
+            var d = _peek;
+            _peek = null;
+            if (d == null || !d.LocalDrive) return;
+            d.LocalDrive = false;
+            d.Velocity = 0f;
+            d.PredictUntil = Time.time + 0.6f;
+            if (_w != null) _w.SendDoorGrab(d.Index, false, d.Angle, 0f);
+        }
+
+        /// <summary>Standing at the door we cracked open (it is still only a crack).</summary>
+        bool PeekingNow()
+        {
+            if (_peekDoor < 0 || _w.Doors == null || _peekDoor >= _w.Doors.Length) return false;
+            var d = _w.Doors[_peekDoor];
+            float dist = GeoUtil.FlatDistance(_avatar.Position, d.Info.Center);
+            if (dist > 2.6f) { _peekDoor = -1; return false; }
+            return d.Angle > 0.3f && d.Angle <= PeekMaxAngle && dist < 1.6f;
+        }
+
         void BeginDrag(DoorEntity door)
         {
             _drag = door;
@@ -1101,6 +1170,7 @@ namespace PrisonersOfOmar.Gameplay
             s.Pitch = _pitch;
             AvatarFlags f = AvatarFlags.None;
             if (_crouch) f |= AvatarFlags.Crouch;
+            if (PeekingNow()) f |= AvatarFlags.Peek;
             if (_sprintingNow) f |= AvatarFlags.Sprint;
             if (LighterLit) f |= AvatarFlags.LighterOn;
             if (_flashOn) f |= AvatarFlags.FlashlightOn;

@@ -294,7 +294,7 @@ namespace PrisonersOfOmar.Gameplay
             // Omar simply walks through doors; prisoners drag the leaf with the mouse
             if (who.IsOmar) { p = default; return false; }
             if (Grabber >= 0 && Grabber != who.PlayerId) { p = InteractPrompt.Info("SOMEONE IS HOLDING IT"); return true; }
-            p = InteractPrompt.Drag(Shut ? "PULL / PUSH" : "DRAG");
+            p = InteractPrompt.Drag((Shut ? "PULL / PUSH" : "DRAG") + (Shut ? "   [RMB] PEEK" : Angle <= PrisonerController.PeekMaxAngle ? "   [RMB] EASE SHUT" : ""));
             return true;
         }
 
@@ -414,6 +414,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             // hinges groan while the leaf moves; louder and higher the faster it swings
             float target = speed < 6f ? 0f : Mathf.Clamp01((speed - 6f) / 160f);
+            if (Angle < PrisonerController.PeekMaxAngle + 2f && speed < 40f) target = 0f; // easing it open a crack / shut again is silent
             _creakVol = Mathf.MoveTowards(_creakVol, target, dt * (target > _creakVol ? 6f : 2.5f));
             if (_creakVol > 0.01f)
             {

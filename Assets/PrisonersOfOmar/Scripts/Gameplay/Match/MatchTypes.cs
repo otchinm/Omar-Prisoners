@@ -24,6 +24,8 @@ namespace PrisonersOfOmar.Gameplay
         Grounded = 1 << 4,
         Stunned = 1 << 5,
         Struggling = 1 << 6,
+        /// <summary>Peeking through a door that is open just a crack: Omar on the other side can not see them.</summary>
+        Peek = 1 << 7,
     }
 
     /// <summary>Replicated per-frame state of an avatar (owner -> host -> everyone).</summary>

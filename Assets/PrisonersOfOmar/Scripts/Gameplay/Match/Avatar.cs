@@ -58,6 +58,8 @@ namespace PrisonersOfOmar.Gameplay
         public bool LighterOn => (State.Flags & AvatarFlags.LighterOn) != 0;
         public bool FlashlightOn => (State.Flags & AvatarFlags.FlashlightOn) != 0;
         public bool Crouching => (State.Flags & AvatarFlags.Crouch) != 0;
+        public bool Peeking => (State.Flags & AvatarFlags.Peek) != 0;
+        bool _peekHidden;
         public bool Sprinting => (State.Flags & AvatarFlags.Sprint) != 0;
         public Vector3 Forward => Quaternion.Euler(0, State.Yaw, 0) * Vector3.forward;
 
@@ -205,7 +207,18 @@ namespace PrisonersOfOmar.Gameplay
             }
 
             if (IsOmar) UpdateDuck(vel, dt);
-            else UpdateHeldItem();
+            else { UpdateHeldItem(); UpdatePeekHidden(); }
+        }
+
+        /// <summary>On a human Omar's screen a prisoner peeking through a cracked door from the other side is not drawn.</summary>
+        void UpdatePeekHidden()
+        {
+            var w = MatchWorld.Instance;
+            bool hide = !IsLocal && Peeking && w != null && w.LocalIsOmar && w.LocalAvatar != null && w.PeekHides(this, w.LocalAvatar.EyePosition);
+            if (hide == _peekHidden) return;
+            _peekHidden = hide;
+            if (Rig != null) Rig.SetVisible(_visible && !IsLocal && !hide);
+            if (_heldModel != null) _heldModel.SetActive(_visible && !hide);
         }
 
         /// <summary>Omar is taller than the door frames: probe the clearance above and just ahead of him and stoop.</summary>
@@ -366,7 +379,7 @@ namespace PrisonersOfOmar.Gameplay
         public void SetVisible(bool v)
         {
             _visible = v;
-            if (Rig != null) Rig.SetVisible(v && !IsLocal);
+            if (Rig != null) Rig.SetVisible(v && !IsLocal && !_peekHidden);
             if (_blob != null) _blob.SetActive(v);
             if (_heldModel != null) _heldModel.SetActive(v);
             if (_breath != null) AudioManager.SetVolume(_breath, v ? 0.75f : 0f);
