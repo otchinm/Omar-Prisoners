@@ -373,7 +373,7 @@ namespace PrisonersOfOmar.Gameplay
             }
             else
             {
-                float eye = Mathf.Lerp(Tuning.CrouchEyeHeight, Tuning.EyeHeight, Mathf.InverseLerp(1.05f, 1.75f, _motor.Height));
+                float eye = Mathf.Lerp(_avatar.CrouchEyeHeight, _avatar.StandEyeHeight, Mathf.InverseLerp(1.05f, 1.75f, _motor.Height));
                 pos = _avatar.transform.position + Vector3.up * eye;
                 float bobAmp = _sprintingNow ? 0.05f : 0.028f;
                 if (st.Injured && !PainkillersActive) bobAmp *= 1.5f;
@@ -944,7 +944,7 @@ namespace PrisonersOfOmar.Gameplay
             else
             {
                 // step in front of it facing the doors, back in, and turn around to look out through the slats
-                Vector3 front = ex.position + Vector3.up * (Tuning.EyeHeight - 0.05f);
+                Vector3 front = ex.position + Vector3.up * (_avatar.StandEyeHeight - 0.05f);
                 Quaternion faceIn = Flat(-ex.forward, 4f);
                 Vector3 side = Vector3.Cross(Vector3.up, ex.forward);
                 _camPath.Add(K(front, faceIn, 0.3f));
@@ -961,7 +961,7 @@ namespace PrisonersOfOmar.Gameplay
             var hv = info.HiddenView;
             var ex = info.ExitPose;
             float k = yanked ? 0.45f : 1f;
-            Vector3 eye = ex.position + Vector3.up * Tuning.EyeHeight;
+            Vector3 eye = ex.position + Vector3.up * _avatar.StandEyeHeight;
             Quaternion outRot = Flat(ex.forward);
             _camPath.Clear();
             _camPath.Add(K(hv.position, hv.rotation, 0f));

@@ -252,6 +252,10 @@ namespace PrisonersOfOmar.Gameplay
         // prisoner stamina: set per difficulty by ApplyDifficulty (Nightmare = the original 7 s)
         public static float StaminaSeconds = 12.5f, StaminaRegenDelay = 0.9f, StaminaRegenRate = 0.26f;
         public const float EyeHeight = 1.58f, CrouchEyeHeight = 0.95f;
+        /// <summary>Standing eye height of a prisoner of this body height (the kid sees from 1.34 m, the tall nerd from 1.70 m).</summary>
+        public static float EyeHeightFor(float bodyHeight) => Mathf.Clamp(bodyHeight * 0.905f, 1.2f, 1.72f);
+        /// <summary>Crouched eye height for a standing eye height (same ratio as the default 0.95 / 1.58).</summary>
+        public static float CrouchEyeFor(float standEye) => standEye * (CrouchEyeHeight / EyeHeight);
         public const float InteractRange = 2.3f;
         public static float LighterBurnSeconds = 170f, FlashlightBurnSeconds = 260f;
         // Omar (walk / run / captures / multipliers are set per difficulty by ApplyDifficulty)

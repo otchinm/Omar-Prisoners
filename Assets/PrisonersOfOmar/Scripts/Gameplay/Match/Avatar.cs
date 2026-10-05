@@ -49,7 +49,10 @@ namespace PrisonersOfOmar.Gameplay
         public const float InterpDelay = 0.1f;
 
         public Vector3 Position => transform.position;
-        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight - Tuning.OmarDuckDrop * DuckAmount : ((State.Flags & AvatarFlags.Crouch) != 0 ? Tuning.CrouchEyeHeight : Tuning.EyeHeight);
+        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight - Tuning.OmarDuckDrop * DuckAmount : ((State.Flags & AvatarFlags.Crouch) != 0 ? CrouchEyeHeight : StandEyeHeight);
+        /// <summary>This prisoner's own eye height (from the body height of their character).</summary>
+        public float StandEyeHeight { get; private set; } = Tuning.EyeHeight;
+        public float CrouchEyeHeight => Tuning.CrouchEyeFor(StandEyeHeight);
         /// <summary>0..1 how far the giant Omar stoops right now (low door frame / ceiling over or just ahead of him).</summary>
         public float DuckAmount { get; private set; }
         float _duckTarget, _duckProbeAt;
@@ -82,6 +85,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 a.Rig = HumanoidFactory.Build(info.Role == PlayerRole.Omar ? CharacterSkin.Omar : info.Skin, go.transform, isLocal ? Layers.LocalBody : layer);
                 a.Anim = a.Rig != null ? a.Rig.GetComponent<HumanoidAnimator>() : null;
+                if (info.Role != PlayerRole.Omar) a.StandEyeHeight = Tuning.EyeHeightFor(a.Rig != null ? a.Rig.Height : BodySpec.For(info.Skin).Height);
                 if (a.Anim != null) a.Anim.Footstep += a.OnFootstep;
                 if (isLocal && a.Rig != null) a.Rig.SetLayer(Layers.LocalBody); // Omar's rig already holds his cleaver
             }
