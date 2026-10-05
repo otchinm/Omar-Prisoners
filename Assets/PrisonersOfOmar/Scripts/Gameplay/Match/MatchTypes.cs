@@ -289,7 +289,16 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>PsxEnvironment.GradeAmount: the olive / yellow tape look of the reference, only above Normal.</summary>
         public static float LightGrade = 0f;
         public static int GrandmaRoamProgress = 2;
-        public static float GrandmaRoamNight = 0.5f;
+        public static float GrandmaRoamNight = 0.3f;
+        /// <summary>Full roaming starts no later than this (match clock, s) whatever the night length.</summary>
+        public static float GrandmaRoamMaxSeconds = 360f;
+        /// <summary>Before that she makes short outings from her TV: the first one at this time, then every OutingMin..Max s.</summary>
+        public static float GrandmaFirstOuting = 150f, GrandmaOutingMin = 100f, GrandmaOutingMax = 140f;
+        public static int GrandmaOutingLegsMin = 2, GrandmaOutingLegsMax = 3;
+        public static float GrandmaHomeChance = 0.15f, GrandmaSitMin = 12f, GrandmaSitMax = 25f, GrandmaPauseMin = 2f, GrandmaPauseMax = 5f;
+        public static float GrandmaRollSpeed = 0.95f, GrandmaFollowSpeed = 0.55f;
+        /// <summary>A loud noise this close draws her towards it once she roams (0 = never).</summary>
+        public static float GrandmaNoiseInvestigate = 10f;
         public static Difficulty CurrentDifficulty = Difficulty.Normal;
 
         /// <summary>Sets every difficulty-dependent value (identical on every peer: comes from the match settings).</summary>
@@ -298,6 +307,30 @@ namespace PrisonersOfOmar.Gameplay
             CurrentDifficulty = d;
             float baseRun = 4.75f, lighter = 170f, flash = 260f;
             LightGrade = d == Difficulty.Hard ? 0.75f : d == Difficulty.Nightmare ? 0.9f : 0f;
+            // the grandmother: when she starts roaming for good, how often she goes on short outings before that
+            switch (d)
+            {
+                case Difficulty.Easy:
+                    GrandmaRoamMaxSeconds = 600f; GrandmaFirstOuting = 210f; GrandmaOutingMin = 150f; GrandmaOutingMax = 210f; GrandmaOutingLegsMin = 2; GrandmaOutingLegsMax = 2;
+                    GrandmaHomeChance = 0.25f; GrandmaSitMin = 20f; GrandmaSitMax = 35f; GrandmaPauseMin = 2.5f; GrandmaPauseMax = 6f;
+                    GrandmaRollSpeed = 0.85f; GrandmaFollowSpeed = 0.45f; GrandmaNoiseInvestigate = 0f;
+                    break;
+                case Difficulty.Hard:
+                    GrandmaRoamMaxSeconds = 240f; GrandmaFirstOuting = 100f; GrandmaOutingMin = 70f; GrandmaOutingMax = 100f; GrandmaOutingLegsMin = 3; GrandmaOutingLegsMax = 3;
+                    GrandmaHomeChance = 0.12f; GrandmaSitMin = 10f; GrandmaSitMax = 18f; GrandmaPauseMin = 1.5f; GrandmaPauseMax = 4f;
+                    GrandmaRollSpeed = 1.05f; GrandmaFollowSpeed = 0.65f; GrandmaNoiseInvestigate = 14f;
+                    break;
+                case Difficulty.Nightmare:
+                    GrandmaRoamMaxSeconds = 120f; GrandmaFirstOuting = 60f; GrandmaOutingMin = 45f; GrandmaOutingMax = 70f; GrandmaOutingLegsMin = 3; GrandmaOutingLegsMax = 4;
+                    GrandmaHomeChance = 0.08f; GrandmaSitMin = 6f; GrandmaSitMax = 12f; GrandmaPauseMin = 1f; GrandmaPauseMax = 3f;
+                    GrandmaRollSpeed = 1.15f; GrandmaFollowSpeed = 0.75f; GrandmaNoiseInvestigate = 18f;
+                    break;
+                default:
+                    GrandmaRoamMaxSeconds = 360f; GrandmaFirstOuting = 150f; GrandmaOutingMin = 100f; GrandmaOutingMax = 140f; GrandmaOutingLegsMin = 2; GrandmaOutingLegsMax = 3;
+                    GrandmaHomeChance = 0.15f; GrandmaSitMin = 12f; GrandmaSitMax = 25f; GrandmaPauseMin = 2f; GrandmaPauseMax = 5f;
+                    GrandmaRollSpeed = 0.95f; GrandmaFollowSpeed = 0.55f; GrandmaNoiseInvestigate = 10f;
+                    break;
+            }
             switch (d)
             {
                 case Difficulty.Easy: StaminaSeconds = 15f; StaminaRegenDelay = 0.8f; StaminaRegenRate = 0.3f; CageBreakChance = 0.05f; CageNoticeNear = 0.25f; break;
@@ -310,22 +343,22 @@ namespace PrisonersOfOmar.Gameplay
                 case Difficulty.Easy:
                     Brightness = 2.2f; OmarWalkSpeed = 1.25f; OmarRunSpeed = baseRun * 0.88f; OmarSightMul = 0.8f; OmarHearingMul = 0.7f;
                     DetectFillMul = 0.6f; MaxCaptures = 4; SupplyMul = 1.5f; LighterBurnSeconds = lighter / 0.6f; FlashlightBurnSeconds = flash / 0.6f;
-                    StartWires = 3; StartBears = 1; GlowStrength = 1f; GrandmaRoamProgress = 4; GrandmaRoamNight = 0.7f;
+                    StartWires = 3; StartBears = 1; GlowStrength = 1f; GrandmaRoamProgress = 3; GrandmaRoamNight = 0.55f;
                     break;
                 case Difficulty.Hard:
                     Brightness = 1.3f; OmarWalkSpeed = 1.6f; OmarRunSpeed = baseRun * 1.06f; OmarSightMul = 1.15f; OmarHearingMul = 1.25f;
                     DetectFillMul = 1.3f; MaxCaptures = 2; SupplyMul = 0.75f; LighterBurnSeconds = lighter / 1.3f; FlashlightBurnSeconds = flash / 1.3f;
-                    StartWires = 6; StartBears = 4; GlowStrength = 0.6f; GrandmaRoamProgress = 1; GrandmaRoamNight = 0.35f;
+                    StartWires = 6; StartBears = 4; GlowStrength = 0.6f; GrandmaRoamProgress = 1; GrandmaRoamNight = 0.2f;
                     break;
                 case Difficulty.Nightmare:
                     Brightness = 1f; OmarWalkSpeed = 1.75f; OmarRunSpeed = baseRun * 1.12f; OmarSightMul = 1.3f; OmarHearingMul = 1.5f;
                     DetectFillMul = 1.6f; MaxCaptures = 2; SupplyMul = 0.5f; LighterBurnSeconds = lighter / 1.6f; FlashlightBurnSeconds = flash / 1.6f;
-                    StartWires = 7; StartBears = 5; GlowStrength = 0f; GrandmaRoamProgress = 1; GrandmaRoamNight = 0.2f;
+                    StartWires = 7; StartBears = 5; GlowStrength = 0f; GrandmaRoamProgress = 1; GrandmaRoamNight = 0.1f;
                     break;
                 default:
                     Brightness = 1.7f; OmarWalkSpeed = 1.45f; OmarRunSpeed = baseRun; OmarSightMul = 1f; OmarHearingMul = 1f;
                     DetectFillMul = 1f; MaxCaptures = 3; SupplyMul = 1f; LighterBurnSeconds = lighter; FlashlightBurnSeconds = flash;
-                    StartWires = 5; StartBears = 3; GlowStrength = 1f; GrandmaRoamProgress = 2; GrandmaRoamNight = 0.5f;
+                    StartWires = 5; StartBears = 3; GlowStrength = 1f; GrandmaRoamProgress = 1; GrandmaRoamNight = 0.3f;
                     break;
             }
         }

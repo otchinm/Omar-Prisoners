@@ -8,16 +8,21 @@ namespace PrisonersOfOmar.Gameplay
 {
     // (iteration 2) Host rules for the grandmother.
     //  Stage 1: she watches TV in her room and only sees what is in front of her (or right next to her).
-    //  Stage 2 (enough progress / late in the night): she rolls around the ground floor between the roam nodes.
+    //  Outings: from a couple of minutes in she leaves her TV now and then for a short trip (2-4 legs) and comes back.
+    //  Stage 2 (enough progress / some minutes into the night): she rolls around the ground floor between the roam nodes.
+    //  Once roaming, a loud noise close by draws her towards it.
     //  Seeing a prisoner: a shriek, then screams every few seconds while she still sees them - each one tells Omar
     //  where she is. Only the revolver kills her.
     public sealed partial class MatchHost
     {
-        const float GrandmaRollSpeed = 0.95f, GrandmaFollowSpeed = 0.55f, GrandmaTurnSpeed = 110f;
+        const float GrandmaTurnSpeed = 110f;
 
         float _gThink, _gVoiceAt, _gLostAt = -1f, _gSnapTimer, _gPauseUntil, _gSitUntil = -1f, _gNoiseUntil, _gRepath;
         int _gTarget = -1;
-        bool _gRoaming, _gSeesTarget;
+        bool _gRoaming, _gSeesTarget, _gOuting;
+        int _gOutingLegs;
+        float _gNextOuting = -1f, _gNextInvestigate;
+        List<int> _gRoamOut;
         Vector3 _gNoise;
         List<Vector3> _gPath;
         int _gPathIdx;
@@ -38,13 +43,30 @@ namespace PrisonersOfOmar.Gameplay
                 return;
             }
 
-            if (!_gRoaming && GrandmaShouldRoam())
+            if (_gNextOuting < 0f) _gNextOuting = Tuning.GrandmaFirstOuting;
+            bool full = GrandmaShouldRoam();
+            if (full && (!_gRoaming || _gOuting))
             {
+                if (!_gRoaming)
+                {
+                    _gPath = null;
+                    _gPauseUntil = now + 2f;
+                    SetGrandma(GrandmaMode.WatchingTv, GrandmaEntity.VoiceNone, -1);
+                }
                 _gRoaming = true;
+                _gOuting = false;
+                g.Stage = 2;
+            }
+            else if (!_gRoaming && g.Mode == GrandmaMode.WatchingTv && now >= _gNextOuting)
+            {
+                // a short trip out of her room, then back to the TV
+                _gRoaming = true;
+                _gOuting = true;
                 g.Stage = 1;
+                _gOutingLegs = Random.Range(Tuning.GrandmaOutingLegsMin, Tuning.GrandmaOutingLegsMax + 1);
                 _gPath = null;
-                _gPauseUntil = now + 2f;
-                SetGrandma(GrandmaMode.WatchingTv, GrandmaEntity.VoiceNone, -1);
+                _gSitUntil = -1f;
+                _gPauseUntil = now + 1.5f;
             }
 
             _gThink -= dt;
@@ -96,7 +118,8 @@ namespace PrisonersOfOmar.Gameplay
             if (o.RadioCalled) done++;
             if (o.BarrelsPoured) done++;
             if (o.ShelterOpen) done++;
-            return done >= Tuning.GrandmaRoamProgress || W.NightProgress >= Tuning.GrandmaRoamNight;
+            float roamAt = Mathf.Min(Tuning.GrandmaRoamNight * W.NightLength, Tuning.GrandmaRoamMaxSeconds);
+            return done >= Tuning.GrandmaRoamProgress || W.Time >= roamAt;
         }
 
         /// <summary>Nav nodes she may use: the ground floor of the house (no stairs), her room included.</summary>
@@ -116,6 +139,12 @@ namespace PrisonersOfOmar.Gameplay
                     _gRoam.Add(i);
                 }
             }
+            // legs of a trip go out of her room (her own room's nodes are only the way home)
+            _gRoamOut = new List<int>();
+            if (nav != null)
+                foreach (int i in _gRoam)
+                    if (i >= nav.NodeAreas.Count || nav.NodeAreas[i] != g.Info.Area) _gRoamOut.Add(i);
+            if (_gRoamOut.Count == 0) _gRoamOut.AddRange(_gRoam);
         }
 
         // ------------------------------------------------------------------ senses
@@ -199,6 +228,20 @@ namespace PrisonersOfOmar.Gameplay
             if (g.Mode == GrandmaMode.Screaming) return;
             _gNoise = pos;
             _gNoiseUntil = W.Time + 5f;
+            // once she is out of her chair a loud noise nearby brings her rolling (same floor only)
+            if (_gRoaming && Tuning.GrandmaNoiseInvestigate > 0f && d <= Tuning.GrandmaNoiseInvestigate && radius >= 6f
+                && W.Time >= _gNextInvestigate && Mathf.Abs(pos.y - g.Position.y) < 1.5f && W.Map.Nav != null)
+            {
+                int n = NearestRoam(W.Map.Nav, pos);
+                if (n >= 0)
+                {
+                    GrandmaPathTo(g, W.Map.Nav.Nodes[n]);
+                    _gGoingHome = false;
+                    _gSitUntil = -1f;
+                    _gPauseUntil = 0f;
+                    _gNextInvestigate = W.Time + 20f;
+                }
+            }
         }
 
         // ------------------------------------------------------------------ behaviour
@@ -229,7 +272,7 @@ namespace PrisonersOfOmar.Gameplay
                 {
                     _gRepath -= dt;
                     if (_gRepath <= 0f || _gPath == null) { _gRepath = 1f; GrandmaPathTo(g, target.Position); }
-                    GrandmaFollowPath(g, dt, GrandmaFollowSpeed, false);
+                    GrandmaFollowPath(g, dt, Tuning.GrandmaFollowSpeed, false);
                 }
             }
             if (now >= _gVoiceAt)
@@ -261,23 +304,37 @@ namespace PrisonersOfOmar.Gameplay
                     if (g.Mode != GrandmaMode.Roaming) SetGrandma(GrandmaMode.Roaming, GrandmaEntity.VoiceNone, -1);
                     return;
                 }
-                bool home = _gRng() < 0.22f;
+                bool home = _gOuting ? _gOutingLegs <= 0 : _gRng() < Tuning.GrandmaHomeChance;
                 if (home) GrandmaPathTo(g, g.Info.ChairPose.position);
                 else
                 {
-                    var nodes = new List<int>(_gRoam);
-                    if (nodes.Count == 0) { _gPauseUntil = now + 5f; return; }
+                    var nodes = _gRoamOut;
+                    if (nodes == null || nodes.Count == 0) { _gPauseUntil = now + 5f; return; }
                     var nav = W.Map.Nav;
                     int pick = nodes[Mathf.Clamp((int)(_gRng() * nodes.Count), 0, nodes.Count - 1)];
                     GrandmaPathTo(g, nav.Nodes[pick]);
+                    _gOutingLegs--;
                 }
                 _gGoingHome = home;
                 if (g.Mode != GrandmaMode.Roaming) SetGrandma(GrandmaMode.Roaming, GrandmaEntity.VoiceNone, -1);
             }
-            if (GrandmaFollowPath(g, dt, GrandmaRollSpeed, true))
+            if (GrandmaFollowPath(g, dt, Tuning.GrandmaRollSpeed, true))
             {
-                _gPauseUntil = now + Random.Range(2f, 6f);
-                if (_gGoingHome) _gSitUntil = now + Random.Range(18f, 40f);
+                _gPauseUntil = now + Random.Range(Tuning.GrandmaPauseMin, Tuning.GrandmaPauseMax);
+                if (_gGoingHome)
+                {
+                    if (_gOuting)
+                    {
+                        // trip over: back to her programme until the next one
+                        _gOuting = false;
+                        _gRoaming = false;
+                        g.Stage = 0;
+                        _gPath = null;
+                        _gNextOuting = now + Random.Range(Tuning.GrandmaOutingMin, Tuning.GrandmaOutingMax);
+                        SetGrandma(GrandmaMode.WatchingTv, GrandmaEntity.VoiceNone, -1);
+                    }
+                    else _gSitUntil = now + Random.Range(Tuning.GrandmaSitMin, Tuning.GrandmaSitMax);
+                }
             }
         }
 
@@ -290,9 +347,9 @@ namespace PrisonersOfOmar.Gameplay
             var nav = W.Map.Nav;
             _gPath = new List<Vector3>();
             _gPathIdx = 0;
-            if (nav == null || _gRoam.Count == 0) { _gPath.Add(goal); return; }
+            if (nav == null || _gRoam.Count == 0) { _gPauseUntil = W.Time + 3f; return; }
             int a = NearestRoam(nav, g.Position), b = NearestRoam(nav, goal);
-            if (a < 0 || b < 0) { _gPath.Add(goal); return; }
+            if (a < 0 || b < 0) { _gPauseUntil = W.Time + 3f; return; }
             var prev = new Dictionary<int, int> { [a] = -1 };
             var q = new Queue<int>();
             q.Enqueue(a);
@@ -310,13 +367,17 @@ namespace PrisonersOfOmar.Gameplay
                     q.Enqueue(m);
                 }
             }
-            if (!prev.ContainsKey(b)) { _gPath.Add(goal); return; }
+            if (!prev.ContainsKey(b)) { _gPauseUntil = W.Time + 3f; return; } // unreachable: wait, never roll through walls
             var rev = new List<Vector3>();
             for (int n = b; n >= 0; n = prev[n]) rev.Add(nav.Nodes[n]);
             rev.Reverse();
-            if (rev.Count > 1) rev.RemoveAt(0); // skip the node she starts next to
+            if (rev.Count > 1 && (rev[0] - g.Position).sqrMagnitude < 1f) rev.RemoveAt(0); // skip the node she starts next to
             _gPath.AddRange(rev);
-            _gPath.Add(goal);
+            // the exact goal only when it is right by the last node and nothing is in between
+            Vector3 last = nav.Nodes[b];
+            if (Mathf.Abs(goal.y - last.y) < 0.45f && (goal - last).sqrMagnitude < 2.25f
+                && !Physics.Linecast(last + Vector3.up * 0.5f, goal + Vector3.up * 0.5f, Layers.Solid & ~(1 << Layers.Door), QueryTriggerInteraction.Ignore))
+                _gPath.Add(goal);
         }
 
         int NearestRoam(NavGraph nav, Vector3 p)
@@ -350,7 +411,7 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 step = g.Forward * Mathf.Min(dist, speed * k * dt);
             Vector3 next = g.Position + step;
             // keep her on the floor
-            if (Physics.Raycast(next + Vector3.up * 0.6f, Vector3.down, out var hit, 1.5f, Layers.Solid, QueryTriggerInteraction.Ignore)) next.y = hit.point.y;
+            if (Physics.Raycast(next + Vector3.up * 0.6f, Vector3.down, out var hit, 1.5f, Layers.Solid, QueryTriggerInteraction.Ignore) && hit.point.y - g.Position.y < 0.25f) next.y = hit.point.y; // never up onto furniture
             Vector3 vel = dt > 0f ? (next - g.Position) / dt : Vector3.zero;
             g.Position = next;
             ShoveDoorsWith(g.Position, vel);
@@ -364,7 +425,7 @@ namespace PrisonersOfOmar.Gameplay
             switch (cmd)
             {
                 case AdminCmd.GrandmaRoam:
-                    _gRoaming = true; g.Stage = 1; _gSitUntil = -1f; _gPath = null; _gPauseUntil = 0f;
+                    _gRoaming = true; _gOuting = false; g.Stage = 2; _gSitUntil = -1f; _gPath = null; _gPauseUntil = 0f;
                     SetGrandma(GrandmaMode.Roaming, GrandmaEntity.VoiceNone, -1);
                     break;
                 case AdminCmd.GrandmaReturn:
