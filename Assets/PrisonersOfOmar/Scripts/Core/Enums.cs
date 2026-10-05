@@ -12,6 +12,8 @@ namespace PrisonersOfOmar
         Prisoner5 = 5, // woman: short auburn bob, grey plaid long-sleeve mini dress, black mary-janes
         Prisoner6 = 6, // boy: short brown hair, loud colourful patterned 90s shirt, dark jeans
         Prisoner7 = 7, // man: dark side-parted hair, white dress shirt, dark slacks
+        // secret (not in the lobby list: typing its code into the lobby's CODE field picks it, see GameInfo.SecretSkinFor)
+        Prisoner8 = 8, // "HTN": tall young man, broad shoulders, a mop of dark curls, navy tee, black trousers, white sneakers
     }
 
     /// <summary>(iteration 2) Match difficulty, chosen by the host in the lobby. Values are sent over the network.</summary>

@@ -202,8 +202,8 @@ Generated (Tools/AssetPipeline/audio):
   `metal_scrape_1`, `metal_scrape_2`, `whisper_1`, `whisper_2`, `thunder_1`, `thunder_2`, `drip_1`…`drip_3`, `phone_ring`, `dog_howl`.
 * Footsteps: `Audio/Steps/<surface>_<1..4>` for surface ∈ {wood, concrete, dirt, grass, metal, asphalt, tile, carpet, gravel}; `Audio/Steps/omar_<1..4>` (muffled, heavy body thumps that carry through walls).
 * Player: `Audio/Player/heartbeat`, `breath_heavy_1`…`3`, `hurt_1`…`3`, `body_fall`, `cage_rattle`, `struggle`, `gasp`, `bed_crawl_in`, `bed_crawl_out`.
-* Character voices (gen_voices.py): folders Audio/Voices/prisoner1 … prisoner7, each with hurt_1..3, scream_1, scream_2, breath_1..3,
-  gasp_1, gasp_2, struggle_1, struggle_2, death_1 — seven distinct degraded VHS voices cut from the human screams in
+* Character voices (gen_voices.py): folders Audio/Voices/prisoner1 … prisoner8 (prisoner8 = the secret prisoner), each with hurt_1..3, scream_1, scream_2, breath_1..3,
+  gasp_1, gasp_2, struggle_1, struggle_2, death_1 — eight distinct degraded VHS voices cut from the human screams in
   the user's recording (never Omar's), re-pitched / coloured per character (`Snd.Voice(skin, line)`).
 * Items: `Audio/Items/lighter_open`, `lighter_flick`, `lighter_close`, `fuel_pour`, `bandage_rip`, `flashlight_click`, `battery_insert`,
   `item_pickup`, `item_drop`, `item_equip`, `bottle_throw`, `glass_break`, `key_unlock`, `locked_rattle`, `lockpick`, `crowbar_pry`,

@@ -1,5 +1,5 @@
-"""Character voices (iteration 2): Audio/Voices/prisoner1..prisoner7/{hurt_1..3, scream_1..2, breath_1..3, gasp_1..2,
-struggle_1..2, death_1} (mono). Seven distinct voices cut from the human screams in the user's recording
+"""Character voices (iteration 2): Audio/Voices/prisoner1..prisoner8/{hurt_1..3, scream_1..2, breath_1..3, gasp_1..2,
+struggle_1..2, death_1} (mono). Eight distinct voices cut from the human screams in the user's recording
 (SourceAssets/sound "screams_long", never Omar's own screams), re-pitched and re-shaped per character (pitch, vocal
 tract colour, tremble, breathiness), then worn out like old VHS dialogue. Breathing / gasps use the shared breath
 model with each character's own voiced pitch."""
@@ -26,6 +26,7 @@ VOICES = {
     "prisoner5": dict(low=1.18, high=0.84, peak=(900, 3.0), lp=4800, tremble=0.0, f0=180, airy=0.22),   # adult woman, lower
     "prisoner6": dict(low=1.06, high=0.70, peak=(1000, 3.0), lp=4800, tremble=0.06, f0=165, airy=0.28), # teenage boy
     "prisoner7": dict(low=0.74, high=0.44, peak=(380, 5.0), lp=3200, tremble=0.0, f0=100, airy=0.15),   # adult man, deep
+    "prisoner8": dict(low=0.81, high=0.47, peak=(460, 4.5), lp=3500, tremble=0.0, f0=114, airy=0.18),   # (secret) tall young man, low
 }
 
 

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace PrisonersOfOmar.Characters
 {
-    internal enum HairStyle { None, Spiky, Short, LongWavy, LongBangs }
+    internal enum HairStyle { None, Spiky, Short, LongWavy, LongBangs, Curly }
     internal enum GlassesStyle { None, Round, Rect }
     internal enum HeadShape { Human, Sack, Featureless }
 
@@ -111,6 +111,21 @@ namespace PrisonersOfOmar.Characters
             new Ring(0.0f, 0.0f, 0.0f, -0.03f),
         };
 
+        /// <summary>Lean young man: strong neck, narrow defined jaw and chin, high cheekbones, long straight nose.</summary>
+        static readonly Ring[] LeanHead =
+        {
+            new Ring(0.238f, 0.222f, 0.242f, -0.06f), // neck base
+            new Ring(0.198f, 0.190f, 0.204f, -0.05f), // neck mid: narrower than the jaw
+            new Ring(0.214f, 0.352f, 0.236f, -0.03f), // chin / jaw: narrow defined jaw, the chin forward
+            new Ring(0.264f, 0.396f, 0.322f, -0.005f),// mouth
+            new Ring(0.292f, 0.410f, 0.376f, 0.00f),  // nose / high cheekbones
+            new Ring(0.312f, 0.390f, 0.418f, 0.00f),  // eyes
+            new Ring(0.326f, 0.408f, 0.438f, 0.00f),  // brow
+            new Ring(0.318f, 0.370f, 0.430f, 0.00f),  // forehead
+            new Ring(0.262f, 0.272f, 0.342f, -0.01f), // upper skull
+            new Ring(0.0f, 0.0f, 0.0f, -0.03f),       // crown (pole)
+        };
+
         static readonly Ring[] SackHead =
         {
             new Ring(0.25f, 0.23f, 0.25f, -0.04f),
@@ -172,6 +187,7 @@ namespace PrisonersOfOmar.Characters
                 case CharacterSkin.Prisoner5: b.Camerawoman(); break;
                 case CharacterSkin.Prisoner6: b.Kid(); break;
                 case CharacterSkin.Prisoner7: b.Father(); break;
+                case CharacterSkin.Prisoner8: b.Htn(); break;
                 default: b.Omar(); break;
             }
             return b;
@@ -338,6 +354,41 @@ namespace PrisonersOfOmar.Characters
             HandScale = 1.02f;
             SleeveT = 0.06f;
             FootLen = 0.27f; FootW = 0.095f; ShoeH = 0.095f;
+        }
+
+        /// <summary>
+        /// (secret, code HTN) Prisoner8: a tall young man with a swimmer's V - broad shoulders and lats over a narrow waist,
+        /// lean muscular arms - and a big mop of dark curls falling over his brows; navy tee, black straight-leg trousers,
+        /// chunky white sneakers.
+        /// </summary>
+        void Htn()
+        {
+            Skeleton(1.84f, false);
+            RoundShoulders = true;   // rounded delts, no box corners
+            float s = Scale;
+            Torso = Rings(s,
+                new Ring(0.144f, 0.082f, 0.092f),            // crotch
+                new Ring(0.146f, 0.088f, 0.100f),            // hips (the tee hangs loose over the waistband)
+                new Ring(0.140f, 0.085f, 0.087f),            // low belly
+                new Ring(0.130f, 0.086f, 0.080f),            // waist: narrow
+                new Ring(0.156f, 0.100f, 0.088f),            // lower ribs
+                new Ring(0.202f, 0.120f, 0.102f),            // chest
+                new Ring(0.226f, 0.114f, 0.110f),            // upper chest, lats
+                new Ring(0.240f, 0.082f, 0.086f),            // shoulders: broad
+                new Ring(0.066f, 0.058f, 0.062f, -0.01f));   // neck: strong
+            TorsoSquare = 2.25f;
+            ArmR = Arr(s, 0.026f, 0.039f, 0.047f, 0.041f, 0.051f, 0.057f, 0.060f);   // lean, muscular forearms and biceps
+            // straight-leg trousers: a wide hem at the shoe instead of a tapering ankle, loose over the knee
+            LegRx = Arr(s, 0.050f, 0.051f, 0.055f, 0.052f, 0.053f, 0.057f, 0.068f, 0.078f, 0.083f);
+            LegRz = Arr(s, 0.054f, 0.055f, 0.060f, 0.055f, 0.055f, 0.060f, 0.072f, 0.081f, 0.086f);
+            ShoulderX = 0.200f * s; ElbowX = 0.222f * s; WristX = 0.230f * s;
+            ShoulderSlope = 0.018f;
+            HeadRings = LeanHead;
+            HeadH = 0.137f * Height;   // a long lean face
+            Nose = 0.094f;             // long straight nose
+            Hair = HairStyle.Curly;
+            HandScale = 1.04f;
+            FootLen = 0.29f; FootW = 0.105f; ShoeH = 0.115f;   // chunky white sneakers
         }
 
         void Nerd()

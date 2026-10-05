@@ -192,13 +192,15 @@ namespace PrisonersOfOmar.Gameplay
             if (wasActive) SessionEnded?.Invoke(reason);
         }
 
-        /// <summary>Lobby: request a role / skin / ready state.</summary>
-        public void RequestLobby(PlayerRole role, CharacterSkin skin, bool ready)
+        /// <summary>Lobby: request a role / skin / ready state. <paramref name="code"/> = the lobby CODE the player typed:
+        /// the host only hands out a secret skin with its code (<see cref="GameInfo.CodeUnlocks"/>).</summary>
+        public void RequestLobby(PlayerRole role, CharacterSkin skin, bool ready, string code = "")
         {
             var w = Begin(Msg.LobbyReq);
             w.WriteByte((byte)role);
             w.WriteByte((byte)skin);
             w.WriteBool(ready);
+            w.WriteString(code ?? "");
             SendToHost(NetChannel.Reliable);
         }
 
@@ -519,6 +521,7 @@ namespace PrisonersOfOmar.Gameplay
             var role = (PlayerRole)r.ReadByte();
             var skin = (CharacterSkin)r.ReadByte();
             bool ready = r.ReadBool();
+            string code = r.ReadString();
             var p = Find(sender);
             if (p == null || State != SessionState.Lobby) return;
             if (role == PlayerRole.Omar)
@@ -529,10 +532,12 @@ namespace PrisonersOfOmar.Gameplay
             else if (role == PlayerRole.Prisoner)
             {
                 if (!GameInfo.IsPrisonerSkin(skin)) skin = CharacterSkin.Prisoner1;
+                // a secret prisoner needs its code (typed into the lobby's CODE field); without it the request is ignored
+                bool locked = !GameInfo.CodeUnlocks(skin, code);
                 bool taken = Players.Exists(o => o.Id != p.Id && o.IsPrisoner && o.Skin == skin);
                 int prisoners = 0;
                 foreach (var o in Players) if (o.IsPrisoner && o.Id != p.Id) prisoners++;
-                if (!taken && prisoners < GameInfo.MaxPrisoners) { p.Role = PlayerRole.Prisoner; p.Skin = skin; }
+                if (!locked && !taken && prisoners < GameInfo.MaxPrisoners) { p.Role = PlayerRole.Prisoner; p.Skin = skin; }
             }
             else
             {

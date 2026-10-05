@@ -6,7 +6,7 @@ namespace PrisonersOfOmar
         public const string Title = "THE PRISONERS OF OMAR";
         public const string Version = "0.1.0";
         /// <summary>Bump whenever the wire protocol changes; peers with a different value are rejected.</summary>
-        public const int ProtocolVersion = 2;
+        public const int ProtocolVersion = 3; // 3: LobbyReq carries the lobby CODE (secret prisoner)
         public const int MaxPrisoners = 4;
         public const int MaxPlayers = MaxPrisoners + 1; // 4 prisoners + 1 Omar
         public const int DefaultPort = 27015;
@@ -22,7 +22,24 @@ namespace PrisonersOfOmar
             CharacterSkin.Prisoner5, CharacterSkin.Prisoner6, CharacterSkin.Prisoner7,
         };
 
-        public static bool IsPrisonerSkin(CharacterSkin s) => System.Array.IndexOf(PrisonerSkins, s) >= 0;
+        /// <summary>Secret prisoners: never offered by the lobby list or handed out by the host, only picked with their code.</summary>
+        public static readonly CharacterSkin[] SecretSkins = { CharacterSkin.Prisoner8 };
+
+        /// <summary>Any prisoner appearance a player may have (the lobby list and the secret ones).</summary>
+        public static bool IsPrisonerSkin(CharacterSkin s) => System.Array.IndexOf(PrisonerSkins, s) >= 0 || IsSecretSkin(s);
+
+        public static bool IsSecretSkin(CharacterSkin s) => System.Array.IndexOf(SecretSkins, s) >= 0;
+
+        /// <summary>The secret prisoner a lobby code unlocks (case and spaces ignored), or null for a wrong code.</summary>
+        public static CharacterSkin? SecretSkinFor(string code)
+        {
+            string c = (code ?? "").Trim().ToUpperInvariant();
+            if (c == "HTN") return CharacterSkin.Prisoner8;
+            return null;
+        }
+
+        /// <summary>Does <paramref name="code"/> unlock <paramref name="skin"/>? (Ordinary skins need no code.)</summary>
+        public static bool CodeUnlocks(CharacterSkin skin, string code) => !IsSecretSkin(skin) || SecretSkinFor(code) == skin;
     }
 
     /// <summary>Physics / rendering layers (must match ProjectSettings/TagManager.asset).</summary>

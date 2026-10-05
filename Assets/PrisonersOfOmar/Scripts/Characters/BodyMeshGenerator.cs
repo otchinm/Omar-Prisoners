@@ -133,6 +133,7 @@ namespace PrisonersOfOmar.Characters
                 case HairStyle.Spiky: SpikyHair(b, sk, mb); break;
                 case HairStyle.LongWavy: LongHair(b, sk, mb, true); break;
                 case HairStyle.LongBangs: LongHair(b, sk, mb, false); break;
+                case HairStyle.Curly: CurlyHair(b, sk, mb); break;
             }
             if (b.Glasses != GlassesStyle.None) Glasses(b, sk, mb);
             if (b.SkirtLen > 0f) MiniSkirt(b, sk, mb);
@@ -427,6 +428,12 @@ namespace PrisonersOfOmar.Characters
                     else
                         hl = Curve(ath, 0, 0.62f, 30, 0.62f, 44, 0.60f, 52, 0.50f, 57, 0.20f, 63, -0.2f, 70, -0.6f, 180, -0.6f);
                     d = 0.013f;
+                    break;
+                case HairStyle.Curly:
+                    // a thick mop of curls: the fringe line low on the forehead, over the tops of the ears, down to the nape;
+                    // fuller towards the top (the curl clumps of CurlyHair() sit on this)
+                    hl = Curve(ath, 0, 0.63f, 25, 0.63f, 40, 0.64f, 55, 0.62f, 68, 0.60f, 78, 0.56f, 96, 0.56f, 108, 0.36f, 135, 0.16f, 180, 0.10f);
+                    d = 0.026f * (0.75f + 1.05f * Mathf.Clamp01((yRel - 0.5f) / 0.45f));
                     break;
                 default: return 0f;
             }
@@ -897,6 +904,160 @@ namespace PrisonersOfOmar.Characters
                 }
                 mb.EndSmoothPart();
             }
+        }
+
+        /// <summary>
+        /// Curl clumps of the curly mop: theta (deg, + = right), yRel on the head, radius (m at 1.8 m), height above the
+        /// scalp (x radius), droop (deg, tips the clump down the head), stretch along the head (curls hang).
+        /// </summary>
+        static readonly float[] CurlClumps =
+        {
+            // fringe hanging unevenly over the forehead to the brows, loose curls lower down
+            3f, 0.650f, 0.026f, 0.12f, 50f, 1.42f,     23f, 0.672f, 0.023f, 0.10f, 44f, 1.30f,    -16f, 0.660f, 0.025f, 0.12f, 48f, 1.38f,
+            42f, 0.704f, 0.023f, 0.05f, 36f, 1.25f,    -37f, 0.688f, 0.024f, 0.06f, 40f, 1.30f,
+            -6f, 0.605f, 0.016f, 0.45f, 62f, 1.50f,    14f, 0.618f, 0.015f, 0.45f, 60f, 1.45f,    -27f, 0.628f, 0.014f, 0.40f, 56f, 1.40f,
+            // the tall front of the mop, rising in uneven tiers
+            4f, 0.800f, 0.033f, 0.15f, 14f, 1.10f,     30f, 0.815f, 0.032f, 0.10f, 14f, 1.10f,    -26f, 0.808f, 0.033f, 0.12f, 14f, 1.10f,
+            55f, 0.780f, 0.030f, 0.08f, 18f, 1.10f,    -56f, 0.786f, 0.030f, 0.08f, 18f, 1.10f,
+            16f, 0.900f, 0.035f, 0.20f, 6f, 1.00f,     -14f, 0.905f, 0.035f, 0.20f, 6f, 1.00f,    46f, 0.890f, 0.033f, 0.12f, 8f, 1.00f,
+            -48f, 0.886f, 0.033f, 0.12f, 8f, 1.00f,
+            // top: a rounded dome of curls
+            0f, 0.985f, 0.036f, 0.00f, 0f, 1.00f,      48f, 0.955f, 0.034f, 0.10f, 4f, 1.00f,     -44f, 0.958f, 0.034f, 0.10f, 4f, 1.00f,
+            100f, 0.945f, 0.035f, 0.12f, 5f, 1.00f,    -95f, 0.950f, 0.035f, 0.12f, 5f, 1.00f,    140f, 0.952f, 0.034f, 0.10f, 4f, 1.00f,
+            -138f, 0.960f, 0.034f, 0.10f, 4f, 1.00f,   178f, 0.945f, 0.035f, 0.12f, 5f, 1.00f,
+            // full sides and back
+            80f, 0.790f, 0.034f, 0.12f, 18f, 1.10f,    108f, 0.805f, 0.035f, 0.10f, 18f, 1.10f,   135f, 0.790f, 0.035f, 0.08f, 15f, 1.12f,
+            160f, 0.815f, 0.035f, 0.06f, 15f, 1.12f,   -172f, 0.785f, 0.035f, 0.06f, 15f, 1.12f,  -146f, 0.810f, 0.035f, 0.08f, 15f, 1.12f,
+            -118f, 0.792f, 0.035f, 0.10f, 18f, 1.10f,  -82f, 0.798f, 0.034f, 0.12f, 18f, 1.10f,
+            // temples, above the ears (the ears stay visible under the curls)
+            64f, 0.660f, 0.027f, 0.12f, 25f, 1.20f,    88f, 0.640f, 0.026f, 0.14f, 25f, 1.20f,    -66f, 0.664f, 0.027f, 0.12f, 25f, 1.20f,
+            -89f, 0.642f, 0.026f, 0.14f, 25f, 1.20f,   76f, 0.720f, 0.026f, 0.15f, 20f, 1.10f,    -77f, 0.724f, 0.026f, 0.15f, 20f, 1.10f,
+            // back of the head, behind the ears, nape
+            120f, 0.560f, 0.031f, 0.06f, 15f, 1.18f,   148f, 0.585f, 0.032f, 0.06f, 15f, 1.18f,   176f, 0.555f, 0.032f, 0.06f, 15f, 1.18f,
+            -152f, 0.575f, 0.032f, 0.06f, 15f, 1.18f,  -124f, 0.552f, 0.031f, 0.06f, 15f, 1.18f,
+            106f, 0.450f, 0.021f, 0.05f, 20f, 1.20f,   -107f, 0.455f, 0.021f, 0.05f, 20f, 1.20f,
+            152f, 0.300f, 0.024f, 0.05f, 20f, 1.20f,   -178f, 0.290f, 0.024f, 0.05f, 20f, 1.20f,  -150f, 0.310f, 0.024f, 0.05f, 20f, 1.20f,
+        };
+
+        /// <summary>
+        /// (secret, Prisoner8) A mop of tight curls: low-poly curl clumps (6-sided domes whose open base is buried in the
+        /// thickened scalp) over the top, sides and back, and a fringe of curls hanging over the forehead to the brows.
+        /// Opaque; each clump shows one of the 2 x 2 curl tiles of the Hair region, projected along its axis.
+        /// </summary>
+        static void CurlyHair(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
+        {
+            var w = SkinWeight.One(BoneId.Head);
+            var reg = CharacterAtlas.Hair;
+            float s = b.Scale;
+            const int Sides = 6;
+            const float Lat1 = 48f * Mathf.Deg2Rad, Lat2 = -14f * Mathf.Deg2Rad;
+            mb.BeginPart();
+            for (int c = 0, idx = 0; c + 5 < CurlClumps.Length; c += 6, idx++)
+            {
+                float th = CurlClumps[c], yRel = CurlClumps[c + 1], r = CurlClumps[c + 2] * s;
+                float lift = CurlClumps[c + 3], droop = CurlClumps[c + 4] * Mathf.Deg2Rad, stretch = CurlClumps[c + 5];
+                Vector3 p = ScalpPoint(b, sk, th, yRel, out Vector3 n);
+                // tip the axis down the head: towards the downhill tangent
+                Vector3 down = Vector3.down - n * Vector3.Dot(Vector3.down, n);
+                Vector3 axis = down.sqrMagnitude > 1e-4f ? (n * Mathf.Cos(droop) + down.normalized * Mathf.Sin(droop)).normalized : n;
+                Vector3 t1 = Vector3.Cross(Vector3.up, axis);
+                t1 = t1.sqrMagnitude > 1e-4f ? t1.normalized : Vector3.right;
+                Vector3 t2 = Vector3.Cross(axis, t1);   // up the head
+                Vector3 right = -t1;                    // seen from outside, looking down the axis
+                float jit = Hash01(idx * 3 + 1), spin = Hash01(idx * 3 + 2) * Mathf.PI * 2f;
+                float rw = r * (0.88f + 0.24f * jit), rh = r * stretch * (1.06f - 0.12f * jit), rd = r * (0.70f + 0.16f * Hash01(idx * 7 + 5));
+                Vector3 centre = p + axis * (lift * r);
+                int tile = (int)(Hash01(idx * 3 + 3) * 4f) & 3;
+                float tu = (tile & 1) * 0.5f, tv = (tile >> 1) * 0.5f;
+                Vector2 Uv(float lx, float ly)
+                {
+                    // planar projection along the axis, the tile turned by spin so neighbouring clumps differ
+                    float cs = Mathf.Cos(spin), sn = Mathf.Sin(spin);
+                    float x = lx * cs - ly * sn, y = lx * sn + ly * cs;
+                    return reg.UV(tu + 0.25f + 0.235f * x, tv + 0.25f + 0.235f * y);
+                }
+                int pole = mb.Add(centre + axis * rd, Uv(0f, 0f), w);
+                int ring1 = mb.V.Count;
+                for (int j = 0; j < Sides; j++)
+                {
+                    float a = (j + 0.5f * (idx & 1)) * Mathf.PI * 2f / Sides;
+                    float ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                    mb.Add(centre + axis * (rd * Mathf.Sin(Lat1)) + (right * (ca * rw) + t2 * (sa * rh)) * Mathf.Cos(Lat1), Uv(ca * Mathf.Cos(Lat1), sa * Mathf.Cos(Lat1)), w);
+                }
+                int ring2 = mb.V.Count;
+                for (int j = 0; j < Sides; j++)
+                {
+                    float a = (j + 0.5f * (idx & 1)) * Mathf.PI * 2f / Sides;
+                    float ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                    mb.Add(centre + axis * (rd * Mathf.Sin(Lat2)) + (right * (ca * rw) + t2 * (sa * rh)) * Mathf.Cos(Lat2), Uv(ca, sa), w);
+                }
+                for (int j = 0; j < Sides; j++)
+                {
+                    int jn = (j + 1) % Sides;
+                    // clockwise seen from outside (angles run counter-clockwise on screen)
+                    mb.Tri(SkinMeshBuilder.Opaque, pole, ring1 + jn, ring1 + j);
+                    mb.Tri(SkinMeshBuilder.Opaque, ring2 + j, ring1 + j, ring1 + jn);
+                    mb.Tri(SkinMeshBuilder.Opaque, ring2 + j, ring1 + jn, ring2 + jn);
+                }
+            }
+            mb.EndSmoothPart();
+        }
+
+        static float Hash01(int i)
+        {
+            float x = Mathf.Sin(i * 12.9898f + 4.1414f) * 43758.5453f;
+            return x - Mathf.Floor(x);
+        }
+
+        /// <summary>Head vertex of Head() at ring k for any theta (the hair push included; no nose / ear bumps).</summary>
+        static Vector3 HeadSurface(BodySpec b, Skeleton sk, int k, float th)
+        {
+            var Y = CharacterAtlas.HeadRingY;
+            float hh = b.HeadH, axisZ = HeadAxisZ(b);
+            Vector2 q = RingPoint(b.HeadRings[k], th, k <= 1 ? 2f : b.HeadSquare);
+            float x = q.x * hh, z = q.y * hh + axisZ, y = sk.ChinY + Y[k] * hh;
+            float d = HairThickness(b, th, Y[k]) * b.Scale;
+            if (d > 0f)
+            {
+                Vector2 dir = k == Y.Length - 1 ? new Vector2(0, -0.2f) : new Vector2(x, z - axisZ);
+                float len = dir.magnitude;
+                if (len > 1e-5f) { x += dir.x / len * d; z += dir.y / len * d; }
+                if (k == Y.Length - 1) y += d * 0.9f;
+                if (k == Y.Length - 2) y += d * 0.5f;
+            }
+            return new Vector3(x, y, z);
+        }
+
+        /// <summary>Point on the (hair-thickened) head mesh at theta / yRel, interpolated like the mesh's quads, and its outward normal.</summary>
+        static Vector3 ScalpPoint(BodySpec b, Skeleton sk, float th, float yRel, out Vector3 normal)
+        {
+            Vector3 p = ScalpPoint(b, sk, th, yRel);
+            float y0 = Mathf.Max(yRel - 0.03f, -0.5f), y1 = Mathf.Min(yRel + 0.03f, 1f);
+            Vector3 alongY = ScalpPoint(b, sk, th, y1) - ScalpPoint(b, sk, th, y0);
+            float tr = th * Mathf.Deg2Rad;
+            Vector3 alongTh = new Vector3(Mathf.Cos(tr), 0f, -Mathf.Sin(tr));   // d/dtheta of (sin, 0, cos)
+            normal = Vector3.Cross(alongY, alongTh);
+            Vector3 centre = new Vector3(0f, sk.ChinY + 0.5f * b.HeadH, HeadAxisZ(b));
+            if (Vector3.Dot(normal, p - centre) < 0f) normal = -normal;
+            normal = normal.sqrMagnitude > 1e-10f ? normal.normalized : Vector3.up;
+            return p;
+        }
+
+        static Vector3 ScalpPoint(BodySpec b, Skeleton sk, float th, float yRel)
+        {
+            var Y = CharacterAtlas.HeadRingY;
+            int k = 0;
+            while (k < Y.Length - 2 && yRel > Y[k + 1]) k++;
+            float ty = Mathf.Clamp01(Mathf.InverseLerp(Y[k], Y[k + 1], yRel));
+            // ring vertices sit every 360 / HeadSides degrees (theta_i = 180 - 30 i)
+            float step = 360f / CharacterAtlas.HeadSides;
+            float fi = (180f - th) / step;
+            int i0 = Mathf.FloorToInt(fi);
+            float ti = fi - i0;
+            float th0 = 180f - i0 * step, th1 = th0 - step;
+            Vector3 a = Vector3.Lerp(HeadSurface(b, sk, k, th0), HeadSurface(b, sk, k, th1), ti);
+            Vector3 c = Vector3.Lerp(HeadSurface(b, sk, k + 1, th0), HeadSurface(b, sk, k + 1, th1), ti);
+            return Vector3.Lerp(a, c, ty);
         }
 
         // ------------------------------------------------------------------------------------------ glasses

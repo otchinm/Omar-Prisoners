@@ -51,7 +51,7 @@ namespace PreviewHarness
 
         public static readonly CharacterSkin[] Skins =
             { CharacterSkin.Prisoner1, CharacterSkin.Prisoner2, CharacterSkin.Prisoner3, CharacterSkin.Prisoner4,
-              CharacterSkin.Prisoner5, CharacterSkin.Prisoner6, CharacterSkin.Prisoner7, CharacterSkin.Omar };
+              CharacterSkin.Prisoner5, CharacterSkin.Prisoner6, CharacterSkin.Prisoner7, CharacterSkin.Prisoner8, CharacterSkin.Omar };
 
         static void Lineup(bool animate)
         {
