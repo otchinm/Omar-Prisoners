@@ -638,7 +638,7 @@ namespace PrisonersOfOmar.Gameplay
                 float want = _running ? Tuning.OmarRunSpeed * 0.93f : Tuning.OmarWalkSpeed;
                 if (W.Time < _rushUntil) want *= Tuning.OmarRushMul;
                 _speedCur = Mathf.MoveTowards(Mathf.Max(_speedCur, Tuning.OmarWalkSpeed * 0.6f), want, (want > _speedCur ? Tuning.OmarAcceleration : Tuning.OmarAcceleration * 2f) * dt);
-                float speed = _speedCur;
+                float speed = _speedCur * A.DoorwaySpeedFactor;   // slows a little squeezing through a low doorway
                 float align = Mathf.Clamp01(1f - Mathf.Abs(Mathf.DeltaAngle(_yaw, targetYaw)) / 90f);
                 vel = Quaternion.Euler(0, _yaw, 0) * Vector3.forward * speed * Mathf.Max(0.25f, align);
                 HandleDoors(vel);

@@ -56,6 +56,7 @@ static class Program
                 Console.WriteLine("floor " + p.ToString("F2") + ": " + (g ? gh.collider.name + " y=" + gh.point.y.ToString("F3") : "NONE"));
             }
         }
+        DoorwayProbeQa(data);   // needs the physics world of the first build
         if (args.Contains("--open-drawers"))   // preview: every drawer pulled out
             foreach (var dr in data.Drawers) if (dr.Drawer != null) dr.Drawer.position += dr.OpenOffset;
         Console.WriteLine("drawers: " + data.Drawers.Count + ", drawer item spots: " + data.ItemSpawns.Count(s => s.Small));
@@ -85,6 +86,7 @@ static class Program
         Console.WriteLine("errors: " + errorsFirst + " (first build), warnings total " + UnityEngine.Debug.Warnings);
         foreach (var e in UnityEngine.Debug.ErrorLog.Take(30)) Console.WriteLine("  ERR " + e);
         Console.WriteLine("missing textures requested: " + Resources.Requested.Count);
+        if (args.Contains("--dump-requested")) File.WriteAllLines(Path.Combine(outDir, "requested.txt"), Resources.Requested.OrderBy(x => x));
         DecalDoorQa(data, world);
 
         if (render)
@@ -161,6 +163,28 @@ static class Program
             }
         }
         Console.WriteLine("decal / doorway QA: " + bad + " decal triangles cross a doorway");
+    }
+
+    /// <summary>QA: Omar's doorway probe (2.5 m walker) from 1.4 m out on both sides of every door.</summary>
+    static void DoorwayProbeQa(MapData data)
+    {
+        int ok = 0, bad = 0;
+        foreach (var d in data.Doors)
+        {
+            Vector3 n = d.SwingDirection; n.y = 0f;
+            if (n.sqrMagnitude < 0.01f) continue;
+            n.Normalize();
+            foreach (float side in new[] { -1f, 1f })
+            {
+                Vector3 feet = d.Center - n * side * 1.4f;
+                bool found = DoorwayProbe.Find(feet, n * side, 2.5f, 1.9f, out var r);
+                string tag = !found ? "MISS" : (!r.HasLeft || !r.HasRight) ? "ONE-JAMB" : "ok";
+                if (tag == "ok") ok++; else bad++;
+                if (tag != "ok" || d.Name.Contains("Front"))
+                    Console.WriteLine($"  doorway {d.Name,-16} side {side:+0;-0}: {tag} lintel {r.Lintel:F2} depth {r.Depth:F2} width {r.Width:F2} plane off {Vector3.Distance(new Vector3(r.Plane.x, 0, r.Plane.z), new Vector3(d.Center.x, 0, d.Center.z)):F2}");
+            }
+        }
+        Console.WriteLine("doorway probe QA: " + ok + " ok, " + bad + " not clean");
     }
 
     static IEnumerable<(string name, Vector3 eye, Vector3 target, bool lit)> Views()

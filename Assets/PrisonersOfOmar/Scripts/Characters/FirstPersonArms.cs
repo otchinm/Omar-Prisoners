@@ -22,6 +22,19 @@ namespace PrisonersOfOmar.Characters
         /// <summary>Mouse delta this frame (for sway).</summary>
         public Vector2 LookDelta;
 
+        /// <summary>Omar squeezing through a low doorway: his free left hand holds the frame at this world point (the jamb,
+        /// or under the head of the frame when <see cref="FrameGripOnLintel"/>), 0..1 how firmly; the right (cleaver) fist
+        /// braces against the other jamb by <see cref="FrameBraceRight"/>. <see cref="FrameNormal"/> is the way through.</summary>
+        public Vector3 FrameGrip, FrameNormal = Vector3.forward;
+        public float FrameGripWeight, FrameBraceRight;
+        public bool FrameGripOnLintel;
+        /// <summary>tan(view model FOV / 2) / tan(world FOV / 2): maps a world point onto the pixel the world camera draws it at.</summary>
+        public float FovRatio = 1f;
+        float _frameW, _braceW;
+        bool _frameHeld;
+        Vector3 _frameLastPos;
+        Quaternion _frameLastRot = Quaternion.identity;
+
         public ItemType HeldItem { get; private set; }
         /// <summary>The instantiated model of the held item (null when empty-handed).</summary>
         public GameObject HeldModel { get; private set; }
@@ -382,7 +395,23 @@ namespace PrisonersOfOmar.Characters
             }
             bool twoHanded = UsesBothHands(HeldItem);
             if (twoHanded) leftTarget = Mathf.Max(leftTarget, Smooth(_raise));
-            _leftW = Mathf.MoveTowards(_leftW, leftTarget, dt * 6f);
+            // a door frame to hold on to: only while the left hand has nothing else to do
+            bool leftFree = !twoHanded && leftTarget < 0.01f;
+            _frameW = Mathf.MoveTowards(_frameW, leftFree ? Mathf.Clamp01(FrameGripWeight) : 0f, dt * (leftFree ? 4f : 8f));
+            _braceW = Mathf.MoveTowards(_braceW, CurrentAction == CharacterAction.None ? Mathf.Clamp01(FrameBraceRight) : 0f, dt * 4f);
+            Vector3 framePos = Vector3.zero;
+            Quaternion frameRot = Quaternion.identity;
+            float frameK = _frameW > 0.001f ? FrameGripPose(out framePos, out frameRot) * Smooth(_frameW) : 0f;
+            if (!leftFree) _frameHeld = false;   // the hand is wanted for something else
+            leftTarget = Mathf.Max(leftTarget, frameK);
+            _leftW = frameK > 0.001f ? Mathf.Max(_leftW, frameK) : Mathf.MoveTowards(_leftW, leftTarget, dt * 6f);
+            // the cleaver fist pushes against the right jamb, blade tipped in
+            if (_braceW > 0.001f)
+            {
+                float b = Smooth(_braceW);
+                pos += new Vector3(0.07f, -0.025f, 0.05f) * b;
+                eul += new Vector3(-8f, 14f, -18f) * b;
+            }
 
             _rHand.localPosition = pos + dp;
             _rHand.localRotation = Quaternion.Euler(eul + de);
@@ -398,16 +427,32 @@ namespace PrisonersOfOmar.Characters
                     lpos = transform.InverseTransformPoint(_gripL.position);
                     lrot = _rHand.localRotation;
                 }
+                else if (frameK > 0.001f)
+                {
+                    // reach out from the rest pose to the frame (straight to it once the hand is there)
+                    Vector3 rest = lp + new Vector3(-bx, by + breathe, 0f);
+                    float w = Smooth(_frameW);
+                    lpos = Vector3.Lerp(rest, framePos, w);
+                    lrot = Quaternion.Slerp(Quaternion.Euler(le), frameRot, w);
+                    _frameHeld = true; _frameLastPos = lpos; _frameLastRot = lrot;
+                }
+                else if (_frameHeld)
+                {
+                    // the frame went by: the hand trails off to the side where it let go (not back through the middle)
+                    lpos = _frameLastPos;
+                    lrot = _frameLastRot;
+                }
                 else
                 {
                     lpos = lp + new Vector3(-bx, by + breathe, 0f);
                     lrot = Quaternion.Euler(le);
                 }
-                Vector3 hidden = new Vector3(-0.2f, -0.55f, 0.1f);
+                Vector3 hidden = _frameHeld ? new Vector3(-0.55f, -0.35f, 0.12f) : new Vector3(-0.2f, -0.55f, 0.1f);
                 _lHand.localPosition = Vector3.Lerp(hidden, lpos, Smooth(_leftW));
                 _lHand.localRotation = lrot;
                 AimForearm(_lArm, _lHand, _lWrist, ElbowL + (_lHand.localPosition - new Vector3(-RestPos.x, RestPos.y, RestPos.z)) * 0.5f);
             }
+            if (!showLeft) _frameHeld = false;
             if (_leftVisible != showLeft)
             {
                 _leftVisible = showLeft;
@@ -416,6 +461,48 @@ namespace PrisonersOfOmar.Characters
         }
 
         bool _leftVisible;
+
+        /// <summary>
+        /// The left fist on the door frame in view model space: on the same pixel the frame is drawn at by the world camera
+        /// (the two cameras differ in field of view), pulled in to arm's length. The fist closes round the jamb's edge
+        /// (grip axis down the jamb, knuckles out) or, under the head of the frame, round the frame head (grip axis along
+        /// it, palm up). Returns how much of the grip can be shown (0 once the frame point is level with / behind the eye).
+        /// </summary>
+        float FrameGripPose(out Vector3 pos, out Quaternion rot)
+        {
+            Vector3 g = FrameGrip;
+            if (!FrameGripOnLintel)
+            {
+                // any height on the jamb will do: from up here the hand takes it where the eyes can see it (no more than
+                // ~23 degrees under the eye line)
+                Vector3 eye = transform.position;
+                float hd = new Vector2(g.x - eye.x, g.z - eye.z).magnitude;
+                g.y = Mathf.Clamp(g.y, eye.y - 0.42f * hd, eye.y + 0.12f * hd);
+            }
+            Vector3 c = transform.InverseTransformPoint(g);
+            float k = Smooth((c.z - 0.06f) / 0.22f);
+            float ratio = Mathf.Clamp(FovRatio, 0.2f, 2f);
+            float z = Mathf.Max(0.08f, c.z);
+            Vector3 dir = new Vector3(c.x / z * ratio, c.y / z * ratio, 1f);
+            // the same direction, at arm's length (a giant's long arm: the real point can be a metre away)
+            float reach = Mathf.Clamp(c.magnitude, 0.34f, 0.6f);
+            pos = dir.normalized * reach;
+            Vector3 down = transform.InverseTransformDirection(Vector3.down);
+            Vector3 fromShoulder = (pos - new Vector3(-0.24f, -0.42f, 0.02f)).normalized;
+            Vector3 gripAxis;
+            if (FrameGripOnLintel)
+            {
+                // grip axis along the frame head (index towards the middle of the doorway), the hand reaching up to it
+                gripAxis = transform.InverseTransformDirection(-Vector3.Cross(Vector3.up, FrameNormal).normalized);
+                pos += new Vector3(0f, -0.02f, 0f);
+            }
+            else gripAxis = down;   // index finger on top, the fist round the jamb
+            // the long axis of the hand runs from the forearm to the frame, square to the grip axis
+            Vector3 up = Vector3.ProjectOnPlane(fromShoulder, gripAxis);
+            if (up.sqrMagnitude < 1e-4f) up = Vector3.up;
+            rot = Quaternion.LookRotation(gripAxis, up.normalized) * Quaternion.Euler(0f, 0f, FrameGripOnLintel ? 0f : -20f);
+            return k;
+        }
 
         void AimForearm(Transform arm, Transform hand, Vector3 wristLocal, Vector3 elbow)
         {

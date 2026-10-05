@@ -49,13 +49,26 @@ namespace PrisonersOfOmar.Gameplay
         public const float InterpDelay = 0.1f;
 
         public Vector3 Position => transform.position;
-        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight - Tuning.OmarDuckDrop * DuckAmount : ((State.Flags & AvatarFlags.Crouch) != 0 ? CrouchEyeHeight : StandEyeHeight);
+        public float EyeHeight => IsOmar ? Tuning.OmarEyeHeight - Mathf.Max(Tuning.OmarDuckDrop * DuckAmount, DoorwayEyeDrop) : ((State.Flags & AvatarFlags.Crouch) != 0 ? CrouchEyeHeight : StandEyeHeight);
         /// <summary>This prisoner's own eye height (from the body height of their character).</summary>
         public float StandEyeHeight { get; private set; } = Tuning.EyeHeight;
         public float CrouchEyeHeight => Tuning.CrouchEyeFor(StandEyeHeight);
         /// <summary>0..1 how far the giant Omar stoops right now (low door frame / ceiling over or just ahead of him).</summary>
         public float DuckAmount { get; private set; }
         float _duckTarget, _duckProbeAt;
+        /// <summary>Omar squeezing through a doorway lower than he is (probed ahead, held while he passes).</summary>
+        public DoorwayPass Doorway => _doorPass;
+        /// <summary>0..1 how far he is folded over under a doorway right now.</summary>
+        public float DoorwayBend => IsOmar && Anim != null ? Anim.DoorwayBend : 0f;
+        /// <summary>He slows down a little while he hauls himself through.</summary>
+        public float DoorwaySpeedFactor => 1f - 0.2f * DoorwayBend;
+        /// <summary>Where the doorway fold put his eyes (below / ahead of / rolled from upright).</summary>
+        public float DoorwayEyeDrop => IsOmar && Anim != null ? Anim.DoorwayEyeDrop : 0f;
+        public float DoorwayEyeForward => IsOmar && Anim != null ? Anim.DoorwayEyeForward : 0f;
+        public float DoorwayEyeRoll => IsOmar && Anim != null ? Anim.DoorwayEyeRoll : 0f;
+        DoorwayPass _doorPass;
+        int _doorCount, _doorVariantLast = -1;
+        float _doorProbeAt;
         public Vector3 EyePosition => transform.position + Vector3.up * EyeHeight;
         public Vector3 ChestPosition => transform.position + Vector3.up * (EyeHeight * 0.72f);
         public bool LighterOn => (State.Flags & AvatarFlags.LighterOn) != 0;
@@ -206,12 +219,83 @@ namespace PrisonersOfOmar.Gameplay
                 var st = MatchWorld.Instance != null ? MatchWorld.Instance.StatusOf(Id) : null;
                 Anim.Injured = st != null && st.Injured;
                 Anim.Pose = _statusPose;
-                if (IsOmar) { Anim.Hold = HoldPose.Cleaver; Anim.Duck = DuckAmount; }
+                if (IsOmar)
+                {
+                    Anim.Hold = HoldPose.Cleaver;
+                    // a real doorway gets the full pass (hands on the frame); the simple stoop is for beams / low ceilings
+                    Anim.Duck = DuckAmount * (1f - Anim.DoorwayBend);
+                }
                 else Anim.Hold = State.Held == ItemType.None ? HoldPose.None : ItemMeshFactory.HoldPoseFor(State.Held);
             }
 
-            if (IsOmar) UpdateDuck(vel, dt);
+            if (IsOmar) { UpdateDuck(vel, dt); UpdateDoorway(vel); }
             else { UpdateHeldItem(); UpdatePeekHidden(); }
+        }
+
+        /// <summary>
+        /// Omar and the 2.2 m doors: finds the next doorway lower than him on his way (its lowest point, frame, jambs), holds
+        /// on to it while he passes and picks how he squeezes through (varied, never the same style twice running).
+        /// </summary>
+        void UpdateDoorway(Vector3 vel)
+        {
+            if (Anim == null) return;
+            Vector3 flat = new Vector3(vel.x, 0f, vel.z);
+            float speed = flat.magnitude;
+            Vector3 pos = transform.position;
+            if (_doorPass.Active)
+            {
+                Vector3 rel = pos - _doorPass.Plane;
+                float s = Vector3.Dot(rel, _doorPass.Normal);
+                float side = Mathf.Abs(Vector3.Dot(rel, Vector3.Cross(Vector3.up, _doorPass.Normal)));
+                _doorPass.Progress = s;
+                // through, backed off, slid away along the wall or changed floors
+                if (s > 1.1f || s < -2.2f || side > 1.2f || Mathf.Abs(rel.y) > 0.6f) _doorPass.Active = false;
+                // turned round in the opening: the same doorway the other way (keeps the style, so no snap)
+                else if (speed > 0.3f && Vector3.Dot(flat, _doorPass.Normal) < -0.25f * speed && s > -0.2f
+                         && DoorwayProbe.Find(pos, flat, Rig != null ? Rig.Height : 2.5f, 1.9f, out var back)
+                         && Vector3.Distance(back.Plane, _doorPass.Plane) < 0.6f)
+                    _doorPass = MakePass(back, _doorPass.Variant);
+            }
+            if (!_doorPass.Active && speed > 0.3f && Time.time >= _doorProbeAt)
+            {
+                _doorProbeAt = Time.time + 0.05f;
+                if (DoorwayProbe.Find(pos, flat, Rig != null ? Rig.Height : 2.5f, 1.9f, out var r) && (r.HasLeft || r.HasRight))
+                {
+                    _doorPass = MakePass(r, PickDoorwayVariant(r.Plane, speed));
+                    _doorPass.Progress = Vector3.Dot(pos - _doorPass.Plane, _doorPass.Normal);
+                }
+            }
+            Anim.Doorway = _doorPass;
+        }
+
+        DoorwayPass MakePass(DoorwayProbe.Result r, int variant)
+        {
+            var d = DoorwayPass.Make(variant, r.Plane, r.Normal, r.Lintel, r.Depth, Rig != null ? Rig.Height : 2.5f,
+                r.HasLeft, r.Left, r.HasRight, r.Right);
+            d.Progress = Vector3.Dot(transform.position - d.Plane, d.Normal);
+            return d;
+        }
+
+        /// <summary>The style for the next doorway: running he grabs high and swings through (hook / lintel), walking any of
+        /// them; never the one he just used.</summary>
+        int PickDoorwayVariant(Vector3 plane, float speed)
+        {
+            int seed = ((Mathf.RoundToInt(plane.x * 7.3f) * 73856093 ^ Mathf.RoundToInt(plane.z * 7.3f) * 19349663) & 0xffffff) + _doorCount * 5 + (Id & 0xff);
+            _doorCount++;
+            int v;
+            if (speed > Tuning.OmarWalkSpeed * 1.6f)
+            {
+                int[] fast = { 1, 3, 0 };
+                v = fast[seed % fast.Length];
+                if (v == _doorVariantLast) v = fast[(seed + 1) % fast.Length];
+            }
+            else
+            {
+                v = seed % DoorwayPass.Variants;
+                if (v == _doorVariantLast) v = (v + 1 + seed / DoorwayPass.Variants % (DoorwayPass.Variants - 1)) % DoorwayPass.Variants;
+            }
+            _doorVariantLast = v;
+            return v;
         }
 
         /// <summary>On a human Omar's screen a prisoner peeking through a cracked door from the other side is not drawn.</summary>

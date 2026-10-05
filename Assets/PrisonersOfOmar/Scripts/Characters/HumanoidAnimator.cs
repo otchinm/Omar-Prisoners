@@ -243,6 +243,8 @@ namespace PrisonersOfOmar.Characters
                 BuildPersistent(_layer, (CharacterPose)p);
                 _acc.LerpTo(_layer, _poseW[p]);
             }
+            // 4b. squeezing through a low doorway (Omar): fold over under the lintel, hands on the frame
+            DoorwayLayer(_acc, dt);
             // 5. actions (previous one fading out, then the current one)
             UpdateActions(dt);
             // 6. look pitch / yaw
@@ -251,6 +253,7 @@ namespace PrisonersOfOmar.Characters
             _ap.Apply(_acc);
             if (_holdW[(int)HoldPose.TwoHanded] > 0.01f) SecondHandGrip();
             UpdateFists(dt);
+            MeasureDoorwayEye(dt);
 
             // footsteps
             if (_moveW > 0.35f && Grounded && _poseW[0] > 0.6f && _airW < 0.5f)
@@ -259,6 +262,125 @@ namespace PrisonersOfOmar.Characters
                 if (Crossed(_prevPhase, _phase, 0.5f)) RaiseFootstep(1);
             }
             _prevPhase = _phase;
+        }
+
+        // ================================================================================================ doorways
+        /// <summary>Set every frame while Omar passes under a doorway lower than he is (inactive otherwise).</summary>
+        public DoorwayPass Doorway;
+        /// <summary>How far the eyes are below / ahead of where they stand upright, from the doorway pose (the first person
+        /// camera follows it).</summary>
+        public float DoorwayEyeDrop { get; private set; }
+        public float DoorwayEyeForward { get; private set; }
+        public float DoorwayEyeRoll { get; private set; }
+        /// <summary>0..1 how far he is folded over for the doorway.</summary>
+        public float DoorwayBend => _doorBend;
+        /// <summary>0..1 how firmly each hand holds the frame.</summary>
+        public float DoorwayGripLeft => _doorGL;
+        public float DoorwayGripRight => _doorGR;
+        DoorwayPass _door;          // the last active pass (keeps the pose while it fades out)
+        float _doorBend, _doorGL, _doorGR, _doorEyeY = -1f, _doorEyeZ;
+
+        /// <summary>
+        /// Folds the body over by exactly what the lintel needs (knees, back, head - split per variant) and puts the hands
+        /// on the frame: world anchored, so they stay on the jambs while he hauls himself through, then trail and let go.
+        /// </summary>
+        void DoorwayLayer(PoseBuffer p, float dt)
+        {
+            if (Doorway.Active) _door = Doorway;
+            var d = _door;
+            float s = Doorway.Active ? Doorway.Progress : d.Progress;
+            int v = d.Variant;
+            // he folds early (the head is half a metre ahead of the feet when bent) and straightens once the head is through
+            float bendT = Doorway.Active ? Smooth01((s + 1.55f) / 0.8f) * (1f - Smooth01((s - 0.22f) / 0.6f)) : 0f;
+            _doorBend = Approach(_doorBend, bendT, dt, 0.085f);
+            // hands: staggered reach / release per variant (the leading hand goes first, the other lets go later)
+            float l0 = v == 1 || v == 3 ? -1.35f : v == 2 ? -1.0f : -1.2f, r0 = v == 1 ? -0.95f : v == 3 ? -1.05f : -1.15f;
+            float l1 = v == 1 ? 0.3f : v == 3 ? 0.12f : 0.05f, r1 = v == 2 ? 0.05f : 0.2f;
+            float tl = Doorway.Active && d.HasLeft ? Smooth01((s - l0) / 0.45f) * (1f - Smooth01((s - l1) / 0.35f)) : 0f;
+            float tr = Doorway.Active && d.HasRight ? Smooth01((s - r0) / 0.45f) * (1f - Smooth01((s - r1) / 0.35f)) : 0f;
+            _doorGL = Approach(_doorGL, tl, dt, 0.06f);
+            _doorGR = Approach(_doorGR, tr, dt, 0.07f);
+            float k = _doorBend;
+            if (k < 0.002f && _doorGL < 0.002f && _doorGR < 0.002f) { DoorwayEyeRoll = 0f; return; }
+
+            float sc = _s;
+            float D = Mathf.Clamp(d.Drop, 0f, 0.8f) * k;
+            float kneeShare = v == 2 ? 0.62f : v == 1 ? 0.36f : v == 3 ? 0.4f : 0.46f;
+            float hd = D * kneeShare;                                  // knees (the leg IK keeps the feet planted)
+            float bowDeg = (v == 0 ? 26f : v == 2 ? 12f : 18f) * k;    // head bowed
+            float bowDrop = _spec.HeadH * (1f - Mathf.Cos(bowDeg * Mathf.Deg2Rad)) + 0.02f * k;
+            float r = Mathf.Max(0f, D - hd - bowDrop);
+            float L = Mathf.Max(0.5f, _spec.Height - _spec.HipsY);
+            float phi = Mathf.Acos(Mathf.Clamp(1f - r / L, -1f, 1f)) * Mathf.Rad2Deg;
+            // effort: heavier breathing and the shoulders working as he hauls himself through
+            float haul = Mathf.Max(_doorGL, _doorGR);
+            float heave = Mathf.Sin(_time * 5.3f) * 1.6f * k + Mathf.Sin(_time * 2.1f + 0.7f) * 3.5f * haul;
+
+            p.HipsPos += new Vector3(0f, -hd, -(v == 2 ? 0.45f : 0.3f) * hd);
+            p.Rot[(int)BoneId.Hips].x += phi * 0.28f;
+            p.Rot[(int)BoneId.Spine].x += phi * 0.38f + heave * 0.3f;
+            p.Rot[(int)BoneId.Chest].x += phi * 0.34f + (v == 0 ? 5f * k : 0f) + heave * 0.5f;
+            // the head stays bowed under the frame but the eyes come up to see where he is going
+            float look = -phi * 0.5f;
+            p.Rot[(int)BoneId.Neck].x += look * 0.45f + 6f * k;
+            p.Rot[(int)BoneId.Head].x += look * 0.55f + bowDeg;
+            switch (v)
+            {
+                case 1:   // hooked high on the left: leans into the right shoulder, head tipped to clear the corner
+                    p.Rot[(int)BoneId.Chest].z += -9f * k; p.Rot[(int)BoneId.Spine].z += -4f * k;
+                    p.Rot[(int)BoneId.Chest].y += 10f * haul; p.Rot[(int)BoneId.Head].z += 15f * k;
+                    break;
+                case 2:   // crouched: the head turns to look past the jamb
+                    p.Rot[(int)BoneId.Head].y += 14f * k; p.Rot[(int)BoneId.Neck].y += 6f * k;
+                    break;
+                case 3:   // pulling on the head of the frame: ducks under his own left arm, turned towards it
+                    p.Rot[(int)BoneId.Chest].y += -12f * haul; p.Rot[(int)BoneId.Chest].z += 6f * k;
+                    p.Rot[(int)BoneId.Head].z += -12f * k; p.Rot[(int)BoneId.Head].y += -8f * k;
+                    break;
+                default:  // braced on both jambs, shoulders hunched
+                    p.Rot[(int)BoneId.Chest].y += Mathf.Sin(_time * 2.4f) * 4f * haul;
+                    break;
+            }
+            DoorwayEyeRoll = (v == 1 ? -10f : v == 3 ? 8f : 0f) * k;
+
+            // hands on the frame (wrist goals converted from the world anchors every frame)
+            if (_doorGL > 0.002f && d.HasLeft)
+            {
+                _layer.CopyFrom(p);
+                _layer.SetHandGoal(0, transform.InverseTransformPoint(d.LeftGrip), 1f);
+                _layer.ElbowHintL = d.LeftOnLintel ? new Vector3(-1f, -0.2f, -0.6f) : new Vector3(-1f, -0.75f, -0.35f);
+                // fingers up / forward round the jamb, palm against it (left palm faces outwards); under the lintel the
+                // palm turns up against the frame head
+                _layer.SetHandRot(0, d.LeftOnLintel ? new Vector3(-170f, 0f, 90f) : new Vector3(-28f, 0f, 180f), 0.85f);
+                p.LerpTo(_layer, Smooth01(_doorGL));
+            }
+            if (_doorGR > 0.002f && d.HasRight)
+            {
+                _layer.CopyFrom(p);
+                _layer.SetHandGoal(1, transform.InverseTransformPoint(d.RightGrip), 1f);
+                _layer.ElbowHintR = new Vector3(1f, -0.8f, -0.35f);
+                // the cleaver hand braces the side of its fist on the jamb, blade forward
+                _layer.SetHandRot(1, new Vector3(-80f, 10f, 0f), 0.6f);
+                p.LerpTo(_layer, Smooth01(_doorGR));
+            }
+        }
+
+        /// <summary>Where the eyes went (relative to standing upright) so the first person camera can follow the fold.</summary>
+        void MeasureDoorwayEye(float dt)
+        {
+            if (_rig == null || _rig.EyePoint == null) return;
+            Vector3 e = transform.InverseTransformPoint(_rig.EyePoint.position);
+            bool active = _doorBend > 0.01f;
+            if (!active)
+            {
+                // learn the upright eye position while not in a doorway
+                _doorEyeY = _doorEyeY < 0f ? e.y : Mathf.Lerp(_doorEyeY, e.y, 1f - Mathf.Exp(-dt / 0.5f));
+                _doorEyeZ = Mathf.Lerp(_doorEyeZ, e.z, 1f - Mathf.Exp(-dt / 0.5f));
+            }
+            float drop = active && _doorEyeY > 0f ? Mathf.Max(0f, _doorEyeY - e.y) : 0f;
+            float fwd = active ? Mathf.Max(0f, e.z - _doorEyeZ) : 0f;
+            DoorwayEyeDrop = Mathf.Lerp(DoorwayEyeDrop, drop, 1f - Mathf.Exp(-dt / 0.05f));
+            DoorwayEyeForward = Mathf.Lerp(DoorwayEyeForward, fwd, 1f - Mathf.Exp(-dt / 0.05f));
         }
 
         float _fistL, _fistR;
@@ -276,7 +398,8 @@ namespace PrisonersOfOmar.Characters
                          || a == CharacterAction.Shoot || a == CharacterAction.BedLift || a == CharacterAction.Struggle
                          || a == CharacterAction.Heal || a == CharacterAction.ChopMeat || a == CharacterAction.Attack;
             bool left = Hold == HoldPose.TwoHanded || Pose == CharacterPose.CagedSit || Pose == CharacterPose.Seated
-                        || a == CharacterAction.Cut || a == CharacterAction.BedLift || a == CharacterAction.Struggle;
+                        || a == CharacterAction.Cut || a == CharacterAction.BedLift || a == CharacterAction.Struggle
+                        || _doorGL > 0.35f;   // gripping the door frame
             if (Pose == CharacterPose.Dead || Pose == CharacterPose.Downed) right = left = false;
             _fistR = Mathf.MoveTowards(_fistR, right ? 1f : 0f, dt / 0.09f);
             _fistL = Mathf.MoveTowards(_fistL, left ? 1f : 0f, dt / 0.09f);

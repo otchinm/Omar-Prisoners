@@ -183,9 +183,27 @@ namespace PrisonersOfOmar.Gameplay
             var rig = PsxCameraRig.Instance;
             if (rig == null) return;
             Vector3 pos = _avatar.transform.position + Vector3.up * _avatar.EyeHeight;
-            float amp = _sprintingNow ? 0.07f : 0.045f;
+            // squeezing through a low doorway: the eyes go where the folded head goes (down, forward, tipped into the corner)
+            float bend = _avatar.DoorwayBend;
+            pos += Quaternion.Euler(0, _yaw, 0) * Vector3.forward * (_avatar.DoorwayEyeForward * 0.8f);
+            float amp = (_sprintingNow ? 0.07f : 0.045f) * (1f - 0.5f * bend);
             pos += Vector3.up * (Mathf.Abs(Mathf.Sin(_bobPhase)) * amp);
-            Quaternion rot = Quaternion.Euler(_pitch, _yaw, Mathf.Sin(_bobPhase * 0.5f) * (_sprintingNow ? 2.5f : 1.2f));
+            Quaternion rot = Quaternion.Euler(Mathf.Clamp(_pitch + 5f * bend, -80f, 85f), _yaw,
+                Mathf.Sin(_bobPhase * 0.5f) * (_sprintingNow ? 2.5f : 1.2f) + _avatar.DoorwayEyeRoll * 0.6f);
+            if (_arms != null)
+            {
+                // the free hand takes hold of the frame, the cleaver fist braces on the other jamb
+                var door = _avatar.Doorway;
+                var anim = _avatar.Anim;
+                _arms.FrameGrip = door.LeftGrip;
+                _arms.FrameNormal = door.Normal;
+                _arms.FrameGripOnLintel = door.LeftOnLintel;
+                // in his own view the hand goes out early, while the frame is still in sight (the body grips a little later)
+                float early = door.Active ? Mathf.SmoothStep(0f, 1f, (door.Progress + 1.6f) / 0.4f) : 0f;
+                _arms.FrameGripWeight = anim != null && door.HasLeft ? Mathf.Max(anim.DoorwayGripLeft, early) : 0f;
+                _arms.FrameBraceRight = anim != null && door.HasRight ? anim.DoorwayGripRight : 0f;
+                _arms.FovRatio = Mathf.Tan(rig.ViewModelFieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(Mathf.Max(1f, rig.FieldOfView) * 0.5f * Mathf.Deg2Rad);
+            }
             if (Stunned) rot *= Quaternion.Euler(Mathf.Sin(Time.time * 9f) * 4f, Mathf.Sin(Time.time * 6f) * 6f, 0);
             float pt = (Time.time - _peekStart) / Tuning.BedPeekTime;
             if (pt >= 0f && pt < 1f)
@@ -207,6 +225,7 @@ namespace PrisonersOfOmar.Gameplay
             bool wantSprint = !frozen && GameInput.Sprint && input.y > 0.1f && !_exhausted;
             float speed = (wantSprint ? Tuning.OmarRunSpeed : Tuning.OmarWalkSpeed) * AdminState.SpeedMultiplier;
             if (Rushing) speed *= Tuning.OmarRushMul;   // flipped a bed on someone: a short surge
+            speed *= _avatar.DoorwaySpeedFactor;         // hauling himself through a doorway too low for him
             if (AdminState.InfiniteStamina) { _stamina = 1f; _exhausted = false; }
             if (AdminState.Noclip && !frozen)
             {

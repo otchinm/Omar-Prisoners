@@ -18,7 +18,9 @@ namespace PreviewHarness
                 case "allanims": AllAnims(args, outDir); return true;
                 case "items": Items(outDir); return true;
                 case "traps": Traps(outDir); return true;
+                case "doorway": Doorway(args, outDir); return true;
                 case "fparms": FpArms(args, outDir); return true;
+                case "fpdoor": FpDoor(args, outDir); return true;
                 case "perf": Perf(); return true;
                 case "grandma": Grandma(args, outDir); return true;
             }
@@ -200,6 +202,129 @@ namespace PreviewHarness
                 i++;
             }
             w.Save(Path.Combine(outDir, "items.json"));
+        }
+
+        /// <summary>
+        /// doorway VARIANT [speed] [s,s,...]: Omar walks through a 1.0 x 2.18 m door frame (plane z = 0) with the doorway layer
+        /// fed like the game does; writes door_VARIANT_k.json snapshots at the given progress values (feet past the plane).
+        /// </summary>
+        static void Doorway(List<string> a, string outDir)
+        {
+            int variant = a.Count > 0 ? int.Parse(a[0]) : 0;
+            float speed = a.Count > 1 ? float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture) : 1.45f;
+            var marks = (a.Count > 2 ? a[2] : "-1.3,-0.9,-0.55,-0.2,0.15,0.5").Split(',');
+            foreach (var go in Runtime.All.ToArray()) UnityEngine.Object.Destroy(go);
+            var holder = new GameObject("Char");
+            var rig = HumanoidFactory.Build(CharacterSkin.Omar, holder.transform);
+            var an = rig.GetComponent<HumanoidAnimator>();
+            float lintel = 2.18f;
+            // the frame: two jamb posts and the head, 0.14 m deep (the walls are left out so the body stays visible)
+            var frame = new GameObject("Frame");
+            var mb = new MeshBuilder();
+            mb.SetMaterial(PrisonersOfOmar.Rendering.PsxMaterials.GetColor(new Color(0.55f, 0.45f, 0.35f)));
+            mb.AddBox(new Vector3(-0.53f, lintel * 0.5f, 0f), new Vector3(0.06f, lintel, 0.14f));
+            mb.AddBox(new Vector3(0.53f, lintel * 0.5f, 0f), new Vector3(0.06f, lintel, 0.14f));
+            mb.AddBox(new Vector3(0f, lintel + 0.03f, 0f), new Vector3(1.12f, 0.06f, 0.14f));
+            mb.Build("FrameMesh", frame.transform, 0);
+            const float dt = 1f / 60f;
+            float z = -2.6f, worst = 0f;
+            int mi = 0;
+            var vel = new Vector3(0f, 0f, speed);
+            an.Velocity = vel;
+            for (int i = 0; i < 2000 && mi < marks.Length; i++)
+            {
+                holder.transform.position = new Vector3(0f, 0f, z);
+                var d = DoorwayPass.Make(variant, Vector3.zero, Vector3.forward, lintel, 0.14f, rig.Height, true, new Vector3(-0.5f, 1f, 0f), true, new Vector3(0.5f, 1f, 0f));
+                d.Progress = z;
+                an.Doorway = d;
+                Runtime.Tick(dt);
+                // clearance: while the head is within the frame's depth (+ a head's half width) its crown must be under the lintel
+                if (rig.EyePoint != null)
+                {
+                    Vector3 eye = rig.EyePoint.position;
+                    float crown = eye.y + (rig.Height - 2.3f) + 0.02f;   // the crown is ~0.2 m above Omar's eyes
+                    if (Mathf.Abs(eye.z) < 0.22f) worst = Mathf.Max(worst, crown);
+                    if (Mathf.Abs(eye.z) < 0.22f && crown > lintel) Console.WriteLine($"  CLIP s={z:F2} crown={crown:F3} > lintel {lintel:F2} (eye z {eye.z:F2})");
+                }
+                float mark = float.Parse(marks[mi], System.Globalization.CultureInfo.InvariantCulture);
+                if (z >= mark)
+                {
+                    var w = new SceneWriter();
+                    w.Add(holder, Matrix4x4.identity);
+                    w.Add(frame, Matrix4x4.identity);
+                    w.Save(Path.Combine(outDir, $"door_{variant}_{mi}.json"));
+                    Console.WriteLine($"variant {variant} s={z:F2} eyeDrop={an.DoorwayEyeDrop:F3} eyeFwd={an.DoorwayEyeForward:F3}");
+                    mi++;
+                }
+                z += speed * dt;
+            }
+            Console.WriteLine($"variant {variant} speed {speed}: highest crown under the frame {worst:F3} (lintel {lintel:F2})");
+        }
+
+        /// <summary>
+        /// fpdoor VARIANT [speed] [s,s,...] [pitch]: Omar's own view walking through the same frame (in a wall this time) - the
+        /// camera follows the eyes of the fold the way OmarController does and the view model's left hand takes the frame.
+        /// Writes fpdoor_VARIANT_k.json in camera space (render.py --camspace).
+        /// </summary>
+        static void FpDoor(List<string> a, string outDir)
+        {
+            int variant = a.Count > 0 ? int.Parse(a[0]) : 0;
+            float speed = a.Count > 1 ? float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture) : 1.45f;
+            var marks = (a.Count > 2 ? a[2] : "-1.1,-0.8,-0.55,-0.3,-0.05").Split(',');
+            float pitch = a.Count > 3 ? float.Parse(a[3], System.Globalization.CultureInfo.InvariantCulture) : 0f;
+            foreach (var go in Runtime.All.ToArray()) UnityEngine.Object.Destroy(go);
+            var holder = new GameObject("Char");
+            var rig = HumanoidFactory.Build(CharacterSkin.Omar, holder.transform);
+            var an = rig.GetComponent<HumanoidAnimator>();
+            float lintel = 2.18f;
+            var frame = new GameObject("Frame");
+            var mb = new MeshBuilder();
+            mb.SetMaterial(PrisonersOfOmar.Rendering.PsxMaterials.GetColor(new Color(0.55f, 0.45f, 0.35f)));
+            mb.AddBox(new Vector3(-0.53f, lintel * 0.5f, 0f), new Vector3(0.06f, lintel, 0.16f));
+            mb.AddBox(new Vector3(0.53f, lintel * 0.5f, 0f), new Vector3(0.06f, lintel, 0.16f));
+            mb.AddBox(new Vector3(0f, lintel + 0.03f, 0f), new Vector3(1.12f, 0.06f, 0.16f));
+            mb.SetMaterial(PrisonersOfOmar.Rendering.PsxMaterials.GetColor(new Color(0.36f, 0.38f, 0.33f)));
+            mb.AddBox(new Vector3(-1.8f, 1.4f, 0f), new Vector3(2.5f, 2.8f, 0.12f));
+            mb.AddBox(new Vector3(1.8f, 1.4f, 0f), new Vector3(2.5f, 2.8f, 0.12f));
+            mb.AddBox(new Vector3(0f, (lintel + 2.8f) * 0.5f + 0.03f, 0f), new Vector3(1.1f, 2.8f - lintel, 0.12f));
+            mb.SetMaterial(PrisonersOfOmar.Rendering.PsxMaterials.GetColor(new Color(0.22f, 0.2f, 0.18f)));
+            mb.AddBox(new Vector3(0f, -0.01f, 0f), new Vector3(6f, 0.02f, 8f));
+            mb.Build("FrameMesh", frame.transform, 0);
+            var cam = new GameObject("Camera");
+            var arms = FirstPersonArms.Create(CharacterSkin.Omar, cam.transform);
+            const float dt = 1f / 60f;
+            float z = -2.6f;
+            int mi = 0;
+            an.Velocity = new Vector3(0f, 0f, speed);
+            arms.MoveSpeed = speed;
+            for (int i = 0; i < 2000 && mi < marks.Length; i++)
+            {
+                holder.transform.position = new Vector3(0f, 0f, z);
+                var d = DoorwayPass.Make(variant, Vector3.zero, Vector3.forward, lintel, 0.16f, rig.Height, true, new Vector3(-0.5f, 1f, 0f), true, new Vector3(0.5f, 1f, 0f));
+                d.Progress = z;
+                an.Doorway = d;
+                // OmarController.LateUpdate
+                float bend = an.DoorwayBend;
+                cam.transform.SetPositionAndRotation(new Vector3(0f, 2.3f - an.DoorwayEyeDrop, z + an.DoorwayEyeForward * 0.8f),
+                    Quaternion.Euler(pitch + 5f * bend, 0f, an.DoorwayEyeRoll * 0.6f));
+                arms.FrameGrip = d.LeftGrip; arms.FrameNormal = d.Normal; arms.FrameGripOnLintel = d.LeftOnLintel;
+                arms.FrameGripWeight = Mathf.Max(an.DoorwayGripLeft, Mathf.SmoothStep(0f, 1f, (z + 1.6f) / 0.4f));
+                arms.FrameBraceRight = an.DoorwayGripRight;
+                Runtime.Tick(dt);
+                float mark = float.Parse(marks[mi], System.Globalization.CultureInfo.InvariantCulture);
+                if (z >= mark)
+                {
+                    var w = new SceneWriter();
+                    // camera space (like fparms): render.py --camspace shows exactly what the player sees
+                    w.Add(frame, cam.transform.worldToLocalMatrix);
+                    w.Add(arms.gameObject, cam.transform.worldToLocalMatrix);
+                    w.Save(Path.Combine(outDir, $"fpdoor_{variant}_{mi}.json"));
+                    Vector3 cp = cam.transform.position, tg = cp + cam.transform.forward * 3f;
+                    Console.WriteLine(FormattableString.Invariant($"fpdoor {variant} {mi} s={z:F2} grip={an.DoorwayGripLeft:F2} cam {cp.x:F3},{cp.y:F3},{cp.z:F3} target {tg.x:F3},{tg.y:F3},{tg.z:F3} roll {an.DoorwayEyeRoll * 0.6f:F1}"));
+                    mi++;
+                }
+                z += speed * dt;
+            }
         }
 
         /// <summary>traps: bear trap open / half / shut, and an armed tripwire with its siren and cans (as placed in game).</summary>
