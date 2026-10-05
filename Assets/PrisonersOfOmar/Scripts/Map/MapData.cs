@@ -300,6 +300,8 @@ namespace PrisonersOfOmar.Map
         public Transform Root;
         /// <summary>Trigger colliders: fuel cap (gas can), hood (battery), driver door (keys / start), passenger doors (board).</summary>
         public Collider FuelCap, Hood, DriverDoor;
+        /// <summary>The screw cap on the fuel filler (taken off once the tank has been filled); may be null.</summary>
+        public GameObject FuelCapModel;
         public Collider[] PassengerDoors = new Collider[0];
         /// <summary>Seat poses: [0] driver, [1..3] passengers (camera position + facing).</summary>
         public Pose[] Seats = new Pose[4];

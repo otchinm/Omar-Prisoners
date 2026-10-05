@@ -234,6 +234,64 @@ namespace PrisonersOfOmar.Map
             Gray(mb, 1f);
         }
 
+        /// <summary>Car-local centre of the fuel filler: on the left rear quarter panel, between the rear wheel and the tail light.</summary>
+        public static readonly Vector3 FuelFillerLocal = new Vector3(-0.9f, 0.76f, -2.0f);
+        /// <summary>Car-local position of the screw cap (outside the filler neck).</summary>
+        public static Vector3 FuelCapLocal => FuelFillerLocal + new Vector3(-0.045f, 0f, 0f);
+
+        /// <summary>
+        /// The fuel filler on the left rear quarter panel (car-local, front at +Z): a recessed housing with a chrome rim, the
+        /// filler neck, the painted fuel door hanging open on its hinge and a fuel stain run down the paint under it. The
+        /// screw cap (with its grip bar) goes into <paramref name="capMb"/>, pivot at the cap's centre, so the game can take
+        /// it off once the tank is filled.
+        /// </summary>
+        public static void FuelFiller(MeshBuilder mb, MeshBuilder capMb, bool wreck)
+        {
+            const float W = 0.17f, H = 0.15f;
+            // local frame on the panel: +Z out of the car (car -X), +X towards the car's front, +Y up
+            mb.Push(FuelFillerLocal, Quaternion.LookRotation(Vector3.left, Vector3.up));
+            Gray(mb, 0.8f);
+            // the dark housing seen through the opening, with a lip of bare metal round it
+            mb.Material = Mat.Lit(Tex.MetalDark, new Color(0.22f, 0.2f, 0.18f));
+            mb.AddQuad(new Vector3(W * 0.5f, -H * 0.5f, 0.003f), new Vector3(W * 0.5f, H * 0.5f, 0.003f), new Vector3(-W * 0.5f, H * 0.5f, 0.003f), new Vector3(-W * 0.5f, -H * 0.5f, 0.003f));
+            mb.Material = Mat.Lit(Tex.Galvanized, new Color(0.62f, 0.6f, 0.56f));
+            float lip = 0.012f, lz = 0.006f;
+            mb.AddBox(new Vector3(0f, H * 0.5f + lip * 0.5f, lz * 0.5f), new Vector3(W + lip * 2f, lip, lz));
+            mb.AddBox(new Vector3(0f, -H * 0.5f - lip * 0.5f, lz * 0.5f), new Vector3(W + lip * 2f, lip, lz));
+            mb.AddBox(new Vector3(W * 0.5f + lip * 0.5f, 0f, lz * 0.5f), new Vector3(lip, H, lz));
+            mb.AddBox(new Vector3(-W * 0.5f - lip * 0.5f, 0f, lz * 0.5f), new Vector3(lip, H, lz));
+            // filler neck (a short steel pipe sticking out of the housing, a little upward)
+            mb.Push(new Vector3(0f, -0.005f, 0.003f), Quaternion.Euler(80f, 0f, 0f));
+            mb.AddCylinder(Vector3.zero, 0.034f, 0.03f, 0.04f, 10, false, false, null, true);
+            mb.Material = Mat.Lit(Tex.MetalDark, new Color(0.08f, 0.07f, 0.06f));   // the dark mouth of the pipe
+            mb.AddCylinder(new Vector3(0f, 0.039f, 0f), 0.026f, 0.026f, 0.001f, 10, true, false, null, false);
+            mb.Pop();
+            // the fuel door: painted outside, bare primer inside, hinged on its front edge and swung open
+            var paint = Mat.Lit(wreck ? Tex.CarWreck : Tex.CarBody);
+            mb.Push(new Vector3(W * 0.5f + lip, 0f, 0.004f), Quaternion.Euler(0f, 100f, 0f));
+            mb.Material = paint;
+            mb.AddBox(new Vector3(-(W + lip) * 0.5f, 0f, 0.004f), new Vector3(W + lip, H + lip, 0.006f), BoxUV.Local, 0.6f, 0f, BoxFaces.All & ~BoxFaces.NegZ);
+            mb.Material = Mat.Lit(Tex.MetalRusty, new Color(0.55f, 0.52f, 0.48f));
+            mb.AddBox(new Vector3(-(W + lip) * 0.5f, 0f, 0.004f), new Vector3(W + lip, H + lip, 0.006f), BoxUV.Local, 0.3f, 0f, BoxFaces.NegZ);
+            mb.Material = Mat.Lit(Tex.MetalDark);
+            mb.AddBox(new Vector3(-0.012f, 0f, 0.0f), new Vector3(0.02f, 0.05f, 0.012f), BoxUV.Local, 0.2f);   // hinge arm
+            mb.Pop();
+            Gray(mb, 1f);
+            mb.Pop();
+            // fuel that ran down the paint the last time someone filled it
+            Arch.Decal(mb, Mat.Decal("grime", new Color(0.5f, 0.42f, 0.3f, 0.8f)), FuelFillerLocal + new Vector3(-0.004f, -0.17f, 0.01f), Vector3.left, 0.1f, 0.24f, 4f);
+
+            if (capMb == null) return;
+            // the screw cap: a ribbed black disc with a grip bar across it (pivot = cap centre, built facing car -X)
+            capMb.Push(Vector3.zero, Quaternion.Euler(0f, 0f, 90f));   // cylinder axis +Y -> car -X
+            Gray(capMb, 0.8f);
+            capMb.Material = Mat.Lit(Tex.Plastic, new Color(0.16f, 0.15f, 0.14f));
+            capMb.AddCylinder(new Vector3(0f, -0.01f, 0f), 0.044f, 0.042f, 0.02f, 12, true, true, null, false);
+            capMb.AddBox(new Vector3(0f, 0.016f, 0f), new Vector3(0.012f, 0.014f, 0.07f), BoxUV.Local, 0.2f);
+            Gray(capMb, 1f);
+            capMb.Pop();
+        }
+
         /// <summary>Tyre on its rim standing on the tread, axle along local X: tread round it, sidewall + rim on both faces.</summary>
         public static void Wheel(MeshBuilder mb, Vector3 center, float radius, float width, int sides = 12)
         {

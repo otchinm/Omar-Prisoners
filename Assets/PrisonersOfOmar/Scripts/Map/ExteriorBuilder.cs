@@ -587,8 +587,14 @@ namespace PrisonersOfOmar.Map
             car.Root = root;
             var mb = new MeshBuilder();
             Props.CarShell(mb, false, false, 1900);
+            var capMb = new MeshBuilder();
+            Props.FuelFiller(mb, capMb, false);
             mb.Build("Body", root, Layers.World);
             ctx.CountRenderer(mb);
+            var cap = GeoUtil.CreateChild(root, "FuelCapModel", Props.FuelCapLocal, Quaternion.identity, Layers.World);
+            capMb.Build("Cap", cap.transform, Layers.World);
+            ctx.CountRenderer(capMb);
+            car.FuelCapModel = cap.gameObject;
             var hood = GeoUtil.CreateChild(root, "HoodPivot", V(0, 0.955f, 0.95f), Quaternion.identity, Layers.World);
             var hmb = new MeshBuilder();
             Props.CarHood(hmb, false);
@@ -599,7 +605,7 @@ namespace PrisonersOfOmar.Map
             GeoUtil.AddBox(root, V(0, 0.63f, 0), V(1.82f, 0.66f, 4.72f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "BodyCol");
             GeoUtil.AddBox(root, V(0, 1.18f, -0.15f), V(1.6f, 0.46f, 2.1f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "CabinCol");
             Collider T(string name, Vector3 c, Vector3 s) => GeoUtil.AddBox(root, c, s, Quaternion.identity, Layers.Interactable, SurfaceType.Default, true, name);
-            car.FuelCap = T("FuelCap", V(-0.98f, 0.82f, -1.65f), V(0.3f, 0.3f, 0.45f));
+            car.FuelCap = T("FuelCap", Props.FuelFillerLocal + V(-0.08f, 0f, 0f), V(0.3f, 0.32f, 0.42f));
             car.Hood = T("Hood", V(0, 1.0f, 1.9f), V(1.7f, 0.5f, 1.25f));
             car.DriverDoor = T("DriverDoor", V(-1.0f, 1.0f, 0.2f), V(0.3f, 0.75f, 0.95f));
             car.PassengerDoors = new Collider[]

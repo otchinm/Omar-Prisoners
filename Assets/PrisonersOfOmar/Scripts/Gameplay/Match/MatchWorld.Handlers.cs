@@ -395,7 +395,10 @@ namespace PrisonersOfOmar.Gameplay
                 AddMessage(LocalIsOmar ? "THE MAIN GATE IS OPEN!" : "THE GATE IS OPEN - RUN DOWN THE ROAD!", 5f);
             }
             if (!prev.CarFueled && o.CarFueled && Map.Car != null && Map.Car.FuelCap != null)
+            {
                 AudioManager.Play3D(Snd.GasPour, Map.Car.FuelCap.bounds.center, 0.4f, 1.2f, 1f, 10f);
+                if (Map.Car.FuelCapModel != null) Map.Car.FuelCapModel.SetActive(false);   // the cap is off, the neck open
+            }
             if (!prev.CarStarted && o.CarStarted && Map.Car != null && Map.Car.Root != null)
             {
                 AudioManager.Play3D(Snd.CarStart, Map.Car.Root.position, 1f, 1f, 3f, 70f);
