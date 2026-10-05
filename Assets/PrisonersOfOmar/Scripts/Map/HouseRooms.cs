@@ -465,17 +465,17 @@ namespace PrisonersOfOmar.Map
         }
 
         /// <summary>Hole through the cage room floor / kitchen ceiling at the far end of the ceiling vent duct (x, z).</summary>
-        internal static readonly Rect VentShaft = Rect.MinMaxRect(-3.9f, 1.08f, -3.15f, 1.83f);
+        internal static readonly Rect VentShaft = Rect.MinMaxRect(-3.98f, 1.05f, -3.12f, 1.91f); // 0.86 m: a prisoner capsule (0.6 + skin) drops through cleanly
 
         /// <summary>
-        /// The crawl duct boxed in along the cage room's north wall (inside 3.3 x 0.9 x 1.15 m: prisoners crouch through it,
-        /// Omar does not fit). Its entrance at the west end is closed by a cover held with four screws; at the east end, in
+        /// The crawl duct boxed in along the cage room's north wall (inside 3.3 x 0.9 x 1.25 m: a crouched prisoner (1.05 m +
+        /// 2 x 0.04 skin) crouches through it; Omar never crouches, his 1.95 m capsule does not fit). Its entrance at the west end is closed by a cover held with four screws; at the east end, in
         /// the corner, a shaft drops through the floor slab to a grate in the kitchen ceiling right by the wall.
         /// </summary>
         static void CeilingVent(MapContext ctx, MeshBuilder mb)
         {
             float F = FU;
-            float x0 = -6.4f, x1 = -3.07f, z0 = 0.98f, z1 = 1.93f, top = F + 1.15f, t = 0.05f;
+            float x0 = -6.4f, x1 = -3.07f, z0 = 0.98f, z1 = 1.93f, top = F + 1.25f, t = 0.05f;
             float zc = (z0 + z1) * 0.5f;
             Rect h = VentShaft;
             var sheet = Mat.Lit(Tex.Galvanized, new Color(0.62f, 0.62f, 0.6f));
