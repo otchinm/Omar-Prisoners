@@ -112,8 +112,10 @@ match at a random spot) can kill her — or stun Omar.
 * The **third capture is final**.
 
 **Traps.**
-* **Tripwires** stretched across passages trigger Omar's **alarm siren** when crossed, and he comes running.
-* **Bear traps** hold and injure you until you pull free, or until a friend pries the trap open.
+* **Tripwires** stretched across passages trigger Omar's **alarm siren** when crossed (the tin cans on the wire crash
+  down) and he comes running; whoever tripped staggers for a couple of seconds and can't sprint.
+* **Bear traps** hold and injure you until you tear free (lots of E mashing, the chain clanks) or a friend pries the
+  trap open. Omar carries 4 wires and 3 traps; spent ones come back side by side (a wire every 35 s, a trap every 50 s).
 * Some traps are placed randomly at the start of each match, and Omar can set more. Crouch to disarm them.
 
 ### The map: the Base of the Second Class

@@ -270,8 +270,14 @@ namespace PrisonersOfOmar.Gameplay
         public const float AttackRange = 1.65f, AttackCooldown = 2.6f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
         public const float AttackRecover = 1.5f;
         public const float ScreamCooldown = 22f, SenseCooldown = 30f, SenseRadius = 16f;
-        public const int TripwireCharges = 3, BearTrapCharges = 2;
-        public const float TrapRecharge = 100f;
+        public const int TripwireCharges = 4, BearTrapCharges = 3;
+        /// <summary>Seconds per recharged trap; wires and bear traps refill side by side.</summary>
+        public const float WireRecharge = 35f, BearTrapRecharge = 50f;
+        /// <summary>E presses (at most ~9 a second) to tear a leg out of a bear trap; a friend pries it open in TrapPryTime.</summary>
+        public const int BearTrapPulls = 26;
+        public const float TrapPryTime = 3.5f, TrapDisarmTime = 4.5f;
+        /// <summary>A prisoner who runs into a tripwire stumbles: this long at TripStumbleSpeed of their speed, no sprinting.</summary>
+        public const float TripStumbleSeconds = 2.4f, TripStumbleSpeed = 0.4f;
         public const float OmarIntroSeconds = 22f, CagesOpenAt = 6f;
         // detection
         public const float SightConeHalfAngle = 62f, SightMinRange = 4.5f, SightMaxRange = 32f;

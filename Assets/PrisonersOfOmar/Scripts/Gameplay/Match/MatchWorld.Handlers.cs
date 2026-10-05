@@ -260,7 +260,13 @@ namespace PrisonersOfOmar.Gameplay
                 Chase.PlayAlarm(p);
                 AlarmBeacon.Spawn(_dynamicRoot, t.InteractPoint + Vector3.up * 0.9f, 25f);
                 if (LocalIsOmar) Pings.Add(new OmarPing { Position = p, Expire = UnityEngine.Time.time + 10f, Kind = 1 });
-                if (victim == LocalId) { VhsEffect.TriggerGlitch(0.8f, 0.4f); AddMessage("A WIRE! THE SIREN!", 3f); }
+                AudioManager.Play3D(Snd.ItemDrop, p, 0.8f, 0.8f, 1f, 12f);   // the cans hit the floor
+                if (victim == LocalId)
+                {
+                    VhsEffect.TriggerGlitch(0.8f, 0.4f);
+                    AddMessage("YOU TRIPPED OVER A WIRE! THE SIREN!", 3f);
+                    if (LocalPrisoner != null) LocalPrisoner.Stumble(Tuning.TripStumbleSeconds);
+                }
             }
             else
             {

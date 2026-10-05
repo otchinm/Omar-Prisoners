@@ -30,7 +30,7 @@ namespace PrisonersOfOmar.Gameplay
         float _screamAt = -1f;
         bool _screamForce;
         int _wires = Tuning.TripwireCharges, _bears = Tuning.BearTrapCharges;
-        float _trapRecharge;
+        float _trapRecharge, _bearRecharge;
         float _omarStunUntil;
         readonly List<OmarAI> _ais = new List<OmarAI>();
 
@@ -280,13 +280,11 @@ namespace PrisonersOfOmar.Gameplay
             if (_powerRestoreAt > 0f && t >= _powerRestoreAt) { _powerRestoreAt = -1f; Event(WorldEventKind.PowerOn); }
             if (t >= _nextEventAt) RandomEvent();
 
-            _trapRecharge += dt;
-            if (_trapRecharge >= Tuning.TrapRecharge)
-            {
-                _trapRecharge = 0f;
-                if (_wires < Tuning.TripwireCharges) { _wires++; SendTrapCharges(); }
-                else if (_bears < Tuning.BearTrapCharges) { _bears++; SendTrapCharges(); }
-            }
+            // wires and bear traps refill side by side (each timer only runs while that kind is short)
+            if (_wires < Tuning.TripwireCharges) _trapRecharge += dt; else _trapRecharge = 0f;
+            if (_trapRecharge >= Tuning.WireRecharge) { _trapRecharge = 0f; _wires++; SendTrapCharges(); }
+            if (_bears < Tuning.BearTrapCharges) _bearRecharge += dt; else _bearRecharge = 0f;
+            if (_bearRecharge >= Tuning.BearTrapRecharge) { _bearRecharge = 0f; _bears++; SendTrapCharges(); }
 
             _endCheckTimer -= dt;
             if (_endCheckTimer <= 0f) { _endCheckTimer = 0.5f; CheckEnd(); }
@@ -711,6 +709,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (id < 0 || id >= W.Traps.Count) return;
             var t = W.Traps[id];
+            var me = W.StatusOf(p);
+            if (!IsPrisoner(p) || me == null || me.Life != LifeState.Free || me.Trapped) return;
             if (!Near(p, t.InteractPoint, 3.2f)) return;
             if (t.Victim >= 0 && t.Victim != p)
             {
@@ -751,8 +751,11 @@ namespace PrisonersOfOmar.Gameplay
             }
             else if (kind == 1 && st.Trapped)
             {
-                if (n % 6 == 0) DeliverNoise(PosOf(sender), 7f);
-                if (n >= 16)
+                // the same human mashing limit as the cage: a macro does not tear the leg out any faster
+                if (_struggleAt.TryGetValue(sender, out var lastPull) && W.Time - lastPull < 0.11f) { _struggle[key] = n - 1; return; }
+                _struggleAt[sender] = W.Time;
+                if (n % 5 == 0) DeliverNoise(PosOf(sender), 9f);   // the chain clanks
+                if (n >= Tuning.BearTrapPulls)
                 {
                     _struggle[key] = 0;
                     int trap = st.TrappedBy;
@@ -782,7 +785,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 BroadcastTrap(t, TrapState.Triggered, victim, true);
                 foreach (var ai in _ais) if (ai != null) ai.OnAlarm(t.InteractPoint);
-                DeliverNoise(t.InteractPoint, 15f);
+                DeliverNoise(t.InteractPoint, 22f);   // siren + the cans hitting the floor
                 ScheduleScream(0.6f, true); // he hears his siren and screams
             }
             else

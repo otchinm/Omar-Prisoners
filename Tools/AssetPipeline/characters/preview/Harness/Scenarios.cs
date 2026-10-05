@@ -17,6 +17,7 @@ namespace PreviewHarness
                 case "anim": Anim(args, outDir); return true;
                 case "allanims": AllAnims(args, outDir); return true;
                 case "items": Items(outDir); return true;
+                case "traps": Traps(outDir); return true;
                 case "fparms": FpArms(args, outDir); return true;
                 case "perf": Perf(); return true;
                 case "grandma": Grandma(args, outDir); return true;
@@ -199,6 +200,38 @@ namespace PreviewHarness
                 i++;
             }
             w.Save(Path.Combine(outDir, "items.json"));
+        }
+
+        /// <summary>traps: bear trap open / half / shut, and an armed tripwire with its siren and cans (as placed in game).</summary>
+        static void Traps(string outDir)
+        {
+            var w = new SceneWriter();
+            float[] jaws = { 0f, 0.55f, 1f };
+            for (int i = 0; i < jaws.Length; i++)
+            {
+                var t = ItemMeshFactory.BuildBearTrap();
+                ItemMeshFactory.SetBearTrapJaws(t, jaws[i]);
+                w.Add(t, Matrix4x4.Translate(new Vector3(i * 1.0f, 0, 0)));
+            }
+            Vector3 a = new Vector3(-0.2f, 0.12f, -1.2f), b = new Vector3(1.9f, 0.12f, -1.2f);
+            foreach (var p in new[] { a, b })
+            {
+                var st = ItemMeshFactory.BuildTripwireStake();
+                w.Add(st, Matrix4x4.Translate(p - Vector3.up * 0.12f));
+            }
+            var siren = ItemMeshFactory.BuildTripwireSiren();
+            w.Add(siren, Matrix4x4.TRS(a + new Vector3(0.06f, -0.12f, 0.1f), Quaternion.Euler(0, 90, 0), Vector3.one));
+            for (int k = 1; k <= 2; k++)
+            {
+                var can = ItemMeshFactory.BuildTinCan(k);
+                w.Add(can, Matrix4x4.Translate(Vector3.Lerp(a, b, k / 3f) + new Vector3(0, 0.027f, 0)));
+            }
+            var wire = new MeshBuilder();
+            wire.SetMaterial(PrisonersOfOmar.Rendering.PsxMaterials.GetColor(new Color(0.55f, 0.55f, 0.5f)));
+            wire.AddBeam(a + new Vector3(0, 0.027f, 0), b + new Vector3(0, 0.027f, 0), 0.012f);
+            var wgo = wire.Build("Wire", null, 0);
+            if (wgo != null) w.Add(wgo, Matrix4x4.identity);
+            w.Save(Path.Combine(outDir, "traps.json"));
         }
 
         /// <summary>fparms SKIN ITEM [action] [t01]: first person view model in camera space.</summary>

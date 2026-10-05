@@ -651,8 +651,8 @@ namespace PrisonersOfOmar.Gameplay
         public TrapState State;
         public int Victim = -1;
         public GameObject Root;
-        Transform _jawL, _jawR;
-        GameObject _wire;
+        GameObject _trap, _wire;
+        readonly System.Collections.Generic.List<Transform> _cans = new System.Collections.Generic.List<Transform>();
         float _jaw;
 
         public TrapEntity(int index, TrapKind kind, Vector3 a, Vector3 b, Transform parent)
@@ -677,6 +677,19 @@ namespace PrisonersOfOmar.Gameplay
                     mb.SetMaterial(PsxMaterials.Get("Textures/Env/metal_galvanized", PsxSurface.Unlit, new Color(0.55f, 0.55f, 0.5f)));
                     mb.AddBeam(A, B, 0.012f);
                     _wire = mb.Build("Wire", Root.transform, Layers.World);
+                    // Omar's siren box wired to the first post, and tin cans hanging off the wire as rattles
+                    var siren = ItemMeshFactory.BuildTripwireSiren();
+                    siren.transform.SetParent(Root.transform, false);
+                    siren.transform.SetPositionAndRotation(new Vector3(A.x, A.y - 0.12f, A.z) + rot * new Vector3(0.07f, 0f, 0.09f), rot * Quaternion.Euler(0, -90f, 0));
+                    int cans = (B - A).magnitude > 1.1f ? 2 : 1;
+                    for (int k = 1; k <= cans; k++)
+                    {
+                        var can = ItemMeshFactory.BuildTinCan(Index * 3 + k);
+                        can.transform.SetParent(Root.transform, false);
+                        can.transform.SetPositionAndRotation(Vector3.Lerp(A, B, (float)k / (cans + 1)) - Vector3.up * ItemMeshFactory.CanString,
+                            rot * Quaternion.Euler(0, k * 70f, 0));
+                        _cans.Add(can.transform);
+                    }
                     // interaction volume along the wire
                     var c = GeoUtil.AddBox(Root.transform, (A + B) * 0.5f, new Vector3(0.45f, 0.4f, Mathf.Max(0.3f, (B - A).magnitude)), rot, Layers.Interactable, SurfaceType.Default, true, "TrapInteract");
                     InteractableRef.Attach(c, this);
@@ -687,8 +700,7 @@ namespace PrisonersOfOmar.Gameplay
                     trap.transform.SetParent(Root.transform, false);
                     trap.transform.position = A;
                     trap.transform.rotation = Quaternion.Euler(0, (Index * 47) % 360, 0);
-                    _jawL = Avatar.FindDeep(trap.transform, "Jaw_L");
-                    _jawR = Avatar.FindDeep(trap.transform, "Jaw_R");
+                    _trap = trap;
                     var c = GeoUtil.AddBox(Root.transform, A + Vector3.up * 0.15f, new Vector3(0.7f, 0.35f, 0.7f), Quaternion.identity, Layers.Interactable, SurfaceType.Default, true, "TrapInteract");
                     InteractableRef.Attach(c, this);
                 }
@@ -707,11 +719,11 @@ namespace PrisonersOfOmar.Gameplay
                 return false;
             }
             if (Victim == who.PlayerId) { p = InteractPrompt.Press("STRUGGLE FREE (MASH E)"); return true; }
-            if (Victim >= 0) { p = InteractPrompt.Hold("PRY THE TRAP OPEN", 2f); return true; }
+            if (Victim >= 0) { p = InteractPrompt.Hold("PRY THE TRAP OPEN", Tuning.TrapPryTime); return true; }
             if (State != TrapState.Armed) return false;
             string what = Kind == TrapKind.Tripwire ? "A TRIPWIRE" : "A BEAR TRAP";
             if (!who.Crouching) { p = InteractPrompt.Info(what + " - CROUCH (C) TO DISARM"); return true; }
-            p = InteractPrompt.Hold("DISARM " + what, 3f);
+            p = InteractPrompt.Hold("DISARM " + what, Tuning.TrapDisarmTime);
             return true;
         }
 
@@ -727,9 +739,19 @@ namespace PrisonersOfOmar.Gameplay
         {
             var prev = State;
             State = state; Victim = victim;
-            if (prev == TrapState.Armed && state != TrapState.Armed)
+            if (prev == TrapState.Armed && state != TrapState.Armed && Kind == TrapKind.Tripwire)
             {
-                if (Kind == TrapKind.Tripwire && _wire != null) _wire.SetActive(false);
+                if (_wire != null) _wire.SetActive(false);
+                // the snapped wire drops its cans: they lie on their sides on the floor
+                float ground = (A.y + B.y) * 0.5f - 0.12f;
+                for (int i = 0; i < _cans.Count; i++)
+                {
+                    var c = _cans[i];
+                    if (c == null) continue;
+                    Vector3 p = c.position;
+                    c.SetPositionAndRotation(new Vector3(p.x + (i - 0.5f) * 0.12f, ground + 0.029f, p.z + 0.04f * (i % 2 == 0 ? 1f : -1f)),
+                        Quaternion.Euler(0, Index * 53f + i * 110f, 0) * Quaternion.Euler(0, 0, 90f));
+                }
             }
         }
 
@@ -739,9 +761,7 @@ namespace PrisonersOfOmar.Gameplay
             float target = State == TrapState.Armed ? 0f : 1f;
             if (Mathf.Approximately(_jaw, target)) return;
             _jaw = Mathf.MoveTowards(_jaw, target, dt * 12f);
-            // ItemMeshFactory convention: Euler(a, 0, 0) on both jaws, 0 = open, 88 = closed
-            if (_jawL != null) _jawL.localRotation = Quaternion.Euler(88f * _jaw, 0, 0);
-            if (_jawR != null) _jawR.localRotation = Quaternion.Euler(88f * _jaw, 0, 0);
+            ItemMeshFactory.SetBearTrapJaws(_trap, _jaw);
         }
 
         /// <summary>Did a foot moving from p0 to p1 (feet positions) set this trap off?</summary>

@@ -627,7 +627,9 @@ namespace PrisonersOfOmar.Characters
 
         /// <summary>Open bear trap (pivot at ground center). Child "Jaw_L" / "Jaw_R" pivots rotate to snap shut.</summary>
         /// <remarks>Jaw_L / Jaw_R: localRotation = Quaternion.Euler(a, 0, 0) with a = 0 open (flat on the ground) .. 88 closed
-        /// (both jaws vertical, teeth meeting in the middle). The pan in the middle is the trigger.</remarks>
+        /// (both jaws vertical, teeth meeting in the middle), see <see cref="SetBearTrapJaws"/>. The pan in the middle is the
+        /// trigger. Heavy leaf springs at both ends (their eyes clamp the jaw ends), a latch over the pan and a chain staked
+        /// into the ground.</remarks>
         public static GameObject BuildBearTrap()
         {
             var go = new GameObject("BearTrap");
@@ -638,19 +640,55 @@ namespace PrisonersOfOmar.Characters
             var mb = new MeshBuilder();
             mb.SetMaterial(mat);
             const float r = 0.15f, hy = 0.02f;
-            // base bar along the hinge axis (Z) + springs extending beyond
-            Bar(mb, new Vector3(0, 0.008f, -0.2f), new Vector3(0, 0.008f, 0.2f), 0.03f, 0.012f, steel);
+            // base: hinge bar along Z + a cross plate under the pan
+            Bar(mb, new Vector3(0, 0.008f, -0.2f), new Vector3(0, 0.008f, 0.2f), 0.032f, 0.012f, steel);
+            Bar(mb, new Vector3(-0.07f, 0.006f, 0), new Vector3(0.07f, 0.006f, 0), 0.04f, 0.008f, steel);
             for (int s = 0; s < 2; s++)
             {
                 float sz = s == 0 ? 1f : -1f;
-                Vector3 p0 = new Vector3(0, 0.012f, sz * 0.19f), p1 = new Vector3(0.0f, 0.035f, sz * 0.32f), p2 = new Vector3(0, 0.012f, sz * 0.42f);
-                Bar(mb, p0, p1, 0.026f, 0.006f, steel);
-                Bar(mb, p1, p2, 0.026f, 0.006f, steel);
-                Bar(mb, new Vector3(-0.012f, hy, sz * r), new Vector3(0.012f, hy, sz * r), 0.016f, 0.016f, steel); // hinge posts
+                // hinge post the jaw ends turn in
+                Bar(mb, new Vector3(-0.016f, hy, sz * r), new Vector3(0.016f, hy, sz * r), 0.018f, 0.02f, steel);
+                // leaf spring folded back on itself: lower leaf on the ground, rounded fold, upper leaf rising to the eye
+                Vector3 l0 = new Vector3(0, 0.01f, sz * 0.17f), l1 = new Vector3(0, 0.01f, sz * 0.38f);
+                Vector3 u0 = new Vector3(0, 0.043f, sz * 0.37f), u1 = new Vector3(0, 0.047f, sz * (r + 0.035f));
+                Bar(mb, l0, l1, 0.03f, 0.007f, steel);
+                Bar(mb, u0, u1, 0.03f, 0.007f, steel);
+                Cyl(mb, new Vector3(-0.015f, 0.026f, sz * 0.39f), new Vector3(0.015f, 0.026f, sz * 0.39f), 0.018f, 0.018f, 6, steel);
+                // the eye: a rectangular loop round both jaw ends, pressing them down
+                float ez = sz * r, ey = 0.034f;
+                Bar(mb, new Vector3(-0.036f, ey + 0.017f, ez), new Vector3(0.036f, ey + 0.017f, ez), 0.008f, 0.008f, steel);
+                Bar(mb, new Vector3(-0.036f, ey - 0.02f, ez), new Vector3(0.036f, ey - 0.02f, ez), 0.008f, 0.006f, steel);
+                Bar(mb, new Vector3(-0.036f, ey - 0.02f, ez), new Vector3(-0.036f, ey + 0.017f, ez), 0.008f, 0.03f, steel);
+                Bar(mb, new Vector3(0.036f, ey - 0.02f, ez), new Vector3(0.036f, ey + 0.017f, ez), 0.008f, 0.03f, steel);
             }
-            // pan (trigger plate)
-            mb.AddBox(new Vector3(0, 0.022f, 0), new Vector3(0.075f, 0.006f, 0.075f), new BoxUVRects { PosY = pan, NegY = pan, PosX = steel, NegX = steel, PosZ = steel, NegZ = steel });
-            Bar(mb, new Vector3(0, 0.014f, 0), new Vector3(0, 0.02f, 0), 0.02f, 0.02f, steel);
+            // pan (trigger plate): octagon on a stem, with the latch (dog) lying across from the left jaw onto its notch
+            const int P = 8;
+            Vector3 panC = new Vector3(0, 0.024f, 0);
+            for (int i = 0; i < P; i++)
+            {
+                float a0 = (i + 0.5f) / P * Mathf.PI * 2f, a1 = (i + 1.5f) / P * Mathf.PI * 2f;
+                Vector3 e0 = new Vector3(Mathf.Cos(a0), 0, Mathf.Sin(a0)) * 0.05f, e1 = new Vector3(Mathf.Cos(a1), 0, Mathf.Sin(a1)) * 0.05f;
+                Vector2 t0 = new Vector2(pan.center.x + Mathf.Cos(a0) * pan.width * 0.5f, pan.center.y + Mathf.Sin(a0) * pan.height * 0.5f);
+                Vector2 t1 = new Vector2(pan.center.x + Mathf.Cos(a1) * pan.width * 0.5f, pan.center.y + Mathf.Sin(a1) * pan.height * 0.5f);
+                mb.AddTriangle(panC + Vector3.up * 0.004f, panC + e1 + Vector3.up * 0.004f, panC + e0 + Vector3.up * 0.004f, pan.center, t1, t0);
+                mb.AddQuad(panC + e0 - Vector3.up * 0.003f, panC + e0 + Vector3.up * 0.004f, panC + e1 + Vector3.up * 0.004f, panC + e1 - Vector3.up * 0.003f,
+                    new Vector2(steel.xMin, steel.yMin), new Vector2(steel.xMin, steel.yMin + 0.02f), new Vector2(steel.xMax, steel.yMin + 0.02f), new Vector2(steel.xMax, steel.yMin));
+            }
+            Bar(mb, new Vector3(0, 0.012f, 0), new Vector3(0, 0.022f, 0), 0.02f, 0.02f, steel);
+            Bar(mb, new Vector3(-0.145f, 0.026f, 0.012f), new Vector3(-0.03f, 0.031f, 0.006f), 0.012f, 0.005f, steel);
+            // anchor chain to a stake driven into the ground (links alternate flat / upright)
+            Vector3 c0 = new Vector3(0.012f, 0.012f, -0.38f), c1 = new Vector3(0.2f, 0.012f, -0.58f);
+            const int Links = 6;
+            Vector3 cd = (c1 - c0) / Links;
+            Quaternion along = Quaternion.LookRotation(cd.normalized);
+            for (int k = 0; k < Links; k++)
+            {
+                Vector3 lc = c0 + cd * (k + 0.5f) + Vector3.up * (k % 2 == 0 ? 0f : 0.008f);
+                Quaternion lr = along * Quaternion.Euler(0, 0, k % 2 == 0 ? 0f : 90f);
+                Link(mb, lc, lr, cd.magnitude * 0.72f, 0.016f, 0.0045f, steel);
+            }
+            Bar(mb, c1 + new Vector3(0, -0.06f, 0), c1 + new Vector3(0, 0.035f, 0), 0.012f, 0.012f, steel);
+            Cyl(mb, c1 + new Vector3(-0.012f, 0.04f, 0), c1 + new Vector3(0.012f, 0.04f, 0), 0.016f, 0.016f, 6, steel);
             mb.Build("Mesh", go.transform, Layers.Item);
 
             for (int side = 0; side < 2; side++)
@@ -660,25 +698,123 @@ namespace PrisonersOfOmar.Characters
                 var jaw = GeoUtil.CreateChild(hinge, side == 0 ? "Jaw_L" : "Jaw_R", Vector3.zero, Quaternion.identity, Layers.Item);
                 var jb = new MeshBuilder();
                 jb.SetMaterial(mat);
-                // semicircle in the jaw's local XZ plane on the -Z side, hinge axis = local X (ends at x = +-r)
-                const int N = 8;
+                // semicircle in the jaw's local XZ plane on the -Z side, hinge axis = local X (ends at x = +-r);
+                // heavy serrated teeth, offset by half a tooth on the other jaw so they interleave when shut
+                const int N = 10;
+                float off = side == 0 ? 0f : 0.5f;
                 for (int i = 0; i < N; i++)
                 {
                     float a0 = (float)i / N * Mathf.PI, a1 = (float)(i + 1) / N * Mathf.PI;
                     Vector3 q0 = new Vector3(Mathf.Cos(a0) * r, 0, -Mathf.Sin(a0) * r);
                     Vector3 q1 = new Vector3(Mathf.Cos(a1) * r, 0, -Mathf.Sin(a1) * r);
-                    Bar(jb, q0, q1, 0.006f, 0.022f, steel);
-                    // tooth pointing towards the centre line (becomes "up" when closed)
-                    Vector3 mid = (q0 + q1) * 0.5f;
-                    Vector3 inward = -mid.normalized;
-                    Vector3 tb0 = q0 + inward * 0.004f, tb1 = q1 + inward * 0.004f, tip = mid + inward * 0.026f;
-                    jb.AddTriangle(tb0 + Vector3.up * 0.004f, tip, tb1 + Vector3.up * 0.004f,
-                        new Vector2(teeth.xMin, teeth.yMin), new Vector2(teeth.center.x, teeth.yMax), new Vector2(teeth.xMax, teeth.yMin));
-                    jb.AddTriangle(tb1 - Vector3.up * 0.004f, tip, tb0 - Vector3.up * 0.004f,
-                        new Vector2(teeth.xMin, teeth.yMin), new Vector2(teeth.center.x, teeth.yMax), new Vector2(teeth.xMax, teeth.yMin));
+                    Bar(jb, q0, q1, 0.008f, 0.026f, steel);
+                    if (side == 1 && i == N - 1) continue;
+                    float am = ((float)i + 0.5f + off) / N * Mathf.PI;
+                    float ah = 0.42f / N * Mathf.PI;
+                    Vector3 b0 = new Vector3(Mathf.Cos(am - ah) * r, 0.003f, -Mathf.Sin(am - ah) * r);
+                    Vector3 b1 = new Vector3(Mathf.Cos(am + ah) * r, 0.003f, -Mathf.Sin(am + ah) * r);
+                    Vector3 mid = new Vector3(Mathf.Cos(am) * r, 0.003f, -Mathf.Sin(am) * r);
+                    Vector3 inward = new Vector3(-mid.x, 0, -mid.z).normalized;
+                    Tooth(jb, b0, b1, mid + inward * 0.034f + Vector3.up * 0.004f, 0.006f, teeth);
                 }
+                // the jaw ends run past the hinge into the spring eye
+                Bar(jb, new Vector3(r, 0, 0), new Vector3(r + 0.03f, 0, 0.008f), 0.01f, 0.02f, steel);
+                Bar(jb, new Vector3(-r, 0, 0), new Vector3(-r - 0.03f, 0, 0.008f), 0.01f, 0.02f, steel);
                 jb.Build("JawMesh", jaw, Layers.Item);
             }
+            return go;
+        }
+
+        /// <summary>Opens / shuts a bear trap model (0 = open flat, 1 = snapped shut). Safe on any model.</summary>
+        public static void SetBearTrapJaws(GameObject trap, float closed01)
+        {
+            if (trap == null) return;
+            float a = 88f * Mathf.Clamp01(closed01);
+            for (int side = 0; side < 2; side++)
+            {
+                var hinge = trap.transform.Find(side == 0 ? "JawHinge_L" : "JawHinge_R");
+                var j = hinge != null ? hinge.Find(side == 0 ? "Jaw_L" : "Jaw_R") : null;
+                if (j != null) j.localRotation = Quaternion.Euler(a, 0f, 0f);
+            }
+        }
+
+        /// <summary>Pyramid tooth: base edge b0..b1 (thickness t up / down), pointing at tip.</summary>
+        static void Tooth(MeshBuilder mb, Vector3 b0, Vector3 b1, Vector3 tip, float t, Rect uv)
+        {
+            Vector3 up = Vector3.up * t * 0.5f;
+            Vector2 u0 = new Vector2(uv.xMin, uv.yMin), u1 = new Vector2(uv.xMax, uv.yMin), ut = new Vector2(uv.center.x, uv.yMax);
+            mb.AddTriangle(b1 + up, tip, b0 + up, u1, ut, u0);
+            mb.AddTriangle(b0 - up, tip, b1 - up, u0, ut, u1);
+            mb.AddTriangle(b0 + up, tip, b0 - up, u0, ut, u1);
+            mb.AddTriangle(b1 - up, tip, b1 + up, u1, ut, u0);
+        }
+
+        /// <summary>Oval chain link centred at c (long axis = local Z of rot, in the local YZ plane).</summary>
+        static void Link(MeshBuilder mb, Vector3 c, Quaternion rot, float len, float wid, float wire, Rect uv)
+        {
+            const int N = 8;
+            for (int i = 0; i < N; i++)
+            {
+                float a0 = (float)i / N * Mathf.PI * 2f, a1 = (float)(i + 1) / N * Mathf.PI * 2f;
+                Vector3 p0 = c + rot * new Vector3(0, Mathf.Sin(a0) * wid * 0.5f, Mathf.Cos(a0) * len * 0.5f);
+                Vector3 p1 = c + rot * new Vector3(0, Mathf.Sin(a1) * wid * 0.5f, Mathf.Cos(a1) * len * 0.5f);
+                Bar(mb, p0, p1, wire, wire, uv);
+            }
+        }
+
+        /// <summary>Length of a tin can's string above its pivot (tie it to the wire this far up).</summary>
+        public const float CanString = 0.025f;
+
+        /// <summary>
+        /// Tin can hung on a tripwire as a rattle (pivot = the hole at the top where its string is tied, can hangs along -Y,
+        /// 7.5 cm tall).
+        /// </summary>
+        public static GameObject BuildTinCan(int seed)
+        {
+            var go = new GameObject("TinCan");
+            go.layer = Layers.Item;
+            var mb = new MeshBuilder();
+            float k = (seed * 37 % 10) / 10f;
+            var tin = Mat("tripwire_stake");
+            Rect steel = R(0, 0, 32, 24, 32, 32), wire = R(0, 24, 32, 8, 32, 32);
+            mb.SetMaterial(tin);
+            const float rr = 0.029f, h = 0.075f;
+            // string, the can body with two rolled ribs
+            Bar(mb, new Vector3(0, CanString, 0), new Vector3(0, 0f, 0), 0.0025f, 0.0025f, wire);
+            Cyl(mb, new Vector3(0, -h, 0), new Vector3(0, 0f, 0), rr, rr, 8, steel, steel, steel);
+            Cyl(mb, new Vector3(0, -h * 0.34f, 0), new Vector3(0, -h * 0.30f, 0), rr + 0.002f, rr + 0.002f, 8, wire);
+            Cyl(mb, new Vector3(0, -h * 0.70f, 0), new Vector3(0, -h * 0.66f, 0), rr + 0.002f, rr + 0.002f, 8, wire);
+            mb.Build("Mesh", go.transform, Layers.Item);
+            // a faded paper label on some of them
+            if (k > 0.35f)
+            {
+                var lb = new MeshBuilder();
+                lb.SetMaterial(PsxMaterials.GetColor(Color.Lerp(new Color(0.42f, 0.16f, 0.12f), new Color(0.5f, 0.45f, 0.3f), k)));
+                Cyl(lb, new Vector3(0, -h * 0.62f, 0), new Vector3(0, -h * 0.38f, 0), rr + 0.0015f, rr + 0.0015f, 8, new Rect(0, 0, 1, 1));
+                lb.Build("Label", go.transform, Layers.Item);
+            }
+            return go;
+        }
+
+        /// <summary>
+        /// Omar's siren box wired to a tripwire post (pivot on the ground; box on a short spike, red horn facing +Z).
+        /// </summary>
+        public static GameObject BuildTripwireSiren()
+        {
+            var go = new GameObject("TripwireSiren");
+            go.layer = Layers.Item;
+            var mb = new MeshBuilder();
+            mb.SetMaterial(Mat("tripwire_stake"));
+            Rect steel = R(0, 0, 32, 24, 32, 32), wire = R(0, 24, 32, 8, 32, 32);
+            Bar(mb, new Vector3(0, -0.08f, 0), new Vector3(0, 0.06f, 0), 0.012f, 0.012f, steel);
+            mb.AddBox(new Vector3(0, 0.1f, 0), new Vector3(0.09f, 0.08f, 0.06f), BoxUVRects.All(steel));
+            mb.AddBox(new Vector3(0, 0.145f, 0), new Vector3(0.05f, 0.012f, 0.03f), BoxUVRects.All(wire));   // battery clip
+            Cyl(mb, new Vector3(0.03f, 0.12f, 0.03f), new Vector3(0.03f, 0.12f, 0.05f), 0.006f, 0.006f, 5, wire); // switch
+            mb.Build("Mesh", go.transform, Layers.Item);
+            var hb = new MeshBuilder();
+            hb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.07f, 0.05f)));
+            Cyl(hb, new Vector3(-0.012f, 0.1f, 0.03f), new Vector3(-0.012f, 0.1f, 0.085f), 0.012f, 0.03f, 8, new Rect(0, 0, 1, 1), new Rect(0, 0, 1, 1), new Rect(0, 0, 1, 1));
+            hb.Build("Horn", go.transform, Layers.Item);
             return go;
         }
     }

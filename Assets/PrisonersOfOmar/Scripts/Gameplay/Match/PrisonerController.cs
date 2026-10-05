@@ -202,6 +202,16 @@ namespace PrisonersOfOmar.Gameplay
             if (_arms != null) _arms.LookDelta = d;
         }
 
+        float _stumbleUntil;
+
+        /// <summary>Stagger after running into a tripwire (slow, no sprint) with a lurch of the camera.</summary>
+        public void Stumble(float seconds)
+        {
+            _stumbleUntil = Time.time + seconds;
+            _pitch = Mathf.Clamp(_pitch + 14f, -85f, 85f);
+            if (_arms != null) _arms.Play(CharacterAction.HitReact);
+        }
+
         void Move(PlayerStatus st, float dt, bool canMove)
         {
             if (GameInput.CrouchPressed && canMove)
@@ -221,6 +231,12 @@ namespace PrisonersOfOmar.Gameplay
             bool wantSprint = canMove && GameInput.Sprint && input.y > 0.1f && !_crouch && !_exhausted;
             float speed = _crouch ? Tuning.CrouchSpeed : wantSprint ? Tuning.RunSpeed : Tuning.WalkSpeed;
             if (injured) speed *= Tuning.InjuredSpeedMul;
+            if (Time.time < _stumbleUntil)
+            {
+                // tripped over a wire: staggering, no sprint until you catch your balance
+                wantSprint = false;
+                speed = Mathf.Min(speed, Tuning.WalkSpeed) * Tuning.TripStumbleSpeed;
+            }
             if (st.Life == LifeState.Caged) speed = Mathf.Min(speed, 1.2f);
             var held = _w.Inventory.HeldType;
             if (held == ItemType.GasCan || held == ItemType.CarBattery) speed *= 0.88f;
