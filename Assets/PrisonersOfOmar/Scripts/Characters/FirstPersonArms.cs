@@ -254,7 +254,7 @@ namespace PrisonersOfOmar.Characters
         {
             switch (item)
             {
-                case ItemType.Lighter: return new Vector3(-0.004f, 0.056f, 0.006f);
+                case ItemType.Lighter: return new Vector3(-0.006f, 0.022f, 0.008f);   // the case sits in the curled fingers
                 case ItemType.LighterFuel: return new Vector3(-0.006f, 0.035f, 0.01f);
                 case ItemType.Bandages: return new Vector3(-0.01f, 0.03f, 0.02f);
                 case ItemType.Pills: return new Vector3(-0.006f, 0.034f, 0.01f);
@@ -284,7 +284,7 @@ namespace PrisonersOfOmar.Characters
                     if (item == ItemType.CarBattery) return new Vector3(-0.02f, 0.06f, 0.08f);
                     return new Vector3(-0.03f, 0.04f, 0.02f);
                 case HoldPose.Flashlight: return new Vector3(0f, 0.02f, 0.02f);
-                case HoldPose.Lighter: return new Vector3(-0.05f, 0.05f, -0.13f);
+                case HoldPose.Lighter: return new Vector3(-0.05f, 0.07f, -0.05f);
                 case HoldPose.Pistol: return new Vector3(-0.025f, 0.055f, 0.035f);
                 case HoldPose.OneHandSmall: return new Vector3(-0.012f, 0.032f, -0.018f);
                 default: return Vector3.zero;
@@ -299,7 +299,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Crowbar: return new Vector3(-14f, -12f, 34f);
                 case ItemType.GasCan: return new Vector3(0f, -25f, 80f);   // knuckles on top of the handle
                 case ItemType.Flashlight: return new Vector3(0f, -4f, 0f);
-                case ItemType.Lighter: return new Vector3(-2f, 26f, -3f);
+                case ItemType.Lighter: return new Vector3(0f, 6f, 0f);
                 case ItemType.Revolver: return new Vector3(4f, -24f, -8f);
                 default: return Vector3.zero;
             }
@@ -310,6 +310,9 @@ namespace PrisonersOfOmar.Characters
             switch (item)
             {
                 case ItemType.GasCan: return Quaternion.Euler(0f, 0f, -80f);   // the can stays upright under the rolled hand
+                // the Zippo stands dead upright in camera space whatever the fist's tilt (no roll, no pitch), its front
+                // turned square to the eye (the hand sits ~20 degrees right of the view axis)
+                case ItemType.Lighter: return Quaternion.Inverse(Quaternion.Euler(RestEuler + HoldEuler(item))) * Quaternion.Euler(0f, 20f, 0f);
                 case ItemType.CarKeys: return Quaternion.Euler(0f, -15f, 0f);
                 case ItemType.CageKey: return Quaternion.Euler(0f, -10f, 0f);
                 case ItemType.SoundMeter: return Quaternion.Euler(-20f, -8f, 0f);  // dial (-Z face) towards the player
