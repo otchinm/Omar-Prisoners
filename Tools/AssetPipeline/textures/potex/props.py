@@ -795,41 +795,107 @@ def car_rear(ctx):
 
 @texture("Props/car_side", (256, 64))
 def car_side(ctx):
+    """lower body side, beltline to rocker (the windows, arches and chrome are geometry): u = 0 at the front bumper,
+    1 at the rear; v = 0 at the rocker. Door seams at the real doors, rust and road dirt round the wheel arches."""
     W, H = ctx.W, ctx.H
     img = car_paint(ctx, H, W, salt=4)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    u, v = xx / W, yy / H
-    # greenhouse (windows) top band between pillars
-    win = ((v > 0.06) & (v < 0.4) & (u > 0.24) & (u < 0.8)).astype(np.float32)
-    slope_f = (v > 0.06 + (0.3 - u) * 2.0)  # A pillar slope
-    slope_r = (v > 0.06 + (u - 0.74) * 2.0)
-    win = win * slope_f * slope_r
-    pillars = ((np.abs(u - 0.52) < 0.012)).astype(np.float32)
-    r = ctx.sub(1)
-    glass = gradient_map(clamp01(0.3 + 0.2 * fft_noise(r, H, W, beta=2.4) + 0.3 * smoothstep(0.3, 0.06, v)), [(0, "#06080a"), (1, "#3a4448")])
-    refl = ((((u * 3 - v * 0.8) % 1.0) > 0.85) & ((((u * 3 - v * 0.8) % 1.0) < 0.9))).astype(np.float32)
-    glass = mix(glass, "#6a7478", refl * 0.4)
-    img = mix(img, "#101010", clamp01(blur(win, 3) * 1.6) * 0.8)
-    img = mix(img, glass, win * (1 - pillars))
-    img = mix(img, "#0e0e0e", pillars * win)
-    # roof edge shading above windows, lower body
-    img = img * (1.0 - 0.35 * smoothstep(0.06, 0.0, v))[..., None]
-    # door seams and handles
-    for sx in (0.27, 0.52, 0.77):
-        img = mix(img, "#120606", ((np.abs(u - sx) < 0.003) & (v > 0.06) & (v < 0.85)).astype(np.float32))
-    img = mix(img, "#120606", ((np.abs(v - 0.42) < 0.008) & (u > 0.2) & (u < 0.82)).astype(np.float32) * 0.6)
-    for hx in (0.47, 0.72):
-        img = mix(img, "#9a9a92", rect(H, W, hx - 0.025, 0.47, hx + 0.005, 0.52))
-    # chrome trim line
-    img = mix(img, chrome(H, W, ctx, 3), rect(H, W, 0.04, 0.6, 0.96, 0.64))
-    # wheel arches (dark)
-    for wx in (0.16, 0.84):
-        arch = ((xx - wx * W) ** 2 / (0.1 * W) ** 2 + (yy - 1.0 * H) ** 2 / (0.48 * H) ** 2 < 1).astype(np.float32)
-        img = mix(img, "#050505", arch)
-    img = mix(img, "#080808", rect(H, W, 0.0, 0.92, 1.0, 1.0))
+    u, v = xx / W, 1.0 - yy / H
+    hl, y0, y1 = 2.35, 0.32, 0.95
+    def U(z):
+        return (hl - z) / (2 * hl)
+    # the light falls off towards the rocker, the top edge catches a little sheen
+    img = img * (0.78 + 0.22 * smoothstep(0.0, 0.6, v))[..., None]
+    img = mix(img, "#8a4a4a", smoothstep(0.9, 1.0, v) * 0.25)
+    # door seams (front door 0.95 .. -0.12, rear door -0.12 .. -1.25), door bottoms just above the rocker
+    seam = np.zeros((H, W), np.float32)
+    for z in (0.95, -0.12, -1.25):
+        seam = np.maximum(seam, ((np.abs(u - U(z)) < 0.0025) & (v > 0.1)).astype(np.float32))
+    seam = np.maximum(seam, ((np.abs(v - 0.1) < 0.012) & (u > U(0.95)) & (u < U(-1.25))).astype(np.float32))
+    img = mix(img, "#120606", seam * 0.9)
+    img = mix(img, "#a06060", ((np.abs(u - U(0.95) - 0.004) < 0.002) & (v > 0.1)).astype(np.float32) * 0.25)
+    # key locks under the (geometry) handles
+    for z in (0.02, -1.08):
+        img = mix(img, "#9a9a92", ellipse_mask(W, H, U(z) * W, (1 - 0.74) * H, W * 0.004, H * 0.03))
+    # rocker panel: darker, stone chips
+    img = mix(img, "#140c0a", smoothstep(0.12, 0.04, v) * 0.85)
+    chipsm = (fft_noise(ctx.sub(5), H, W, beta=1.4) > 1.5).astype(np.float32) * (v < 0.25)
+    img = mix(img, "#6a5040", chipsm * 0.6)
+    # rust and road dirt round the wheel arches (arch radius 0.42 round the wheel centre 0.33 m up)
+    rr = np.zeros((H, W), np.float32)
+    for zw in (1.45, -1.45):
+        dz = (U(zw) - u) * 2 * hl
+        dy = (y0 + v * (y1 - y0)) - 0.33
+        d = np.sqrt(dz * dz + dy * dy)
+        rr = np.maximum(rr, smoothstep(0.62, 0.43, d))
+    rm = rust_mask(ctx, H, W, cover=0.55, salt=9) * rr
+    img = mix(img, rust_color(ctx, H, W, salt=9), clamp01(rm * 1.3))
+    mud = grime(ctx.sub(2), H, W, cover=0.5, beta=2.4, sharp=0.5)
+    img = mix(img, "#2a2216", mud * clamp01(smoothstep(0.55, 0.0, v) + rr * 0.6) * 0.65)
     img = dirt_pass(ctx, img, 0.35, 0.4, "#2a2418")
-    mud = smoothstep(0.6, 1.0, v) * grime(ctx.sub(2), H, W, cover=0.5, beta=2.4, sharp=0.5)
-    img = mix(img, "#2a2216", mud * 0.6)
+    dr = drips(ctx.sub(3), H, W, 14, length=(0.2, 0.6), width=(W / 600, W / 250))
+    img = mix(img, "#3a1a0e", dr * 0.35)
+    return finish(ctx, img, light=0.06)
+
+
+@texture("Props/car_dash", (128, 32), k=8)
+def car_dash(ctx):
+    """dashboard face seen from the front seat (u = 0 at the driver's door): vent, the hooded gauges (fuel, a big
+    speedometer, temperature), the radio, heater sliders, the glove box, vent"""
+    W, H = ctx.W, ctx.H
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    t = clamp01(0.45 + 0.12 * fft_noise(ctx.sub(1), H, W, beta=2.4) + 0.05 * photo(ctx, "gravel_fine"))
+    img = gradient_map(t, [(0, "#100c0a"), (1, "#3a2c22")])
+    img = img * (1.0 + 0.06 * np.sin(yy / H * np.pi * 9))[..., None]          # moulded grain lines
+    # vents
+    for x0 in (0.015, 0.905):
+        m = rect(H, W, x0, 0.25, x0 + 0.08, 0.75)
+        slats = (np.sin(yy / H * np.pi * 14) > 0).astype(np.float32)
+        img = mix(img, mix(np.zeros_like(img) + 0.02, "#4a4038", slats * 0.6), m)
+        img = mix(img, "#7a7a74", outer_rim(m, 2) * 0.5)
+    # instrument cluster (driver side, u 0.14 .. 0.41)
+    cl = rect(H, W, 0.14, 0.12, 0.41, 0.9)
+    img = mix(img, "#050505", cl)
+    img = mix(img, "#6a6a64", outer_rim(cl, 3) * 0.6)
+    def gauge(img, cx, cy, r, ticks, needle, red=None):
+        face = ellipse_mask(W, H, cx * W, cy * H, r * H, r * H)
+        img = mix(img, "#141414", face)
+        img = mix(img, "#8a8a82", outer_rim(face, 2) * 0.8)
+        ang = np.arctan2(yy - cy * H, xx - cx * W)
+        rad = np.sqrt((xx - cx * W) ** 2 + (yy - cy * H) ** 2) / (r * H)
+        tk = ((np.abs(np.sin(ang * ticks / 2)) < 0.18) & (rad > 0.72) & (rad < 0.92) & (ang > -np.pi * 0.95) & (ang < -np.pi * 0.05 + np.pi)).astype(np.float32)
+        img = mix(img, "#d8d4c0", tk * face * 0.85)
+        if red is not None:
+            img = mix(img, "#a01810", ((rad > 0.7) & (rad < 0.92) & (np.cos(ang - red) > 0.9)).astype(np.float32) * face)
+        a = needle
+        nd = np.abs(-np.sin(a) * (xx - cx * W) + np.cos(a) * (yy - cy * H))
+        along = np.cos(a) * (xx - cx * W) + np.sin(a) * (yy - cy * H)
+        img = mix(img, "#e06a20", ((nd < H * 0.012) & (along > 0) & (along < r * H * 0.85)).astype(np.float32))
+        img = mix(img, "#2a2a28", ellipse_mask(W, H, cx * W, cy * H, r * H * 0.12, r * H * 0.12))
+        return img
+    img = gauge(img, 0.185, 0.52, 0.26, 8, np.pi * 0.95, red=np.pi * 1.1)      # fuel: on empty
+    img = gauge(img, 0.275, 0.5, 0.36, 12, np.pi * 0.85)                      # speed: zero
+    img = gauge(img, 0.365, 0.52, 0.26, 8, np.pi * 1.0, red=np.pi * 1.9)      # temperature
+    for i, c in enumerate(("#6a1008", "#6a5008", "#103a10")):
+        img = mix(img, c, ellipse_mask(W, H, (0.2 + i * 0.08) * W, 0.86 * H, H * 0.03, H * 0.03))
+    # radio (chrome faceplate, dial window, two knobs)
+    rd = rect(H, W, 0.45, 0.3, 0.6, 0.7)
+    img = mix(img, chrome(H, W, ctx, 5), rd)
+    img = mix(img, "#2a3a2a", rect(H, W, 0.47, 0.38, 0.58, 0.55))
+    img = mix(img, "#d0c8a0", ((np.abs(np.sin(xx / W * np.pi * 60)) < 0.15) & (rect(H, W, 0.47, 0.42, 0.58, 0.5) > 0)).astype(np.float32) * 0.6)
+    for kx in (0.462, 0.588):
+        img = knob(img, kx * W, 0.62 * H, H * 0.05, "#2a2a28", "#0a0a0a")
+    # heater sliders
+    for i in range(3):
+        img = mix(img, "#050505", rect(H, W, 0.62 + i * 0.022, 0.3, 0.628 + i * 0.022, 0.72))
+        img = mix(img, "#a8a49a", rect(H, W, 0.618 + i * 0.022, 0.4 + i * 0.1, 0.632 + i * 0.022, 0.46 + i * 0.1))
+    # glove box
+    gm, sh = bevel(H, W, 0.68, 0.18, 0.88, 0.82, 0.006 * W, True)
+    img = apply_bevel(img, sh, 0.4)
+    img = mix(img, "#a8a49a", ellipse_mask(W, H, 0.78 * W, 0.3 * H, H * 0.04, H * 0.04))
+    sc = scratches_mask(ctx.sub(2), H, W, 18, length=(W * 0.02, W * 0.12), width=1)
+    img = mix(img, "#5a4a3a", sc * 0.3)
+    img = dirt_pass(ctx, img, 0.3, 0.35, "#1a140e")
     return finish(ctx, img, light=0.06)
 
 

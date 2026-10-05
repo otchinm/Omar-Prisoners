@@ -96,7 +96,8 @@ writing_help (128×64, "HELP" scrawled in blood), writing_omar (128×64, "OMAR S
 | car_body_wreck | 128×128 | rusted-through wreck paint |
 | car_front | 128×64 | sedan front: grille + two headlights + plate |
 | car_rear | 128×64 | sedan rear: tail lights + trunk + plate |
-| car_side | 256×64 | sedan side: two doors with windows (dark glass) |
+| car_side | 256×64 | sedan lower body side (rocker to beltline, u from the front): door seams, locks, rust and road dirt round the wheel arches (the windows, arches and chrome are geometry) |
+| car_dash | 128×32 | dashboard face seen from the front seat: vents, hooded gauges, radio, heater sliders, glove box |
 | car_tire | 128×64 | atlas: sidewall + rusty rim (left half, cylinder caps), tread (right half, round the tyre) |
 | car_glass | 64×64 | tinted car glass: reflections, dust film, water spots (tiles) |
 | car_glass_broken | 64×64 | wreck glass: cracks, holes, mud (tiles) |

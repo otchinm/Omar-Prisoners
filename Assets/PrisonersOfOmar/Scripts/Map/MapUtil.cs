@@ -93,6 +93,8 @@ namespace PrisonersOfOmar.Map
         public const string CarGlassBroken = Props + "car_glass_broken";
         /// <summary>Atlas: engine top in the left half, battery in the right half (top above, labelled side below).</summary>
         public const string CarEngine = Props + "car_engine";
+        /// <summary>Dashboard face seen from the front seat (u = 0 at the driver's door).</summary>
+        public const string CarDash = Props + "car_dash";
         public const string Enamel = Props + "enamel";
         public const string Porcelain = Props + "porcelain";
         public const string Plastic = Props + "plastic";

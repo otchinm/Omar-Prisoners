@@ -1,5 +1,5 @@
 // Offline QA harness for the runtime map builder (no Unity needed):
-//   dotnet run -c Release -- <outDir> [seed] [--no-render] [--textured]
+//   dotnet run -c Release -- <outDir> [seed] [--no-render] [--textured] [--car-open]
 // --textured samples the real textures (Assets/PrisonersOfOmar/Resources/*.png, point filtered like the game) instead of
 // the flat palette colours, to check UV mapping and untextured surfaces.
 // Builds the map against a managed UnityEngine stub (box-collider physics with Unity query semantics),
@@ -96,6 +96,12 @@ static class Program
         {
             var views = Path.Combine(outDir, "views");
             Directory.CreateDirectory(views);
+            // --car-open: the working car's hood up and its lamps lit (to check the engine bay and the lamp glow)
+            if (args.Contains("--car-open") && data.Car != null)
+            {
+                if (data.Car.HoodPivot != null) data.Car.HoodPivot.localRotation = Quaternion.Euler(data.Car.HoodOpenAngle, 0f, 0f);
+                if (data.Car.LampGlow != null) data.Car.LampGlow.SetActive(true);
+            }
             var scene = Raster.Collect(world);
             var menuScene = Raster.Collect(menuWorld);
             Console.WriteLine("render scene: " + scene.Tris + " triangles");
@@ -520,7 +526,7 @@ static class Raster
         { "blood_pool", new Color(0.35f, 0.02f, 0.02f) }, { "blood_splatter_1", new Color(0.4f, 0.03f, 0.03f) }, { "blood_splatter_2", new Color(0.4f, 0.03f, 0.03f) }, { "blood_splatter_3", new Color(0.4f, 0.03f, 0.03f) },
         { "blood_smear", new Color(0.4f, 0.04f, 0.03f) }, { "blood_handprint", new Color(0.45f, 0.04f, 0.03f) }, { "graffiti_scrawl_1", new Color(0.02f, 0.02f, 0.02f) }, { "graffiti_scrawl_2", new Color(0.02f, 0.02f, 0.02f) },
         { "grime", new Color(0.1f, 0.09f, 0.07f) }, { "water_stain", new Color(0.3f, 0.25f, 0.15f) }, { "parking_line", new Color(0.85f, 0.7f, 0.1f) }, { "road_dashes", new Color(0.9f, 0.9f, 0.85f) },
-        { "car_glass", new Color(0.12f, 0.14f, 0.15f) }, { "car_glass_broken", new Color(0.08f, 0.08f, 0.08f) }, { "car_engine", new Color(0.15f, 0.12f, 0.1f) },
+        { "car_glass", new Color(0.12f, 0.14f, 0.15f) }, { "car_glass_broken", new Color(0.08f, 0.08f, 0.08f) }, { "car_engine", new Color(0.15f, 0.12f, 0.1f) }, { "car_dash", new Color(0.15f, 0.12f, 0.1f) },
         { "enamel", new Color(0.75f, 0.72f, 0.64f) }, { "porcelain", new Color(0.78f, 0.76f, 0.7f) }, { "plastic", new Color(0.7f, 0.7f, 0.68f) },
         { "trash_bag", new Color(0.08f, 0.08f, 0.09f) }, { "bottle", new Color(0.45f, 0.45f, 0.42f) }, { "jar", new Color(0.45f, 0.4f, 0.25f) },
         { "bone", new Color(0.72f, 0.66f, 0.5f) }, { "coal", new Color(0.07f, 0.07f, 0.08f) }, { "skin_dead", new Color(0.65f, 0.52f, 0.48f) },

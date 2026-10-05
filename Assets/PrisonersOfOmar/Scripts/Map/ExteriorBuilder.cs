@@ -595,7 +595,15 @@ namespace PrisonersOfOmar.Map
             capMb.Build("Cap", cap.transform, Layers.World);
             ctx.CountRenderer(capMb);
             car.FuelCapModel = cap.gameObject;
-            var hood = GeoUtil.CreateChild(root, "HoodPivot", V(0, 0.955f, 0.95f), Quaternion.identity, Layers.World);
+            // the lamps light up when the engine starts (MatchWorld switches them on)
+            var lamps = GeoUtil.CreateChild(root, "Lamps", Vector3.zero, Quaternion.identity, Layers.World);
+            var lmb = new MeshBuilder();
+            Props.CarLampGlow(lmb);
+            lmb.Build("LampGlow", lamps, Layers.World);
+            ctx.CountRenderer(lmb);
+            lamps.gameObject.SetActive(false);
+            car.LampGlow = lamps.gameObject;
+            var hood = GeoUtil.CreateChild(root, "HoodPivot", Props.CarHoodPivot, Quaternion.identity, Layers.World);
             var hmb = new MeshBuilder();
             Props.CarHood(hmb, false);
             hmb.Build("Hood", hood, Layers.World);
@@ -603,7 +611,7 @@ namespace PrisonersOfOmar.Map
             car.HoodPivot = hood;
             car.HoodOpenAngle = -60f;
             GeoUtil.AddBox(root, V(0, 0.63f, 0), V(1.82f, 0.66f, 4.72f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "BodyCol");
-            GeoUtil.AddBox(root, V(0, 1.18f, -0.15f), V(1.6f, 0.46f, 2.1f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "CabinCol");
+            GeoUtil.AddBox(root, V(0, 1.18f, -0.22f), V(1.6f, 0.46f, 2.26f), Quaternion.identity, Layers.World, SurfaceType.Metal, false, "CabinCol");
             Collider T(string name, Vector3 c, Vector3 s) => GeoUtil.AddBox(root, c, s, Quaternion.identity, Layers.Interactable, SurfaceType.Default, true, name);
             car.FuelCap = T("FuelCap", Props.FuelFillerLocal + V(-0.08f, 0f, 0f), V(0.3f, 0.32f, 0.42f));
             car.Hood = T("Hood", V(0, 1.0f, 1.9f), V(1.7f, 0.5f, 1.25f));
@@ -614,7 +622,7 @@ namespace PrisonersOfOmar.Map
                 T("PassengerDoor_RL", V(-1.0f, 1.0f, -0.85f), V(0.3f, 0.75f, 0.85f)),
                 T("PassengerDoor_RR", V(1.0f, 1.0f, -0.85f), V(0.3f, 0.75f, 0.85f)),
             };
-            var seatLocal = new[] { V(-0.38f, 1.12f, -0.12f), V(0.38f, 1.12f, -0.12f), V(-0.38f, 1.12f, -1.0f), V(0.38f, 1.12f, -1.0f) };
+            var seatLocal = Props.CarSeatEyes;   // eye points over the bench seats (the body sits 1 m under them)
             car.Seats = new Pose[4];
             car.SeatAnchors = new Transform[4];
             for (int i = 0; i < 4; i++)
@@ -624,8 +632,8 @@ namespace PrisonersOfOmar.Map
             }
             car.Headlights = new[]
             {
-                GeoUtil.CreateChild(root, "Headlight_L", V(-0.62f, 0.72f, 2.37f), Quaternion.Euler(4f, 0, 0), Layers.World),
-                GeoUtil.CreateChild(root, "Headlight_R", V(0.62f, 0.72f, 2.37f), Quaternion.Euler(4f, 0, 0), Layers.World),
+                GeoUtil.CreateChild(root, "Headlight_L", Props.CarHeadlights[0] + V(0, 0, 0.03f), Quaternion.Euler(4f, 0, 0), Layers.World),
+                GeoUtil.CreateChild(root, "Headlight_R", Props.CarHeadlights[1] + V(0, 0, 0.03f), Quaternion.Euler(4f, 0, 0), Layers.World),
             };
             car.DrivePath = new[]
             {

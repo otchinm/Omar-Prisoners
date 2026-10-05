@@ -405,6 +405,7 @@ namespace PrisonersOfOmar.Gameplay
                 _carIdle = AudioManager.Loop3D(Snd.CarIdleLoop, Map.Car.Root.position, 0.8f, 45f, AudioCategory.Sfx, Map.Car.Root, 1f);
                 foreach (var h in Map.Car.Headlights)
                     if (h != null) { var l = PsxLight.CreateSpot(h, Vector3.zero, Quaternion.identity, new Color(1f, 0.95f, 0.75f), 2.4f, 26f, 55f); l.Priority = 6; }
+                if (Map.Car.LampGlow != null) Map.Car.LampGlow.SetActive(true);
                 AddMessage("THE ENGINE IS RUNNING! GET IN THE CAR!", 5f);
             }
             if (!prev.ShelterOpen && o.ShelterOpen && Map.Shelter != null)
