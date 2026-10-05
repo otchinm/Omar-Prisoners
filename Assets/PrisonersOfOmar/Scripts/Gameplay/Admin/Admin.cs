@@ -54,6 +54,8 @@ namespace PrisonersOfOmar.Gameplay
         ShowPlayers, ShowOmar, ShowGrandma, ShowItems, ShowTraps, ShowNav, ShowNetStats,
         // ---- lobby
         ForceStart, SetRole, SetDifficulty,
+        // ---- self (added later: kept at the end so the byte values above never change)
+        SeeMyself,
     }
 
     public sealed class AdminCmdInfo
@@ -90,6 +92,7 @@ namespace PrisonersOfOmar.Gameplay
             Add(AdminCmd.Fullbright, S, "FULLBRIGHT", AdminArg.Toggle, local: true);
             Add(AdminCmd.NoVhs, S, "VHS OFF", AdminArg.Toggle, local: true);
             Add(AdminCmd.FreeCamera, S, "FREE CAMERA", AdminArg.Toggle, local: true);
+            Add(AdminCmd.SeeMyself, S, "SEE MYSELF (FREE CAMERA)", AdminArg.Toggle, local: true, hint: "YOUR OWN BODY SHOWS IN THE FREE CAMERA");
             Add(AdminCmd.HealSelf, S, "HEAL ME", AdminArg.None);
             Add(AdminCmd.TeleportToLocation, S, "TELEPORT TO...", AdminArg.Location, local: true);
             Add(AdminCmd.TeleportToPlayer, S, "TELEPORT TO PLAYER", AdminArg.Player, local: true);
@@ -439,6 +442,18 @@ namespace PrisonersOfOmar.Gameplay
                     else if (_vhsSaved) { PrisonersOfOmar.Rendering.VhsEffect.Preset = _savedPreset; _vhsSaved = false; }
                     break;
                 case AdminCmd.FreeCamera: AdminFreeCam.Set(a != 0); break;
+                case AdminCmd.SeeMyself:
+                    AdminFreeCam.ShowSelf = a != 0;
+                    if (a != 0 && !AdminFreeCam.Active)
+                    {
+                        // turn the free camera on, in front of us and looking back at us
+                        AdminFreeCam.Set(true);
+                        _toggles[AdminCmd.FreeCamera] = AdminFreeCam.Active;
+                        var me = w != null ? w.LocalAvatar : null;
+                        if (me != null) AdminFreeCam.Frame(me.Position + UnityEngine.Vector3.up * 1.15f, me.Forward);
+                        if (!AdminFreeCam.Active) AddLog("NO CAMERA YET: START A MATCH");
+                    }
+                    break;
                 case AdminCmd.TeleportToLocation:
                     if (w != null && TryLocation(w, s, out var lp)) TeleportSelf(w, lp); else AddLog("UNKNOWN PLACE");
                     break;
@@ -468,6 +483,7 @@ namespace PrisonersOfOmar.Gameplay
             if (_savedBrightness >= 0f) { PrisonersOfOmar.Rendering.PsxEnvironment.Brightness = _savedBrightness; _savedBrightness = -1f; }
             if (_vhsSaved) { PrisonersOfOmar.Rendering.VhsEffect.Preset = _savedPreset; _vhsSaved = false; }
             AdminFreeCam.Set(false);
+            AdminFreeCam.ShowSelf = false;
             foreach (var c in new List<AdminCmd>(_toggles.Keys))
             {
                 var i = AdminCmds.Get(c);

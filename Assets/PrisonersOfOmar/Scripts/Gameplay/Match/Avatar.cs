@@ -76,6 +76,7 @@ namespace PrisonersOfOmar.Gameplay
         public bool Crouching => (State.Flags & AvatarFlags.Crouch) != 0;
         public bool Peeking => (State.Flags & AvatarFlags.Peek) != 0;
         bool _peekHidden;
+        bool _selfShown;   // the local body is drawn for the admin free camera (AdminFreeCam.ShowingSelf)
         public bool Sprinting => (State.Flags & AvatarFlags.Sprint) != 0;
         public Vector3 Forward => Quaternion.Euler(0, State.Yaw, 0) * Vector3.forward;
 
@@ -161,6 +162,7 @@ namespace PrisonersOfOmar.Gameplay
 
         void Update()
         {
+            if (IsLocal) UpdateSelfShown();
             if (_hideDelay > 0f)
             {
                 _hideDelay -= Time.deltaTime;
@@ -298,6 +300,18 @@ namespace PrisonersOfOmar.Gameplay
             return v;
         }
 
+        /// <summary>Admin "SEE MYSELF": the local body is drawn while the admin free camera looks at it.</summary>
+        void UpdateSelfShown()
+        {
+            bool show = AdminFreeCam.ShowingSelf;
+            if (show == _selfShown) return;
+            _selfShown = show;
+            if (Rig != null) Rig.SetVisible(_visible && show && !_peekHidden);
+        }
+
+        /// <summary>Our own body is drawn: a remote avatar, or the local one seen through the admin free camera.</summary>
+        bool BodyDrawn => !IsLocal || _selfShown;
+
         /// <summary>On a human Omar's screen a prisoner peeking through a cracked door from the other side is not drawn.</summary>
         void UpdatePeekHidden()
         {
@@ -305,7 +319,7 @@ namespace PrisonersOfOmar.Gameplay
             bool hide = !IsLocal && Peeking && w != null && w.LocalIsOmar && w.LocalAvatar != null && w.PeekHides(this, w.LocalAvatar.EyePosition);
             if (hide == _peekHidden) return;
             _peekHidden = hide;
-            if (Rig != null) Rig.SetVisible(_visible && !IsLocal && !hide);
+            if (Rig != null) Rig.SetVisible(_visible && BodyDrawn && !hide);
             if (_heldModel != null) _heldModel.SetActive(_visible && !hide);
         }
 
@@ -335,7 +349,7 @@ namespace PrisonersOfOmar.Gameplay
         void UpdateHeldItem()
         {
             ItemType want = (_visible && (_statusPose == CharacterPose.Normal || _statusPose == CharacterPose.Trapped)) ? State.Held : ItemType.None;
-            if (IsLocal) want = ItemType.None; // local view model handles it
+            if (IsLocal && !_selfShown) want = ItemType.None; // local view model handles it (unless we look at ourselves)
             if (want != _heldType)
             {
                 _heldType = want;
@@ -467,7 +481,7 @@ namespace PrisonersOfOmar.Gameplay
         public void SetVisible(bool v)
         {
             _visible = v;
-            if (Rig != null) Rig.SetVisible(v && !IsLocal && !_peekHidden);
+            if (Rig != null) Rig.SetVisible(v && BodyDrawn && !_peekHidden);
             if (_blob != null) _blob.SetActive(v);
             if (_heldModel != null) _heldModel.SetActive(v);
             if (_breath != null) AudioManager.SetVolume(_breath, v ? 0.75f : 0f);
