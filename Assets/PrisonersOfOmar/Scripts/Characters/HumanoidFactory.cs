@@ -69,8 +69,8 @@ namespace PrisonersOfOmar.Characters
             rig.Height = spec.Height;
 
             var sk = BodyMeshGenerator.MakeSkeleton(spec);
-            var bones = new Transform[PoseBuffer.BoneCount];
-            for (int i = 0; i < bones.Length; i++)
+            var bones = new Transform[BodyMeshGenerator.TotalBones];
+            for (int i = 0; i < PoseBuffer.BoneCount; i++)
             {
                 int pi = (int)Parents[i];
                 Transform p = pi < 0 ? go.transform : bones[pi];
@@ -89,6 +89,17 @@ namespace PrisonersOfOmar.Characters
             rig.RightHandSocket = GeoUtil.CreateChild(rig.RightHand, "RightHandSocket", sk.RightSocket - sk.Pos[(int)BoneId.RHand], Quaternion.identity, layer);
             rig.LeftHandSocket = GeoUtil.CreateChild(rig.LeftHand, "LeftHandSocket", sk.LeftSocket - sk.Pos[(int)BoneId.LHand], Quaternion.identity, layer);
             rig.EyePoint = GeoUtil.CreateChild(rig.Head, "EyePoint", sk.Eye - sk.Pos[(int)BoneId.Head], Quaternion.identity, layer);
+            // finger bones (relaxed / fist) at the palm centres, see BodyMeshGenerator.LFingersBone
+            for (int side = 0; side < 2; side++)
+            {
+                int hand = (int)BoneId.LHand + side * 3;
+                Vector3 palm = BodyMeshGenerator.PalmCenter(spec, sk, side) - sk.Pos[hand];
+                string n = side == 0 ? "Left" : "Right";
+                bones[BodyMeshGenerator.LFingersBone + side * 2] = GeoUtil.CreateChild(bones[hand], n + "Fingers", palm, Quaternion.identity, layer);
+                bones[BodyMeshGenerator.LFistBone + side * 2] = GeoUtil.CreateChild(bones[hand], n + "Fist", palm, Quaternion.identity, layer);
+            }
+            rig.LeftFingers = bones[BodyMeshGenerator.LFingersBone]; rig.LeftFist = bones[BodyMeshGenerator.LFistBone];
+            rig.RightFingers = bones[BodyMeshGenerator.RFingersBone]; rig.RightFist = bones[BodyMeshGenerator.RFistBone];
 
             // mesh
             var mb = new SkinMeshBuilder();
@@ -101,6 +112,9 @@ namespace PrisonersOfOmar.Characters
             Matrix4x4 bodyToWorld = body.transform.localToWorldMatrix;
             for (int i = 0; i < bones.Length; i++) bind[i] = bones[i].worldToLocalMatrix * bodyToWorld;
             mesh.bindposes = bind;
+            // relaxed hands until the animator clenches them (after the bind poses: those need the unscaled bones)
+            rig.SetFist(0, 0f);
+            rig.SetFist(1, 0f);
 
             var smr = body.AddComponent<SkinnedMeshRenderer>();
             smr.sharedMesh = mesh;

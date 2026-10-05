@@ -18,6 +18,19 @@ namespace PrisonersOfOmar.Characters
             public Vector3 RightSocket, LeftSocket, Eye;
         }
 
+        /// <summary>
+        /// Finger bones after the 17 pose bones (not driven by <see cref="PoseBuffer"/>): per hand the relaxed fingers and the
+        /// clenched fist, both pivoting at the palm centre. The animator swaps them by scale (folded away inside the palm).
+        /// </summary>
+        internal const int LFingersBone = 17, LFistBone = 18, RFingersBone = 19, RFistBone = 20, TotalBones = 21;
+
+        /// <summary>Palm centre of a hand (root space, bind pose). side 0 = left, 1 = right.</summary>
+        internal static Vector3 PalmCenter(BodySpec b, Skeleton sk, int side)
+        {
+            float hs = b.HandScale * b.Scale;
+            return sk.Pos[(int)BoneId.LHand + (side == 0 ? 0 : 3)] + new Vector3(0, -0.092f * hs * 0.5f - 0.004f * hs, 0.004f * hs);
+        }
+
         public static Skeleton MakeSkeleton(BodySpec b)
         {
             var sk = new Skeleton { Pos = new Vector3[17] };
@@ -616,28 +629,42 @@ namespace PrisonersOfOmar.Characters
             float sx = side == 0 ? -1f : 1f;
             BoneId hd = BoneId.LHand + o;
             var w = SkinWeight.One(hd);
-            Vector3 wr = sk.Pos[(int)hd];
+            var wOpen = SkinWeight.One((BoneId)(side == 0 ? LFingersBone : RFingersBone));
+            var wFist = SkinWeight.One((BoneId)(side == 0 ? LFistBone : RFistBone));
             float hs = b.HandScale * b.Scale;
             var reg = CharacterAtlas.Hand;
             var sw = CharacterAtlas.SwatchSkin;
+            var swUV = new Vector4(0.2f, 0.2f, 0.8f, 0.8f);
             // palm: thickness along X, width along Z, length down -Y
             Vector3 palmSize = new Vector3(0.030f, 0.092f, 0.082f) * hs;
-            Vector3 palmC = wr + new Vector3(0, -palmSize.y * 0.5f - 0.004f * hs, 0.004f * hs);
+            Vector3 palmC = PalmCenter(b, sk, side);
             Box(mb, SkinMeshBuilder.Opaque, palmC, Quaternion.identity, palmSize, w,
-                reg, new Vector4(0, 0.5f, 1, 1), sw, new Vector4(0.2f, 0.2f, 0.8f, 0.8f), sw, new Vector4(0.2f, 0.2f, 0.8f, 0.8f));
-            // fingers, curled towards the palm (palm faces the body: -X on the right hand)
+                reg, new Vector4(0, 0.5f, 1, 1), sw, swUV, sw, swUV);
+            // relaxed: fingers curled a little towards the palm (palm faces the body: -X on the right hand)
             Quaternion curl = Quaternion.AngleAxis(sx * -28f, Vector3.forward);
             Vector3 fSize = new Vector3(0.024f, 0.082f, 0.078f) * hs;
             Vector3 fBase = palmC + new Vector3(0, -palmSize.y * 0.5f, 0);
             Vector3 fC = fBase + curl * new Vector3(0, -fSize.y * 0.5f, 0);
-            Box(mb, SkinMeshBuilder.Opaque, fC, curl, fSize, w,
-                reg, new Vector4(0, 0, 1, 0.5f), sw, new Vector4(0.2f, 0.2f, 0.8f, 0.8f), reg, new Vector4(0, 0, 1, 0.1f));
+            Box(mb, SkinMeshBuilder.Opaque, fC, curl, fSize, wOpen,
+                reg, new Vector4(0, 0, 1, 0.5f), sw, swUV, reg, new Vector4(0, 0, 1, 0.1f));
             // thumb at the front edge, pointing down / forward / inward
             Quaternion tr = Quaternion.AngleAxis(sx * -20f, Vector3.forward) * Quaternion.AngleAxis(-25f, Vector3.right);
             Vector3 tSize = new Vector3(0.024f, 0.062f, 0.024f) * hs;
             Vector3 tC = palmC + new Vector3(-sx * 0.006f * hs, -0.01f * hs, palmSize.z * 0.5f + 0.006f * hs) + tr * new Vector3(0, -tSize.y * 0.4f, 0);
-            Box(mb, SkinMeshBuilder.Opaque, tC, tr, tSize, w, sw, new Vector4(0.2f, 0.2f, 0.8f, 0.8f), sw,
-                new Vector4(0.2f, 0.2f, 0.8f, 0.8f), sw, new Vector4(0.2f, 0.2f, 0.8f, 0.8f));
+            Box(mb, SkinMeshBuilder.Opaque, tC, tr, tSize, wOpen, sw, swUV, sw, swUV, sw, swUV);
+
+            // clenched fist (as if gripping something): knuckle roll under the palm, the folded fingers against the palm
+            // side and the thumb lying across them. Weighted to the fist bone, collapsed until the animator clenches it.
+            float palmIn = -sx; // towards the palm side
+            Vector3 kC = palmC + new Vector3(palmIn * 0.004f * hs, -palmSize.y * 0.5f - 0.011f * hs, 0f);
+            Box(mb, SkinMeshBuilder.Opaque, kC, Quaternion.identity, new Vector3(0.040f, 0.026f, 0.080f) * hs, wFist,
+                reg, new Vector4(0, 0.22f, 1, 0.42f), sw, swUV, reg, new Vector4(0, 0.4f, 1, 0.5f));
+            Vector3 cC = palmC + new Vector3(palmIn * (palmSize.x * 0.5f + 0.010f * hs), -0.028f * hs, 0f);
+            Box(mb, SkinMeshBuilder.Opaque, cC, Quaternion.identity, new Vector3(0.022f, 0.046f, 0.076f) * hs, wFist,
+                reg, new Vector4(0, 0.02f, 1, 0.26f), sw, swUV, sw, swUV);
+            Vector3 thC = palmC + new Vector3(palmIn * (palmSize.x * 0.5f + 0.024f * hs), -0.026f * hs, 0.014f * hs);
+            Box(mb, SkinMeshBuilder.Opaque, thC, Quaternion.AngleAxis(sx * 12f, Vector3.up), new Vector3(0.018f, 0.019f, 0.052f) * hs, wFist,
+                sw, swUV, sw, swUV, sw, swUV);
         }
 
         static void Shoe(BodySpec b, Skeleton sk, SkinMeshBuilder mb, int side)

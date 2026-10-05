@@ -249,6 +249,7 @@ namespace PrisonersOfOmar.Characters
             // 7. apply
             _ap.Apply(_acc);
             if (_holdW[(int)HoldPose.TwoHanded] > 0.01f) SecondHandGrip();
+            UpdateFists(dt);
 
             // footsteps
             if (_moveW > 0.35f && Grounded && _poseW[0] > 0.6f && _airW < 0.5f)
@@ -257,6 +258,29 @@ namespace PrisonersOfOmar.Characters
                 if (Crossed(_prevPhase, _phase, 0.5f)) RaiseFootstep(1);
             }
             _prevPhase = _phase;
+        }
+
+        float _fistL, _fistR;
+
+        /// <summary>
+        /// Hands close into fists whenever they hold or work something (items, doors, switches, the cage bars...), so from
+        /// the outside nobody pushes a door with a flat paddle hand. Relaxed fingers otherwise (hanging arms, grabbing, waving).
+        /// </summary>
+        void UpdateFists(float dt)
+        {
+            var a = CurrentAction;
+            bool right = Hold != HoldPose.None || Pose == CharacterPose.CagedSit || Pose == CharacterPose.Seated
+                         || a == CharacterAction.Interact || a == CharacterAction.Pickup || a == CharacterAction.UseItem
+                         || a == CharacterAction.Pour || a == CharacterAction.Throw || a == CharacterAction.Cut
+                         || a == CharacterAction.Shoot || a == CharacterAction.BedLift || a == CharacterAction.Struggle
+                         || a == CharacterAction.Heal || a == CharacterAction.ChopMeat || a == CharacterAction.Attack;
+            bool left = Hold == HoldPose.TwoHanded || Pose == CharacterPose.CagedSit || Pose == CharacterPose.Seated
+                        || a == CharacterAction.Cut || a == CharacterAction.BedLift || a == CharacterAction.Struggle;
+            if (Pose == CharacterPose.Dead || Pose == CharacterPose.Downed) right = left = false;
+            _fistR = Mathf.MoveTowards(_fistR, right ? 1f : 0f, dt / 0.09f);
+            _fistL = Mathf.MoveTowards(_fistL, left ? 1f : 0f, dt / 0.09f);
+            _rig.SetFist(0, _fistL);
+            _rig.SetFist(1, _fistR);
         }
 
         /// <summary>True when the gait phase moved past <paramref name="mark"/> this frame (phase wraps at 1).</summary>
