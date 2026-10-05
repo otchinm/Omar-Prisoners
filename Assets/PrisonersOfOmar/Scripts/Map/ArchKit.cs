@@ -423,22 +423,51 @@ namespace PrisonersOfOmar.Map
             var rot = Quaternion.LookRotation(dir, Vector3.up);
             float dr = rise / steps, dl = run / steps;
             var col = mb.Color;
+            // Built as one seamless shell in stair space (x across, y up from bottomCenter, z along the run): every tread
+            // shares its edges with the risers above / below it and the side panels repeat the same corner points, so the
+            // PS1 vertex snapping can't open see-through cracks (the old per-step boxes ended treads in the middle of the
+            // next riser and had T-junctions on the sides).
+            mb.Push(bottomCenter, rot);
+            float hw = width * 0.5f, by = baseY - bottomCenter.y;
             for (int i = 0; i < steps; i++)
             {
-                float top = bottomCenter.y + (i + 1) * dr;
-                float s0 = i * dl, s1 = (i + 1) * dl;
-                float h = top - baseY;
-                Vector3 c = bottomCenter + dir * ((s0 + s1) * 0.5f);
-                c.y = baseY + h * 0.5f;
-                mb.Push(c, rot);
-                mb.Color = Shade.Gray(0.75f + 0.2f * Shade.Hash(c, 21));
-                mb.Material = tread;
-                mb.AddBox(Vector3.zero, new Vector3(width, h, dl), BoxUV.PerFace, 1f, 0f, BoxFaces.PosY);
+                float y0 = i * dr, y1 = (i + 1) * dr, z0 = i * dl, z1 = (i + 1) * dl;
+                Vector3 cWorld = bottomCenter + dir * ((z0 + z1) * 0.5f) + Vector3.up * y1;
+                // riser (faces back down the stair) from the previous tread up to this one
                 mb.Material = side;
                 mb.Color = Shade.Gray(0.55f);
-                mb.AddBox(Vector3.zero, new Vector3(width, h, dl), BoxUV.WorldAligned, 1.2f, 1.0f, BoxFaces.NegZ | BoxFaces.PosX | BoxFaces.NegX);
-                mb.Pop();
+                mb.AddQuad(new Vector3(-hw, y0, z0), new Vector3(-hw, y1, z0), new Vector3(hw, y1, z0), new Vector3(hw, y0, z0),
+                    new Vector2(0, y0 / 1.2f), new Vector2(0, y1 / 1.2f), new Vector2(width / 1.2f, y1 / 1.2f), new Vector2(width / 1.2f, y0 / 1.2f));
+                // tread
+                mb.Material = tread;
+                mb.Color = Shade.Gray(0.75f + 0.2f * Shade.Hash(cWorld, 21));
+                mb.AddQuad(new Vector3(-hw, y1, z0), new Vector3(-hw, y1, z1), new Vector3(hw, y1, z1), new Vector3(hw, y1, z0));
+                // side panels: one column per step, its near edge split at the previous step's height (no T-junction)
+                mb.Material = side;
+                mb.Color = Shade.Gray(0.55f);
+                for (int sgn = -1; sgn <= 1; sgn += 2)
+                {
+                    float x = sgn * hw;
+                    Vector3 b0 = new Vector3(x, by, z0), b1 = new Vector3(x, by, z1), m0 = new Vector3(x, y0, z0), t0 = new Vector3(x, y1, z0), t1 = new Vector3(x, y1, z1);
+                    Vector2 U(Vector3 p) => new Vector2(p.z / 1.2f, (p.y - by) / 1.2f);
+                    // +X side: seen from +X the run goes to the right (front faces are clockwise)
+                    if (sgn > 0)
+                    {
+                        if (i > 0 && y0 > by + 0.001f) mb.AddTriangle(b0, m0, b1, U(b0), U(m0), U(b1));
+                        mb.AddTriangle(m0.y > by + 0.001f ? m0 : b0, t0, t1, U(m0), U(t0), U(t1));
+                        mb.AddTriangle(m0.y > by + 0.001f ? m0 : b0, t1, b1, U(m0), U(t1), U(b1));
+                    }
+                    else
+                    {
+                        if (i > 0 && y0 > by + 0.001f) mb.AddTriangle(b0, b1, m0, U(b0), U(b1), U(m0));
+                        mb.AddTriangle(m0.y > by + 0.001f ? m0 : b0, t1, t0, U(m0), U(t1), U(t0));
+                        mb.AddTriangle(m0.y > by + 0.001f ? m0 : b0, b1, t1, U(m0), U(b1), U(t1));
+                    }
+                }
             }
+            // back of the top step (only shows when the stair stops short of a landing)
+            mb.AddQuad(new Vector3(hw, by, run), new Vector3(hw, rise, run), new Vector3(-hw, rise, run), new Vector3(-hw, by, run));
+            mb.Pop();
             mb.Color = col;
             // ramp collider through the nosings
             Vector3 p0 = bottomCenter, p1 = bottomCenter + dir * run + Vector3.up * rise;

@@ -85,6 +85,7 @@ static class Program
         Console.WriteLine("errors: " + errorsFirst + " (first build), warnings total " + UnityEngine.Debug.Warnings);
         foreach (var e in UnityEngine.Debug.ErrorLog.Take(30)) Console.WriteLine("  ERR " + e);
         Console.WriteLine("missing textures requested: " + Resources.Requested.Count);
+        DecalDoorQa(data, world);
 
         if (render)
         {
@@ -93,7 +94,20 @@ static class Program
             var scene = Raster.Collect(world);
             var menuScene = Raster.Collect(menuWorld);
             Console.WriteLine("render scene: " + scene.Tris + " triangles");
-            foreach (var v in Views())
+            // --cam name ex ey ez tx ty tz [name ...]: render only these custom views (close-ups while debugging)
+            var views2 = Views();
+            int ci = Array.IndexOf(args, "--cam");
+            if (ci >= 0)
+            {
+                var custom = new List<(string name, Vector3 eye, Vector3 target, bool lit)>();
+                for (int k = ci + 1; k + 6 < args.Length && !args[k].StartsWith("--"); k += 7)
+                {
+                    float F(int j) => float.Parse(args[k + j], IC);
+                    custom.Add((args[k], new Vector3(F(1), F(2), F(3)), new Vector3(F(4), F(5), F(6)), false));
+                }
+                views2 = custom;
+            }
+            foreach (var v in views2)
             {
                 Raster.Render(scene, v.eye, v.target, v.lit, 640, 400, 72f, Path.Combine(views, v.name + ".png"));
             }
@@ -103,6 +117,50 @@ static class Program
             Console.WriteLine("views written: " + views);
         }
         return UnityEngine.Debug.Errors > 0 ? 1 : 0;
+    }
+
+    /// <summary>
+    /// QA: wall decals (stains, blood, writing) must not cross a doorway - they hang in the air in front of the door /
+    /// over its casing (and stay there when the door swings open).
+    /// </summary>
+    static void DecalDoorQa(MapData data, List<GameObject> world)
+    {
+        int bad = 0;
+        foreach (var go in world)
+        {
+            if (!go.activeInHierarchy) continue;
+            var mf = go.GetComponent<MeshFilter>();
+            var mr = go.GetComponent<MeshRenderer>();
+            if (mf == null || mr == null || mf.sharedMesh == null) continue;
+            var mesh = mf.sharedMesh;
+            var m = go.transform.localToWorldMatrix;
+            var verts = mesh.vertices;
+            for (int sub = 0; sub < mesh.subMeshCount; sub++)
+            {
+                var mat = sub < mr.sharedMaterials.Length ? mr.sharedMaterials[sub] : null;
+                string n = mat?.name ?? "";
+                if (!n.EndsWith("_Decal") || n.Contains("blob_shadow")) continue;
+                var tris = mesh.GetTriangles(sub);
+                for (int t = 0; t < tris.Length; t += 3)
+                {
+                    Vector3 a = m.MultiplyPoint3x4(verts[tris[t]]), b = m.MultiplyPoint3x4(verts[tris[t + 1]]), c = m.MultiplyPoint3x4(verts[tris[t + 2]]);
+                    Vector3 nrm = Vector3.Cross(b - a, c - a).normalized;
+                    if (Mathf.Abs(nrm.y) > 0.7f) continue;   // floor / ceiling decals are fine under a door
+                    foreach (var d in data.Doors)
+                    {
+                        bool alongX = d.Pivot != null && Mathf.Abs(Vector3.Dot(d.SwingDirection, Vector3.forward)) > 0.7f;
+                        Vector3 L(Vector3 p) { Vector3 q = p - d.Center; return alongX ? new Vector3(q.x, q.y, q.z) : new Vector3(q.z, q.y, q.x); }
+                        Vector3 la = L(a), lb = L(b), lc = L(c);
+                        Vector3 mn = Vector3.Min(la, Vector3.Min(lb, lc)), mx = Vector3.Max(la, Vector3.Max(lb, lc));
+                        if (mx.x < -0.66f || mn.x > 0.66f || mx.y < 0.05f || mn.y > 2.32f || mx.z < -0.3f || mn.z > 0.3f) continue;
+                        if (bad < 40) Console.WriteLine("  DECAL OVER DOOR " + d.Name + ": " + n + " near " + ((a + b + c) / 3f).ToString("F2"));
+                        bad++;
+                        break;
+                    }
+                }
+            }
+        }
+        Console.WriteLine("decal / doorway QA: " + bad + " decal triangles cross a doorway");
     }
 
     static IEnumerable<(string name, Vector3 eye, Vector3 target, bool lit)> Views()

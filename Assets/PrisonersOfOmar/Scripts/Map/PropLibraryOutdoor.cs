@@ -199,12 +199,21 @@ namespace PrisonersOfOmar.Map
             // roof + windshield + rear window
             mb.Material = paint;
             mb.AddQuad(new Vector3(-rw, y2, roofR), new Vector3(-rw, y2, roofF), new Vector3(rw, y2, roofF), new Vector3(rw, y2, roofR), new Rect(0, 0, 0.6f, 0.6f));
+            // (wound so they face out: up / forward and up / back - they were inside out and culled, the cabin looked hollow)
             mb.Material = glass;
-            mb.AddQuad(new Vector3(-cw, y1, cabF), new Vector3(-rw, y2, roofF), new Vector3(rw, y2, roofF), new Vector3(cw, y1, cabF));
-            mb.AddQuad(new Vector3(cw, y1, cabR), new Vector3(rw, y2, roofR), new Vector3(-rw, y2, roofR), new Vector3(-cw, y1, cabR));
+            mb.AddQuad(new Vector3(cw, y1, cabF), new Vector3(rw, y2, roofF), new Vector3(-rw, y2, roofF), new Vector3(-cw, y1, cabF));
+            mb.AddQuad(new Vector3(-cw, y1, cabR), new Vector3(-rw, y2, roofR), new Vector3(rw, y2, roofR), new Vector3(cw, y1, cabR));
             // underside
             mb.Material = dark;
             mb.AddQuad(new Vector3(-hw, y0, hl), new Vector3(-hw, y0, -hl), new Vector3(hw, y0, -hl), new Vector3(hw, y0, hl));
+            // solid cores just inside the panels: whatever seam the vertex snapping opens shows paint / dark glass, never
+            // the sky behind the car (the body core stays under the engine bay when the hood is separate)
+            mb.Material = paint;
+            float coreTop = hood ? y1 - 0.02f : y1 - 0.27f;
+            mb.AddBox(new Vector3(0, (y0 + y1) * 0.5f, (cabF - hl) * 0.5f), new Vector3(2 * hw - 0.04f, y1 - y0 - 0.03f, cabF + hl - 0.04f), BoxUV.Local, 1.2f);
+            mb.AddBox(new Vector3(0, (y0 + coreTop) * 0.5f, (cabF + hl) * 0.5f), new Vector3(2 * hw - 0.04f, coreTop - y0 - 0.01f, hl - cabF - 0.04f), BoxUV.Local, 1.2f);
+            mb.Material = glass;
+            mb.AddBox(new Vector3(0, (y1 + y2) * 0.5f, (roofF + roofR) * 0.5f), new Vector3(2 * rw - 0.08f, y2 - y1 - 0.05f, roofF - roofR - 0.04f), BoxUV.Local, 1f);
             // bumpers
             mb.Material = Mat.Lit(Tex.Galvanized, wreck ? new Color(0.45f, 0.35f, 0.3f) : new Color(0.7f, 0.7f, 0.7f));
             mb.AddBox(new Vector3(0, y0 + 0.1f, hl + 0.06f), new Vector3(2 * hw + 0.05f, 0.14f, 0.12f), BoxUV.Local, 0.5f);
@@ -258,7 +267,7 @@ namespace PrisonersOfOmar.Map
             mb.Material = Mat.Lit(Tex.CarFront, new Color(0.55f, 0.45f, 0.4f));
             mb.AddQuad(new Vector3(0.925f, 0.32f, 2.36f), new Vector3(0.925f, 0.92f, 2.36f), new Vector3(-0.925f, 0.92f, 2.36f), new Vector3(-0.925f, 0.32f, 2.36f));
             mb.Material = dark;
-            mb.AddQuad(new Vector3(-0.8f, 1.15f, 0.81f), new Vector3(-0.75f, 1.6f, 0.81f), new Vector3(0.75f, 1.6f, 0.81f), new Vector3(0.8f, 1.15f, 0.81f));
+            mb.AddQuad(new Vector3(0.8f, 1.15f, 0.81f), new Vector3(0.75f, 1.6f, 0.81f), new Vector3(-0.75f, 1.6f, 0.81f), new Vector3(-0.8f, 1.15f, 0.81f));   // faces forward
             mb.AddQuad(new Vector3(0.93f, 1.15f, -0.15f), new Vector3(0.93f, 1.6f, -0.15f), new Vector3(0.93f, 1.6f, 0.65f), new Vector3(0.93f, 1.15f, 0.65f));
             mb.AddQuad(new Vector3(-0.93f, 1.15f, 0.65f), new Vector3(-0.93f, 1.6f, 0.65f), new Vector3(-0.93f, 1.6f, -0.15f), new Vector3(-0.93f, 1.15f, -0.15f));
             mb.Material = rust;

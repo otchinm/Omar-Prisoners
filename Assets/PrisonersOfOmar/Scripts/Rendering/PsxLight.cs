@@ -358,8 +358,9 @@ namespace PrisonersOfOmar.Rendering
         public static float FogEnd = 38f;
 
         /// <summary>Vertical size of the virtual pixel grid vertices snap to (PS1 jitter; width follows the aspect).
-        /// Lower = more wobble. 0 disables snapping. Default 120 (2 low-res pixels at 240 lines).</summary>
-        public static float VertexSnapHeight = 120f;
+        /// Lower = more wobble. 0 disables snapping. Default 240 = one low-res pixel at 240 lines, like the real PS1:
+        /// the old 2-pixel grid opened see-through cracks along every seam (stairs, cars, furniture).</summary>
+        public static float VertexSnapHeight = 240f;
 
         /// <summary>Affine texture warping: 0 = perspective correct, 1 = full PS1 affine. Default 0.7.</summary>
         public static float AffineAmount = 0.7f;
@@ -399,7 +400,7 @@ namespace PrisonersOfOmar.Rendering
             Ambient = new Color(0.06f, 0.07f, 0.09f);
             FogColor = new Color(0.02f, 0.025f, 0.035f);
             FogStart = 6f; FogEnd = 38f;
-            VertexSnapHeight = 120f;
+            VertexSnapHeight = 240f;
             AffineAmount = 0.7f;
         }
 

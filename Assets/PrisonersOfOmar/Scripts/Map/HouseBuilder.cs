@@ -361,12 +361,21 @@ namespace PrisonersOfOmar.Map
             ext.Material = Mat.Lit(Tex.Concrete);
             ext.AddBox(new Vector3(0, FG - 0.02f, -8.2f), new Vector3(1.2f, 0.04f, 0.2f), BoxUV.Local, 0.5f);
             // grime / water stains on the siding
+            // (kept clear of the doors and windows: a stain across the front door hung in the doorway when it opened)
             var rng = ctx.Rng("house.grime");
             for (int i = 0; i < 18; i++)
             {
                 int side = i % 4;
-                float along = rng.Range(-10f, 10f) * (side < 2 ? 1f : 0.75f);
-                float y = rng.Range(0.8f, 6.0f);
+                float along = 0f, y = 0f, w = 0f, h = 0f, rot = 0f;
+                bool ok = false;
+                for (int tries = 0; tries < 10 && !ok; tries++)
+                {
+                    along = rng.Range(-10f, 10f) * (side < 2 ? 1f : 0.75f);
+                    y = rng.Range(0.8f, 6.0f);
+                    w = rng.Range(0.8f, 2.0f); h = rng.Range(1.0f, 2.5f); rot = rng.Range(-10f, 10f);
+                    ok = !ExteriorDecalHitsOpening(ops, side, along, y, w, h);
+                }
+                if (!ok) continue;
                 string tex = rng.Chance(0.5f) ? "water_stain" : "grime";
                 Vector3 p, n;
                 switch (side)
@@ -376,9 +385,37 @@ namespace PrisonersOfOmar.Map
                     case 2: p = new Vector3(-11.1f, y, along * 0.75f); n = Vector3.left; break;
                     default: p = new Vector3(11.1f, y, along * 0.75f); n = Vector3.right; break;
                 }
-                Arch.Decal(ext, Mat.Decal(tex), p, n, rng.Range(0.8f, 2.0f), rng.Range(1.0f, 2.5f), rng.Range(-10f, 10f));
+                Arch.Decal(ext, Mat.Decal(tex), p, n, w, h, rot);
             }
             ctx.Area("House", new Vector3(-11.2f, FB - 0.1f, -8.2f), new Vector3(11.2f, Ridge, 8.2f));
+        }
+
+        /// <summary>
+        /// Would a (slightly rotated) exterior wall decal on side 0 S / 1 N / 2 W / 3 E overlap a door (with its casing) or a
+        /// window (with its frame)? along = x on S / N, z on W / E.
+        /// </summary>
+        static bool ExteriorDecalHitsOpening(List<Opening> ops, int side, float along, float y, float w, float h)
+        {
+            // half extents of the decal's bounding box at up to 10 degrees of rotation, plus a margin for frames / casings
+            float c10 = 0.985f, s10 = 0.174f;
+            float hw = 0.5f * (w * c10 + h * s10) + 0.2f, hh = 0.5f * (h * c10 + w * s10) + 0.2f;
+            bool Hit(float u0, float u1, float v0, float v1) => along + hw > u0 && along - hw < u1 && y + hh > v0 && y - hh < v1;
+            bool alongX = side < 2;
+            float c = side == 0 ? -8f : side == 1 ? 8f : side == 2 ? -11f : 11f;
+            foreach (var o in ops)
+            {
+                if (o.AlongX != alongX || Mathf.Abs(o.C - c) > 0.05f) continue;
+                float fy = FloorY[o.Level];
+                if (Hit(o.Along - o.W * 0.5f, o.Along + o.W * 0.5f, fy + o.Sill, fy + o.H)) return true;
+            }
+            char sc = side == 0 ? 'S' : side == 1 ? 'N' : side == 2 ? 'W' : 'E';
+            foreach (var (lvl, ws, wa, _) in Windows)
+            {
+                if (ws != sc) continue;
+                float wy = FloorY[lvl] + 1.5f;
+                if (Hit(wa - 0.55f, wa + 0.55f, wy - 0.7f, wy + 0.7f)) return true;
+            }
+            return false;
         }
 
         static void Roof(MapContext ctx, MeshBuilder ext)
