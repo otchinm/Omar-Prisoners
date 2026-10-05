@@ -7,8 +7,6 @@ namespace PrisonersOfOmar.Characters
     /// First person view model: forearm(s) + hand(s) in the skin's sleeves, holding the equipped item.
     /// Lives under the camera on Layers.ViewModel. Gameplay feeds movement state for bob/sway and calls Play() for actions.
     /// Omar always holds his cleaver (child "Cleaver" of the hand socket, independent of <see cref="SetHeld"/>).
-    /// Prisoners never see their own hands: the rig still moves (it carries the item), only the hand / forearm meshes stay
-    /// hidden, and every item is held low enough that it comes up from under the bottom edge of the screen (never floats).
     /// Camera space: +Z forward, +X right. Tuned for the view model camera FOV ~60 (works from 4:3 to 21:9).
     /// </summary>
     public sealed class FirstPersonArms : MonoBehaviour
@@ -71,14 +69,12 @@ namespace PrisonersOfOmar.Characters
             float armR = Mathf.Clamp(spec.ArmR[1] * 1.05f, 0.026f, 0.05f);
             _mat = mat;
             _hs = hs;
-            _hideHands = !omar;
 
             _rHand = GeoUtil.CreateChild(transform, "RightHand", RestPos, Quaternion.Euler(RestEuler), Layers.ViewModel);
             SetHandPose(true, omar ? FpHandPose.Fist : FpHandPose.Relaxed);
             HandSocket = GeoUtil.CreateChild(_rHand, "HandSocket", Vector3.zero, Quaternion.identity, Layers.ViewModel);
             _rArm = GeoUtil.CreateChild(transform, "RightForearm", Vector3.zero, Quaternion.identity, Layers.ViewModel);
             BuildForearm(_rArm, mat, armR, 1f, spec.SleeveT);
-            if (_hideHands) foreach (var r in _rArm.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
 
             _lHand = GeoUtil.CreateChild(transform, "LeftHand", new Vector3(-RestPos.x, RestPos.y, RestPos.z), Quaternion.identity, Layers.ViewModel);
             SetHandPose(false, FpHandPose.Fist);
@@ -118,7 +114,7 @@ namespace PrisonersOfOmar.Characters
             FirstPersonHand.Build(mb, _hs, side, pose);
             var go = mb.Build("Hand", hand, Layers.ViewModel);
             Vector3 wrist = FirstPersonHand.WristPoint(pose, _hs, side);
-            bool visible = _visible && !_hideHands && (right || _leftVisible);
+            bool visible = _visible && (right || _leftVisible);
             if (go != null) foreach (var r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = visible;
             if (right) { _rHandMesh = go; _rPose = pose; _rWrist = wrist; }
             else { _lHandMesh = go; _lPose = pose; _lWrist = wrist; _leftRenderers = null; }
@@ -194,12 +190,11 @@ namespace PrisonersOfOmar.Characters
                 HeldModel = ItemMeshFactory.Build(item);
                 HeldModel.transform.SetParent(HandSocket, false);
                 // the Zippo sits close to the lens in the corner of the view, like the reference
-                if (item == ItemType.Lighter) HeldModel.transform.localScale = Vector3.one * 1.1f;
+                HeldModel.transform.localScale = Vector3.one * ViewScale(item);
                 GeoUtil.SetLayerRecursive(HeldModel, Layers.ViewModel);
                 _gripL = HeldModel.transform.Find("Grip_L");
                 foreach (var r in HeldModel.GetComponentsInChildren<Renderer>(true)) r.enabled = _visible;
             }
-            _itemDrop = ComputeItemDrop();
             // switch animation: the new item rises from below
             _raise = 0f;
             _raiseTarget = item == ItemType.None && Skin != CharacterSkin.Omar ? 0f : 1f;
@@ -217,7 +212,7 @@ namespace PrisonersOfOmar.Characters
             if (_lHand != null) SetHandPose(false, open ? FpHandPose.Relaxed : FpHandPose.Fist);
         }
 
-        bool _visible = true, _visApplied, _hideHands;
+        bool _visible = true, _visApplied;
 
         public void SetVisible(bool visible)
         {
@@ -225,11 +220,6 @@ namespace PrisonersOfOmar.Characters
             _visible = visible;
             _visApplied = true;
             foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = visible;
-            if (_hideHands)
-            {
-                foreach (var t in new[] { _rHandMesh != null ? _rHandMesh.transform : null, _rArm })
-                    if (t != null) foreach (var r in t.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-            }
             SetLeftVisible(visible && _leftW > 0.02f);
         }
 
@@ -246,7 +236,17 @@ namespace PrisonersOfOmar.Characters
                 a.CopyTo(_leftRenderers, 0);
                 b.CopyTo(_leftRenderers, a.Length);
             }
-            for (int i = 0; i < _leftRenderers.Length; i++) if (_leftRenderers[i] != null) _leftRenderers[i].enabled = v && _visible && !_hideHands;
+            for (int i = 0; i < _leftRenderers.Length; i++) if (_leftRenderers[i] != null) _leftRenderers[i].enabled = v && _visible;
+        }
+
+        /// <summary>View model scale per item (small things read a little larger so they stay legible at 240 lines).</summary>
+        static float ViewScale(ItemType item)
+        {
+            switch (item)
+            {
+                case ItemType.Lighter: return 1.15f;
+                default: return 1f;
+            }
         }
 
         /// <summary>Where the item's grip sits relative to the fist (lighter on top of the fist, others through it).</summary>
@@ -257,7 +257,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Lighter: return new Vector3(-0.004f, 0.056f, 0.006f);
                 case ItemType.LighterFuel: return new Vector3(-0.006f, 0.035f, 0.01f);
                 case ItemType.Bandages: return new Vector3(-0.01f, 0.03f, 0.02f);
-                case ItemType.Pills: return new Vector3(-0.006f, 0.02f, 0.01f);
+                case ItemType.Pills: return new Vector3(-0.006f, 0.034f, 0.01f);
                 case ItemType.SoundMeter: return new Vector3(-0.012f, 0.0f, 0.03f);
                 case ItemType.Bottle: return new Vector3(0f, 0.02f, 0f);
                 case ItemType.Batteries: return new Vector3(-0.005f, 0.03f, 0.01f);
@@ -266,83 +266,17 @@ namespace PrisonersOfOmar.Characters
             }
         }
 
-        // ---- hidden hands (prisoners)
-        /// <summary>How far the (unseen) hand is lowered so the held item comes up from under the bottom edge of the view.</summary>
-        float _itemDrop;
-        /// <summary>Lowest point of a held item below the bottom edge, as a fraction of the half view height (room for the bob).</summary>
-        const float EdgeMargin = 0.08f;
-
-        /// <summary>Hidden hands: per item tweak of the rest pose (camera space). Small things come closer so they still read.</summary>
-        static Vector3 HiddenHoldOffset(ItemType item)
-        {
-            switch (item)
-            {
-                case ItemType.Lighter: return new Vector3(0f, 0.03f, -0.01f);
-                case ItemType.Fuse: return new Vector3(-0.01f, 0f, -0.13f);
-                case ItemType.CageKey: return new Vector3(-0.01f, 0f, -0.12f);
-                case ItemType.Batteries: return new Vector3(-0.01f, 0f, -0.12f);
-                case ItemType.Pills: return new Vector3(-0.01f, 0f, -0.11f);
-                case ItemType.CarKeys: return new Vector3(-0.01f, 0f, -0.1f);
-                case ItemType.Revolver: return new Vector3(-0.01f, 0f, -0.09f);
-                case ItemType.Bandages: return new Vector3(0f, 0f, -0.06f);
-                default: return Vector3.zero;
-            }
-        }
-
-        /// <summary>Hidden hands: per item tweak of the rest rotation (small things stand up out of the unseen fist).</summary>
-        static Vector3 HiddenHoldEuler(ItemType item)
-        {
-            switch (item)
-            {
-                // the Zippo turned so its lid folds away behind the case instead of sticking out towards the middle of the view
-                case ItemType.Lighter: return new Vector3(-6f, -50f, -6f);
-                case ItemType.Fuse: return new Vector3(0f, 0f, 75f);
-                case ItemType.CageKey: return new Vector3(-75f, 0f, 15f);
-                case ItemType.Batteries: return new Vector3(-80f, 0f, 0f);
-                case ItemType.CarKeys: return new Vector3(0f, 0f, 35f);
-                default: return Vector3.zero;
-            }
-        }
-
         /// <summary>
-        /// Hidden hands: the drop that puts the item's lowest point just under the bottom edge of the 60 degree view model
-        /// camera in the rest pose, so it always reads as held by a hand below the frame, never floating. Items that already
-        /// run off the screen are left where they are (unless they have their own hidden pose).
+        /// The left hand joins in for the bulky things (gas can, battery, bolt cutters); the crowbar is carried in the right
+        /// hand alone, raised like a club (two hands on a bar this close to the lens twisted the left wrist).
         /// </summary>
-        float ComputeItemDrop()
-        {
-            if (!_hideHands || HeldModel == null) return 0f;
-            Vector3 savedP = _rHand.localPosition;
-            Quaternion savedR = _rHand.localRotation;
-            _rHand.localPosition = RestPos + HoldOffset(HeldItem) + HiddenHoldOffset(HeldItem);
-            _rHand.localRotation = Quaternion.Euler(RestEuler + HoldEuler(HeldItem) + HiddenHoldEuler(HeldItem));
-            float t = Mathf.Tan(30f * Mathf.Deg2Rad) * (1f + EdgeMargin);
-            float best = float.MaxValue;
-            foreach (var mf in HeldModel.GetComponentsInChildren<MeshFilter>(true))
-            {
-                if (mf.sharedMesh == null) continue;
-                var vs = mf.sharedMesh.vertices;
-                for (int i = 0; i < vs.Length; i++)
-                {
-                    Vector3 c = transform.InverseTransformPoint(mf.transform.TransformPoint(vs[i]));
-                    if (c.z > 0.02f) best = Mathf.Min(best, c.y + c.z * t);
-                }
-            }
-            _rHand.localPosition = savedP;
-            _rHand.localRotation = savedR;
-            if (best == float.MaxValue) return 0f;
-            // items with their own hidden pose are placed exactly (lifted too), the others only ever go down
-            return HiddenHoldOffset(HeldItem) != Vector3.zero ? best : Mathf.Max(0f, best);
-        }
-
-        /// <summary>Actions done with the held item itself; for the others the unseen free hand does the work.</summary>
-        static bool UsesHeldItem(CharacterAction a)
-            => a == CharacterAction.Pour || a == CharacterAction.Throw || a == CharacterAction.Shoot || a == CharacterAction.Cut
-               || a == CharacterAction.UseItem || a == CharacterAction.Heal;
+        static bool UsesBothHands(ItemType item)
+            => ItemMeshFactory.HoldPoseFor(item) == HoldPose.TwoHanded && item != ItemType.Crowbar;
 
         /// <summary>Per item adjustment of the right hand rest pose (camera space).</summary>
         static Vector3 HoldOffset(ItemType item)
         {
+            if (item == ItemType.Crowbar) return new Vector3(0.015f, 0.01f, 0.03f);
             switch (ItemMeshFactory.HoldPoseFor(item))
             {
                 case HoldPose.TwoHanded:
@@ -351,8 +285,8 @@ namespace PrisonersOfOmar.Characters
                     return new Vector3(-0.03f, 0.04f, 0.02f);
                 case HoldPose.Flashlight: return new Vector3(0f, 0.02f, 0.02f);
                 case HoldPose.Lighter: return new Vector3(-0.05f, 0.05f, -0.13f);
-                case HoldPose.Pistol: return new Vector3(-0.07f, 0.075f, 0.04f);
-                case HoldPose.OneHandSmall: return new Vector3(-0.01f, 0.02f, 0f);
+                case HoldPose.Pistol: return new Vector3(-0.025f, 0.055f, 0.035f);
+                case HoldPose.OneHandSmall: return new Vector3(-0.012f, 0.032f, -0.018f);
                 default: return Vector3.zero;
             }
         }
@@ -362,11 +296,11 @@ namespace PrisonersOfOmar.Characters
             switch (item)
             {
                 case ItemType.BoltCutters: return new Vector3(-12f, -6f, 0f);
-                case ItemType.Crowbar: return new Vector3(-25f, -20f, 20f);
-                case ItemType.GasCan: return new Vector3(0f, -25f, 0f);
+                case ItemType.Crowbar: return new Vector3(-14f, -12f, 34f);
+                case ItemType.GasCan: return new Vector3(0f, -25f, 80f);   // knuckles on top of the handle
                 case ItemType.Flashlight: return new Vector3(0f, -4f, 0f);
                 case ItemType.Lighter: return new Vector3(-2f, 26f, -3f);
-                case ItemType.Revolver: return new Vector3(2f, 4f, 0f);
+                case ItemType.Revolver: return new Vector3(4f, -24f, -8f);
                 default: return Vector3.zero;
             }
         }
@@ -375,6 +309,7 @@ namespace PrisonersOfOmar.Characters
         {
             switch (item)
             {
+                case ItemType.GasCan: return Quaternion.Euler(0f, 0f, -80f);   // the can stays upright under the rolled hand
                 case ItemType.CarKeys: return Quaternion.Euler(0f, -15f, 0f);
                 case ItemType.CageKey: return Quaternion.Euler(0f, -10f, 0f);
                 case ItemType.SoundMeter: return Quaternion.Euler(-20f, -8f, 0f);  // dial (-Z face) towards the player
@@ -415,11 +350,6 @@ namespace PrisonersOfOmar.Characters
 
             Vector3 pos = RestPos + HoldOffset(HeldItem) + new Vector3(bx, by + breathe, 0f);
             Vector3 eul = RestEuler + HoldEuler(HeldItem) + new Vector3(_sway.y + by * 120f, _sway.x + bx * 80f, -_sway.x * 0.6f);
-            if (_hideHands)
-            {
-                pos += HiddenHoldOffset(HeldItem) + new Vector3(0f, -_itemDrop, 0f);
-                eul += HiddenHoldEuler(HeldItem);
-            }
             // sprint: arm pulled down / tilted, crouch: lower
             pos += new Vector3(0.01f, -0.06f, -0.04f) * _sprintW + new Vector3(0f, -0.015f, 0f) * _crouchW;
             eul += new Vector3(18f, -6f, 10f) * _sprintW;
@@ -445,16 +375,9 @@ namespace PrisonersOfOmar.Characters
                 _actTime += dt;
                 float t = Mathf.Clamp01(_actTime / d);
                 ActionOffsets(CurrentAction, t, ref dp, ref de, ref leftTarget, ref lp, ref le);
-                if (_hideHands && !UsesHeldItem(CurrentAction))
-                {
-                    // doors, pickups, struggling...: the held item just dips a little out of the way
-                    float k = Hold(t, 0f, 0.25f, 0.7f, 1f);
-                    dp = new Vector3(0.02f, -0.06f, -0.02f) * k;
-                    de = new Vector3(14f, 0f, 0f) * k;
-                }
                 if (_actTime >= d) CurrentAction = CharacterAction.None;
             }
-            bool twoHanded = ItemMeshFactory.HoldPoseFor(HeldItem) == HoldPose.TwoHanded;
+            bool twoHanded = UsesBothHands(HeldItem);
             if (twoHanded) leftTarget = Mathf.Max(leftTarget, Smooth(_raise));
             _leftW = Mathf.MoveTowards(_leftW, leftTarget, dt * 6f);
 

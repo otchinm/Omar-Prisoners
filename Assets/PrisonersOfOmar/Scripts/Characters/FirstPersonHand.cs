@@ -148,7 +148,7 @@ namespace PrisonersOfOmar.Characters
             // FK in the XY plane: alpha measured from +Y towards -X (curling over the top of the grip)
             float a0, t1, t2, t3;
             if (pose == FpHandPose.Relaxed) { a0 = 2f + f * 2f; t1 = 20f + f * 6f; t2 = 30f + f * 6f; t3 = 18f + f * 4f; }
-            else if (pose == FpHandPose.Pistol && f == 0) { a0 = 4f; t1 = 34f; t2 = 62f; t3 = 34f; }   // trigger finger
+            else if (pose == FpHandPose.Pistol && f == 0) { a0 = -4f; t1 = 14f; t2 = 38f; t3 = 26f; }   // trigger finger: along the guard, tip on the trigger
             else { a0 = 8f; t1 = 78f; t2 = 77f + (3 - f) * 1f; t3 = 66f; }
             if (pose != FpHandPose.Relaxed && f == 3) { t1 += 6f; t2 += 6f; }  // little finger curls tighter
             Vector3 mcp = new Vector3(0.020f - (f == 3 ? 0.002f : 0f), 0.024f + FArch[f], FZ[f]);
@@ -179,8 +179,9 @@ namespace PrisonersOfOmar.Characters
                 path = new[] { new Vector3(0.027f, -0.036f, -0.028f), new Vector3(0.012f, -0.026f, -0.046f), new Vector3(-0.006f, -0.012f, -0.058f),
                                new Vector3(-0.016f, 0.003f, -0.064f), new Vector3(-0.022f, 0.016f, -0.066f) };
             else if (pose == FpHandPose.Pistol)
-                path = new[] { new Vector3(0.027f, -0.036f, -0.028f), new Vector3(0.010f, -0.028f, -0.044f), new Vector3(-0.010f, -0.018f, -0.054f),
-                               new Vector3(-0.020f, -0.012f, -0.066f), new Vector3(-0.025f, -0.008f, -0.078f) };
+                // pistol: hand +Y runs along the barrel (see PoseMatrix): the thumb lies along the left of the frame, pointing forward
+                path = new[] { new Vector3(0.027f, -0.036f, -0.028f), new Vector3(0.008f, -0.024f, -0.040f), new Vector3(-0.008f, -0.006f, -0.042f),
+                               new Vector3(-0.016f, 0.014f, -0.040f), new Vector3(-0.019f, 0.030f, -0.037f) };
             else
                 path = new[] { new Vector3(0.027f, -0.036f, -0.028f), new Vector3(0.010f, -0.030f, -0.044f), new Vector3(-0.012f, -0.018f, -0.048f),
                                new Vector3(-0.027f, -0.004f, -0.044f), new Vector3(-0.035f, 0.010f, -0.035f) };
