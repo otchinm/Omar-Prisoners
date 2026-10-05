@@ -99,6 +99,7 @@ namespace PrisonersOfOmar.Characters
                 case CharacterAction.CrawlOut: return 0.9f;
                 case CharacterAction.Cower: return 1.2f;
                 case CharacterAction.Push: return 0.6f;
+                case CharacterAction.PeekUnder: return 0.85f;
                 default: return 0.8f;
             }
         }
@@ -683,6 +684,7 @@ namespace PrisonersOfOmar.Characters
             switch (a)
             {
                 case CharacterAction.Attack: return 0.08f;
+                case CharacterAction.PeekUnder: return 0.07f;   // he drops like a stone
                 case CharacterAction.HitReact: return 0.04f;
                 case CharacterAction.Stunned: return 0.06f;
                 case CharacterAction.Throw: return 0.1f;
@@ -816,6 +818,25 @@ namespace PrisonersOfOmar.Characters
                     p.SetHandGoal(0, new Vector3(-0.24f * s, y, (0.42f + 0.1f * up) * s), grab);
                     p.ElbowHintR = new Vector3(1f, -0.6f, -0.3f);
                     p.ElbowHintL = new Vector3(-1f, -0.6f, -0.3f);
+                    break;
+                }
+                case CharacterAction.PeekUnder:
+                {
+                    // a sudden drop onto one knee, torso folded over, head jerked down and turned on its side to look
+                    // under the bed; the free hand slaps the floor, the cleaver hand braces on the knee
+                    float k = HoldCurve(t, 0.0f, 0.13f, 0.66f, 0.98f);
+                    float jerk = Bell(t, 0.1f, 0.3f);
+                    p.HipsPos += new Vector3(0f, -0.5f * _legLen * k, -0.12f * s * k);
+                    p.Rot[(int)BoneId.Spine].x += 48f * k;
+                    p.Rot[(int)BoneId.Chest].x += 38f * k + 6f * jerk;
+                    p.Rot[(int)BoneId.Neck].x += 10f * k;
+                    p.Rot[(int)BoneId.Head].x += 18f * k;
+                    p.Rot[(int)BoneId.Head].z += 34f * k;
+                    p.Rot[(int)BoneId.Chest].z += 8f * k;
+                    p.SetHandGoal(0, new Vector3(-0.2f * s, 0.04f * s, 0.5f * s), k);
+                    p.ElbowHintL = new Vector3(-1f, 0.3f, -0.6f);
+                    p.SetHandGoal(1, new Vector3(0.22f * s, b.KneeY * 0.75f, 0.32f * s), 0.8f * k);
+                    p.ElbowHintR = new Vector3(1f, 0f, -1f);
                     break;
                 }
                 case CharacterAction.Push:

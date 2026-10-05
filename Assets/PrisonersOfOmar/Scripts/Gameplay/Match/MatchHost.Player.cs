@@ -389,7 +389,16 @@ namespace PrisonersOfOmar.Gameplay
             var h = W.Hiding[spot];
             if (!Near(omarId, h.InteractPoint, 3.8f)) return -1;
             int occ = h.Occupant;
-            if (h.IsBed) BroadcastAction(omarId, CharacterAction.BedLift);
+            if (h.IsBed)
+            {
+                // he drops and looks under it; only when someone is there does the bed get flipped (see TickBedReveals)
+                foreach (var r in _bedReveals) if (r.Spot == spot) return -1;
+                BroadcastAction(omarId, CharacterAction.PeekUnder);
+                if (occ < 0) return -1;
+                _bedReveals.Add(new BedReveal { Omar = omarId, Spot = spot, Prisoner = occ, Start = W.Time });
+                SendOmarRush(omarId, 0, Tuning.BedFlipAt + Tuning.BedEscapeGrace);
+                return occ;
+            }
             BroadcastHide(spot, -1, true);
             if (occ < 0) return -1;
             var st = Edit(occ);
@@ -410,5 +419,71 @@ namespace PrisonersOfOmar.Gameplay
             }
             return occ;
         }
+
+        // ------------------------------------------------------------------ under-bed discovery
+
+        sealed class BedReveal
+        {
+            public int Omar, Spot, Prisoner;
+            public float Start;
+            public bool Warned, Lifting;
+        }
+
+        readonly System.Collections.Generic.List<BedReveal> _bedReveals = new System.Collections.Generic.List<BedReveal>();
+        readonly System.Collections.Generic.Dictionary<int, float> _noAttackUntil = new System.Collections.Generic.Dictionary<int, float>();
+
+        /// <summary>
+        /// Someone was under the bed Omar checked: he sees them (peek), heaves the bed up and flips it; the prisoner gets up
+        /// with a split second to run while Omar is still busy with the bed, then Omar surges after them.
+        /// </summary>
+        void TickBedReveals()
+        {
+            for (int i = _bedReveals.Count - 1; i >= 0; i--)
+            {
+                var r = _bedReveals[i];
+                float t = W.Time - r.Start;
+                if (!r.Warned && t >= 0.35f)
+                {
+                    r.Warned = true;
+                    Message("HE SEES YOU! RUN THE MOMENT THE BED GOES UP!", 2.5f, r.Prisoner);
+                }
+                if (!r.Lifting && t >= Tuning.BedLiftAt)
+                {
+                    r.Lifting = true;
+                    BroadcastAction(r.Omar, CharacterAction.BedLift);
+                }
+                if (t < Tuning.BedFlipAt) continue;
+                _bedReveals.RemoveAt(i);
+                BroadcastHide(r.Spot, -1, true);   // the bed flips (before the status: clients know it was a flip)
+                var st = W.StatusOf(r.Prisoner);
+                if (st != null && st.HidingSpot == r.Spot)
+                {
+                    var e = Edit(r.Prisoner);
+                    e.HidingSpot = -1;
+                    e.TeleportSeq++;
+                    Commit(e);
+                    Message("RUN!", 1.5f, r.Prisoner);
+                    SetChase(r.Prisoner, true);
+                }
+                _noAttackUntil[r.Omar] = W.Time + Tuning.BedEscapeGrace;
+                SendOmarRush(r.Omar, 1, Tuning.OmarRushSeconds);
+                var av = W.AvatarOf(r.Prisoner);
+                foreach (var ai in _ais) if (ai != null && ai.OmarId == r.Omar) ai.OnFlippedBed(r.Prisoner, av != null ? av.Position : W.Hiding[r.Spot].InteractPoint);
+            }
+        }
+
+        /// <summary>Tell a human Omar about a bed discovery (stage 0: hold still for `seconds`, 1: the surge for `seconds`).</summary>
+        void SendOmarRush(int omarId, byte stage, float seconds)
+        {
+            var info = S.Players.Find(x => x.Id == omarId);
+            if (info == null || info.IsBot || !info.Connected) return;
+            var w = S.Begin(Msg.OmarRush);
+            w.WriteByte(stage);
+            w.WriteFloat(seconds);
+            S.SendTo(omarId, NetChannel.Reliable);
+        }
+
+        /// <summary>Omar is still wrestling the bed: his swings don't count yet.</summary>
+        bool OmarBusyWithBed(int omarId) => _noAttackUntil.TryGetValue(omarId, out var until) && W.Time < until;
     }
 }

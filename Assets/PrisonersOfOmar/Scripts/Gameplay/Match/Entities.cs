@@ -460,6 +460,8 @@ namespace PrisonersOfOmar.Gameplay
         public bool IsBed => Info.Kind == HidingKind.UnderBed;
         /// <summary>0..1 how far Omar has tipped the bed up.</summary>
         public float Lift => _lift;
+        /// <summary>Omar has just flipped the bed (it is going up / staying up).</summary>
+        public bool Lifting => _liftTimer > 0f;
 
         public HidingEntity(int index, HidingSpotInfo info)
         {
@@ -475,7 +477,7 @@ namespace PrisonersOfOmar.Gameplay
 
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
-            if (who.IsOmar) { p = InteractPrompt.Hold(IsBed ? "LIFT THE BED" : "SEARCH", 0.9f); return true; }
+            if (who.IsOmar) { p = InteractPrompt.Hold(IsBed ? "LOOK UNDER THE BED" : "SEARCH", IsBed ? 0.5f : 0.9f); return true; }
             if (who.Status != null && who.Status.HidingSpot == Index) { p = InteractPrompt.Press("LEAVE"); return true; }
             if (Occupant >= 0) { p = InteractPrompt.Info("SOMEONE IS ALREADY HIDING HERE"); return true; }
             if (who.Status != null && who.Status.Trapped) { p = default; return false; }

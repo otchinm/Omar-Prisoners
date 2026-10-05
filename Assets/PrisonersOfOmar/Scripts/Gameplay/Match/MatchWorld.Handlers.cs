@@ -14,7 +14,7 @@ namespace PrisonersOfOmar.Gameplay
             Msg.Snapshot, Msg.AvatarStateReq, Msg.Action, Msg.ActionReq, Msg.PlayerStatus, Msg.ItemPicked, Msg.ItemDropped,
             Msg.ItemConsumed, Msg.ItemCharge, Msg.BottleShatter, Msg.CageState, Msg.TrapState,
             Msg.TrapSpawned, Msg.AttackFx, Msg.ChaseState, Msg.Scream, Msg.OmarStun, Msg.Noise, Msg.ObjectiveState,
-            Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges,
+            Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges, Msg.OmarRush,
             // requests (host)
             Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.StruggleReq,
             Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.KeypadReq, Msg.EscapeReq,
@@ -47,6 +47,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.Message, OnMessage);
             s.On(Msg.CarDrive, OnCarDrive);
             s.On(Msg.TrapCharges, (id, r) => { int wires = r.ReadByte(), bears = r.ReadByte(); LocalOmar?.SetTrapCharges(wires, bears); });
+            s.On(Msg.OmarRush, (id, r) => { byte stage = r.ReadByte(); float secs = r.ReadFloat(); LocalOmar?.OnBedDiscovery(stage, secs); });
 
             // host side requests are forwarded to MatchHost (ignored on clients)
             s.On(Msg.AvatarStateReq, (id, r) => Host?.OnAvatarState(id, r));

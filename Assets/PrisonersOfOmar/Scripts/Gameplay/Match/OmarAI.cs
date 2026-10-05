@@ -193,6 +193,17 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        float _rushUntil;
+
+        public int OmarId => A != null ? A.Id : -1;
+
+        /// <summary>Host: the bed this AI checked flipped over on a prisoner - after them, faster for a moment.</summary>
+        public void OnFlippedBed(int prisoner, Vector3 pos)
+        {
+            _rushUntil = W.Time + Tuning.OmarRushSeconds;
+            D.ForceSpot(prisoner, pos, OnDetect);
+        }
+
         // ------------------------------------------------------------------ main loop
 
         void Update()
@@ -466,6 +477,8 @@ namespace PrisonersOfOmar.Gameplay
                     _searchQueue.RemoveAt(0);
                     H.BroadcastAction(A.Id, CharacterAction.Search);
                     int found = H.DoSearch(A.Id, s);
+                    // a bed: he drops to look under it, and if someone is there he stays busy flipping it
+                    if (h.IsBed) _recoverUntil = W.Time + (found >= 0 ? Tuning.BedFlipAt + Tuning.BedEscapeGrace : Tuning.BedPeekTime);
                     foreach (var kv in new List<KeyValuePair<int, int>>(_sawHide)) if (kv.Value == s) _sawHide.Remove(kv.Key);
                     if (found >= 0)
                     {
@@ -623,6 +636,7 @@ namespace PrisonersOfOmar.Gameplay
                 _yaw = Mathf.MoveTowardsAngle(_yaw, targetYaw, 360f * dt);
                 // no human sprint: the heavy walk just speeds up (ramps to full run over ~1.2 s, slows down faster)
                 float want = _running ? Tuning.OmarRunSpeed * 0.93f : Tuning.OmarWalkSpeed;
+                if (W.Time < _rushUntil) want *= Tuning.OmarRushMul;
                 _speedCur = Mathf.MoveTowards(Mathf.Max(_speedCur, Tuning.OmarWalkSpeed * 0.6f), want, (want > _speedCur ? Tuning.OmarAcceleration : Tuning.OmarAcceleration * 2f) * dt);
                 float speed = _speedCur;
                 float align = Mathf.Clamp01(1f - Mathf.Abs(Mathf.DeltaAngle(_yaw, targetYaw)) / 90f);

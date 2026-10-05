@@ -270,6 +270,16 @@ namespace PrisonersOfOmar.Gameplay
         public const float AttackRange = 1.65f, AttackCooldown = 2.6f, AttackWindup = 0.66f; // impact = 0.58 of the 1.15 s chop
         public const float AttackRecover = 1.5f;
         public const float ScreamCooldown = 22f, SenseCooldown = 30f, SenseRadius = 16f;
+        // ---- under-bed discovery (host timeline from the moment Omar checks a bed)
+        /// <summary>Omar drops and looks under the bed (an empty bed ends here).</summary>
+        public const float BedPeekTime = 0.85f;
+        /// <summary>He starts heaving the bed up at BedLiftAt and it flips (the prisoner is out) at BedFlipAt.</summary>
+        public const float BedLiftAt = 0.7f, BedFlipAt = 1.15f;
+        /// <summary>After the flip Omar is still busy with the bed this long: the prisoner's split second to run.</summary>
+        public const float BedEscapeGrace = 0.6f;
+        /// <summary>Omar's surge after flipping a bed on someone: speed multiplier and seconds.</summary>
+        public const float OmarRushMul = 1.2f, OmarRushSeconds = 5f;
+
         public const int TripwireCharges = 4, BearTrapCharges = 3;
         /// <summary>Seconds per recharged trap; wires and bear traps refill side by side.</summary>
         public const float WireRecharge = 35f, BearTrapRecharge = 50f;

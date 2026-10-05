@@ -91,6 +91,7 @@ namespace PrisonersOfOmar.Gameplay
         KitchenState = 124,  // host -> all: Omar starts / stops chopping meat
         ChopReq = 125,       // human Omar -> host: chop at the butcher table
         OmarHitReq = 126,    // prisoner -> host: hit the distracted Omar from behind (bottle / crowbar)
+        OmarRush = 127,      // host -> Omar's owner: someone is under the bed he checks (stage 0 = hold still, 1 = flipped: surge)
 
         // ---- "session" package (spawns, cages, auto AI, difficulty, admin): 140..159
         CageActive = 140,    // host -> all: activate / deactivate a cage slot

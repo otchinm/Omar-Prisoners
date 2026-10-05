@@ -1238,7 +1238,8 @@ namespace PrisonersOfOmar.Gameplay
                 _crouch = false;
                 Teleport(ex.position, ex.rotation.eulerAngles.y);
                 _pitch = 0f;
-                bool yanked = (now.Injured && !before.Injured) || now.Life != LifeState.Free;
+                // pulled out / the bed flipped over us: up on our feet fast
+                bool yanked = (now.Injured && !before.Injured) || now.Life != LifeState.Free || _w.Hiding[before.HidingSpot].Lifting;
                 if (now.Life == LifeState.Free) StartExitPath(info, before.HidingSpot, yanked);
             }
             // car

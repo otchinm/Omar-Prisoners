@@ -225,6 +225,8 @@ namespace PrisonersOfOmar.UI
             ui.Text("LMB  CLEAVER", x, y, VhsUI.Dim); y += lh;
             ui.Text("RMB  SCREAM " + (c.ScreamCooldown01 > 0 ? Bar(c.ScreamCooldown01) : "READY"), x, y, c.ScreamCooldown01 > 0 ? VhsUI.Dim : VhsUI.Red); y += lh;
             ui.Text("T WIRE x" + c.TripwireCharges + "   G TRAP x" + c.BearTrapCharges + "   Q SENSE " + (c.SenseCooldown01 > 0 ? Bar(c.SenseCooldown01) : "READY"), x, y, VhsUI.Dim);
+            // flipped a bed on someone: the surge, blinking above the ability list
+            if (c.Rushing && (Time.time % 0.5f) < 0.36f) ui.Text(">> SURGE: FASTER <<", x, ui.Height - 14 - lh * 4 - 2, VhsUI.Red);
             if (c.Stamina < 0.98f) ui.Rect(ui.Width * 0.5f - 30, ui.Height - 10, 60 * c.Stamina, 2, new Color(0.8f, 0.3f, 0.3f, 0.6f));
 
             // prisoners status (top right)

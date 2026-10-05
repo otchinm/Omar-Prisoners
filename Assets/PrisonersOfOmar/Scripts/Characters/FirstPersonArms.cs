@@ -653,6 +653,14 @@ namespace PrisonersOfOmar.Characters
                     le = new Vector3(50f, 0f, 0f);
                     break;
                 }
+                case CharacterAction.PeekUnder:
+                {
+                    // the cleaver hand drops to the knee while he looks under the bed
+                    float k = Hold(t, 0f, 0.15f, 0.65f, 0.98f);
+                    dp = new Vector3(0.03f, -0.3f, 0.02f) * k;
+                    de = new Vector3(40f, 0f, 10f) * k;
+                    break;
+                }
                 case CharacterAction.Shoot:
                 {
                     // sharp kick up and back, slow settle

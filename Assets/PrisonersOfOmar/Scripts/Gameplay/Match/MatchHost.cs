@@ -280,6 +280,8 @@ namespace PrisonersOfOmar.Gameplay
             if (_powerRestoreAt > 0f && t >= _powerRestoreAt) { _powerRestoreAt = -1f; Event(WorldEventKind.PowerOn); }
             if (t >= _nextEventAt) RandomEvent();
 
+            TickBedReveals();
+
             // wires and bear traps refill side by side (each timer only runs while that kind is short)
             if (_wires < Tuning.TripwireCharges) _trapRecharge += dt; else _trapRecharge = 0f;
             if (_trapRecharge >= Tuning.WireRecharge) { _trapRecharge = 0f; _wires++; SendTrapCharges(); }
@@ -858,6 +860,7 @@ namespace PrisonersOfOmar.Gameplay
         public void DoAttack(int omarId, int target)
         {
             if (OmarStunned || _ended || !W.Running) return;
+            if (OmarBusyWithBed(omarId)) { BroadcastAttack(omarId, 255, 0); return; }
             float last = _lastAttack.TryGetValue(omarId, out var l) ? l : -99f;
             if (W.Time - last < Tuning.AttackCooldown * 0.7f) return;
             _lastAttack[omarId] = W.Time;

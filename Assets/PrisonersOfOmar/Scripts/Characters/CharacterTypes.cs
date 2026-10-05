@@ -41,6 +41,7 @@ namespace PrisonersOfOmar.Characters
         Shoot,      // prisoner: fire the revolver (recoil)
         Cower,      // prisoner: flinch back raising both arms to protect the head
         Push,       // shoulder / hand push (Omar shoving a door open while walking)
+        PeekUnder,  // Omar: drops onto one knee and jerks his head down sideways to look under a bed (~0.85 s)
     }
 
     /// <summary>Persistent body states.</summary>

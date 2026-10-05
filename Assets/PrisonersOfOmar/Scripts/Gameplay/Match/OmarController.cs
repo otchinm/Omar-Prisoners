@@ -92,6 +92,40 @@ namespace PrisonersOfOmar.Gameplay
 
         public void ClearStun() => _stunUntil = 0f;
 
+        // ---- under-bed discovery
+        float _peekStart = -10f, _lockUntil, _rushUntil;
+        Vector3 _peekTarget;
+
+        /// <summary>We drop and look under a bed (local, instant; the host decides what we find).</summary>
+        void StartPeek(HidingEntity bed)
+        {
+            _peekStart = Time.time;
+            _lockUntil = Mathf.Max(_lockUntil, Time.time + Tuning.BedPeekTime);
+            Vector3 c = bed.Info.HiddenView.position != Vector3.zero ? bed.Info.HiddenView.position : bed.InteractPoint;
+            _peekTarget = new Vector3(c.x, _avatar.transform.position.y + 0.18f, c.z);
+            _arms?.Play(CharacterAction.PeekUnder);
+            AudioManager.Play2D(AudioManager.Variant(Snd.OmarStep, 4), 0.8f, 0.8f, AudioCategory.Omar); // the knee hits the floor
+        }
+
+        /// <summary>Host (Msg.OmarRush): stage 0 = someone is under there, hold still while we flip the bed;
+        /// stage 1 = the bed flipped, a surge of speed for `seconds`.</summary>
+        public void OnBedDiscovery(byte stage, float seconds)
+        {
+            if (stage == 0)
+            {
+                _lockUntil = Mathf.Max(_lockUntil, Time.time + seconds);
+                AudioManager.Play2D(AudioManager.Variant(Snd.Growl, 2), 0.7f, 1.05f, AudioCategory.Omar);
+                _w.AddMessage("SOMEONE IS UNDER THE BED...", 1.5f);
+                return;
+            }
+            _rushUntil = Time.time + seconds;
+            _arms?.Play(CharacterAction.Grab);
+            VhsEffect.TriggerGlitch(0.6f, 0.35f);
+            _w.AddMessage("FOUND ONE! YOU SURGE AFTER THEM - FASTER FOR " + Mathf.RoundToInt(seconds) + " S", 3f);
+        }
+
+        public bool Rushing => Time.time < _rushUntil;
+
         /// <summary>Admin teleport (the host follows our position).</summary>
         public void AdminTeleport(Vector3 p)
         {
@@ -118,7 +152,8 @@ namespace PrisonersOfOmar.Gameplay
                 GameInput.SetCursorLocked(!ui.AnyModal);
             }
 
-            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null || AdminFreeCam.Active || Time.time < _recoverUntil;
+            bool frozen = !_w.Running || Waking || Stunned || _w.Ending != null || AdminFreeCam.Active || Time.time < _recoverUntil
+                          || Time.time < _lockUntil;
             var look = GameInput.Look;
             _yaw += look.x * (Stunned ? 0.3f : 1f);
             _pitch = Mathf.Clamp(_pitch - look.y, -80f, 80f);
@@ -152,6 +187,16 @@ namespace PrisonersOfOmar.Gameplay
             pos += Vector3.up * (Mathf.Abs(Mathf.Sin(_bobPhase)) * amp);
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, Mathf.Sin(_bobPhase * 0.5f) * (_sprintingNow ? 2.5f : 1.2f));
             if (Stunned) rot *= Quaternion.Euler(Mathf.Sin(Time.time * 9f) * 4f, Mathf.Sin(Time.time * 6f) * 6f, 0);
+            float pt = (Time.time - _peekStart) / Tuning.BedPeekTime;
+            if (pt >= 0f && pt < 1f)
+            {
+                // a sharp drop to the floor, head turned on its side to look under the bed, then back up
+                float k = pt < 0.13f ? Mathf.SmoothStep(0f, 1f, pt / 0.13f) : pt < 0.66f ? 1f : 1f - Mathf.SmoothStep(0f, 1f, (pt - 0.66f) / 0.32f);
+                Vector3 low = new Vector3(pos.x, _avatar.transform.position.y + 0.5f, pos.z);
+                pos = Vector3.Lerp(pos, low, k);
+                Vector3 to = _peekTarget - pos;
+                if (to.sqrMagnitude > 0.01f) rot = Quaternion.Slerp(rot, Quaternion.LookRotation(to.normalized) * Quaternion.Euler(0, 0, 32f), k);
+            }
             rig.transform.SetPositionAndRotation(pos, rot);
             rig.FieldOfView = Settings.FieldOfView + (_sprintingNow ? 6f : 0f);
         }
@@ -161,6 +206,7 @@ namespace PrisonersOfOmar.Gameplay
             Vector2 input = frozen ? Vector2.zero : GameInput.Move;
             bool wantSprint = !frozen && GameInput.Sprint && input.y > 0.1f && !_exhausted;
             float speed = (wantSprint ? Tuning.OmarRunSpeed : Tuning.OmarWalkSpeed) * AdminState.SpeedMultiplier;
+            if (Rushing) speed *= Tuning.OmarRushMul;   // flipped a bed on someone: a short surge
             if (AdminState.InfiniteStamina) { _stamina = 1f; _exhausted = false; }
             if (AdminState.Noclip && !frozen)
             {
@@ -411,6 +457,7 @@ namespace PrisonersOfOmar.Gameplay
             if (_hold >= _prompt.HoldTime)
             {
                 _target.Interact(_who);
+                if (_target is HidingEntity he && he.IsBed) StartPeek(he);
                 _hold = 0; _holdLock = true;
             }
         }

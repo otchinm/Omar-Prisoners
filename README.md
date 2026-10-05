@@ -55,7 +55,7 @@ takes over his body.
 | C / Ctrl | crouch (quiet, harder to see) | LMB | cleaver |
 | E | interact (hold for long actions), hide in wardrobes / lockers / **under beds** | RMB | scream (one of 4 screams) |
 | hold LMB on a door + move the mouse | swing the door open / shut (physical doors) | walk into a door | shove it open |
-| F / LMB | use item (Zippo open + strike / close, flashlight, bandage, throw bottle, fire the revolver...) | E | unlock doors, **search** hiding spots (lifts beds), smash boards |
+| F / LMB | use item (Zippo open + strike / close, flashlight, bandage, throw bottle, fire the revolver...) | E | unlock doors, **search** hiding spots (looks under beds, flips them on whoever hides there), smash boards |
 | 1 2 3 / wheel | select slot | T | string a tripwire across a doorway |
 | G | drop item | G | set a bear trap |
 | Tab | inventory | Q | sense nearby prisoners |
@@ -90,7 +90,9 @@ it burns fuel, and Omar can see the flame from far away. Items lie around the wh
 
 **Stealth.** Running, doors, dropping or throwing things make **noise**. Omar's player sees it as ripples
 through walls, and the AI comes to investigate. Darkness and crouching hide you; your own lighter or flashlight
-gives you away. Hide in **wardrobes, lockers and under beds**, but Omar can tear them open.
+gives you away. Hide in **wardrobes, lockers and under beds**, but Omar can tear them open. When he checks a bed he
+drops to look under it; if you are there he flips the bed over - you get up with a split second to run while he is still
+busy with it, and then he surges after you, faster for a few seconds.
 
 **Omar.** A 2.3 m giant who has to stoop through door frames, shoves doors open with his body and butchers meat
 in the kitchen now and then (you can watch him from the dining room vent — or hit him from behind while he is busy
