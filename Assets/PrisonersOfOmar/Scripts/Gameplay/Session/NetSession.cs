@@ -252,6 +252,9 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteString(reason);
             SendTo(playerId, NetChannel.Reliable);
             try { _server?.Flush(); _server?.Disconnect(playerId, DisconnectReason.Kicked); } catch { }
+            // the transport does not raise ClientDisconnected for a drop we asked for: remove / mark the player ourselves
+            // (otherwise a ghost stays in the lobby, blocks the match end or leaves Omar's slot taken)
+            OnClientDisconnected(playerId, DisconnectReason.Kicked);
         }
 
         /// <summary>Host: start even if somebody isn't ready (admin panel).</summary>
@@ -390,8 +393,13 @@ namespace PrisonersOfOmar.Gameplay
         {
             var p = new PlayerInfo { Id = connId, Name = Gameplay.Settings.CleanName(req.PlayerName) };
             // unique name
+            // unique, and still within the 14 characters every client keeps (the suffix replaces the end of a long name)
             string baseName = p.Name; int n = 2;
-            while (Players.Exists(o => o.Name == p.Name)) p.Name = baseName + n++;
+            while (Players.Exists(o => o.Name == p.Name))
+            {
+                string suffix = (n++).ToString();
+                p.Name = baseName.Substring(0, Mathf.Min(baseName.Length, 14 - suffix.Length)) + suffix;
+            }
             AssignDefaultRole(p);
             Players.Add(p);
             BroadcastRoster();
@@ -429,7 +437,12 @@ namespace PrisonersOfOmar.Gameplay
             BroadcastRoster();
         }
 
-        void OnServerData(int connId, NetReader r, NetChannel ch) => Dispatch(connId, r);
+        void OnServerData(int connId, NetReader r, NetChannel ch)
+        {
+            // only client -> host requests are accepted from the network (host -> client messages stay host-only)
+            if (r.Remaining < 1 || !MsgRules.FromClient((Msg)r.PeekByte())) return;
+            Dispatch(connId, r);
+        }
 
         void OnClientConnectedToHost()
         {
@@ -451,6 +464,9 @@ namespace PrisonersOfOmar.Gameplay
                 case DisconnectReason.Timeout: text = "CONNECTION LOST"; break;
                 default: text = "DISCONNECTED"; break;
             }
+            // a kick already told us why: keep the host's words instead of the generic line
+            if (reason == DisconnectReason.Kicked && !string.IsNullOrEmpty(_kickReason)) text = _kickReason;
+            _kickReason = null;
             LastError = text;
             _pendingShutdown = text; // deferred: we are inside the client's Poll()
         }
@@ -585,16 +601,23 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        string _kickReason;
+
         void OnKick(int sender, NetReader r)
         {
             string reason = r.ReadString();
-            if (!IsHost) { LastError = reason; _pendingShutdown = reason; }
+            if (!IsHost) { LastError = reason; _pendingShutdown = reason; _kickReason = reason; }
         }
 
         void SetState(SessionState s)
         {
             if (State == s) return;
             State = s;
+            // building the map blocks a peer for several seconds without any keep-alive: give everybody far longer
+            // than the usual 10 s before calling it a timeout while the match loads
+            float timeout = s == SessionState.Loading ? 60f : NetProtocol.DefaultTimeout;
+            if (_server != null) _server.TimeoutSeconds = timeout;
+            if (_client != null) _client.TimeoutSeconds = timeout;
             StateChanged?.Invoke(s);
         }
 

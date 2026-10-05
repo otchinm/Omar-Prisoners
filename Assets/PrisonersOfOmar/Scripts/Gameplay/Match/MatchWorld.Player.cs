@@ -96,6 +96,15 @@ namespace PrisonersOfOmar.Gameplay
             Session.SendToHost(NetChannel.Unreliable);
         }
 
+        /// <summary>Owner -> host: what is left in a light we hold (they burn on our machine only).</summary>
+        public void SendChargeReport(int itemId, float charge)
+        {
+            var w = Session.Begin(Msg.ChargeReq);
+            w.WriteShort((short)itemId);
+            w.WriteUnit(charge);
+            Session.SendToHost(NetChannel.Reliable);
+        }
+
         public void SendSearch(int spot)
         {
             var w = Session.Begin(Msg.SearchReq);

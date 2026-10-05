@@ -389,6 +389,10 @@ namespace PrisonersOfOmar.Gameplay
             var h = W.Hiding[spot];
             if (!Near(omarId, h.InteractPoint, 3.8f)) return -1;
             int occ = h.Occupant;
+            // trust the player's own status, not the spot's (possibly stale) occupant: never drag an escaped / dead /
+            // disconnected player back into a cage
+            var ost = occ >= 0 ? W.StatusOf(occ) : null;
+            if (ost == null || ost.Life != LifeState.Free || ost.HidingSpot != spot) occ = -1;
             if (h.IsBed)
             {
                 // he drops and looks under it; only when someone is there does the bed get flipped (see TickBedReveals)

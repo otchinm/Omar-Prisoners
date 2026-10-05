@@ -30,14 +30,16 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 origin = r.ReadVector3();
             Vector3 dir = r.ReadVector3();
             if (!W.Running || !IsPrisoner(sender)) return;
-            var st = W.StatusOf(sender);
-            if (st == null || st.Life != LifeState.Free || st.Hidden || st.InCar || st.Trapped) return;
-            if (float.IsNaN(dir.x) || float.IsNaN(origin.x) || dir.sqrMagnitude < 0.25f) return;
-            dir.Normalize();
-            if (_lastShot.TryGetValue(sender, out var last) && W.Time - last < 0.45f) return;
             int gunId = FindHeld(sender, ItemType.Revolver);
             var gun = W.GetItem(gunId);
-            if (gun == null || gun.Charge < 0.49f) return;
+            if (gun == null) return;
+            // the shooter already took the round off its own count: every refusal sends the real count back
+            var st = W.StatusOf(sender);
+            bool ok = st != null && st.Life == LifeState.Free && !st.Hidden && !st.InCar && !st.Trapped
+                      && !float.IsNaN(dir.x) && !float.IsNaN(origin.x) && dir.sqrMagnitude >= 0.25f
+                      && !(_lastShot.TryGetValue(sender, out var last) && W.Time - last < 0.45f) && gun.Charge >= 0.49f;
+            if (!ok) { SetCharge(gunId, gun.Charge); return; }
+            dir.Normalize();
             Vector3 eye = PosOf(sender) + Vector3.up * 1.55f;
             if (Vector3.Distance(origin, eye) > 1.6f) origin = eye;
             _lastShot[sender] = W.Time;

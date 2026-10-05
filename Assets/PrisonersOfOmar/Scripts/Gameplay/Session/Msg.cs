@@ -104,4 +104,30 @@ namespace PrisonersOfOmar.Gameplay
         AdminItemSpawn = 147, // host -> all: a new item appears (admin give / spawn)
         CageRattle = 148,    // host -> all: a caged prisoner rattles the lock (cage, prisoner) - loud, Omar may come to punish them
     }
+
+    public static class MsgRules
+    {
+        /// <summary>
+        /// Messages a client may send to the host. Everything else is host -&gt; clients only: the host drops it when a
+        /// client sends it (otherwise a modified client could push a fake status, objective, match end...).
+        /// </summary>
+        public static bool FromClient(Msg m)
+        {
+            switch (m)
+            {
+                case Msg.LobbyReq: case Msg.LoadedReq:
+                case Msg.AvatarStateReq: case Msg.ActionReq: case Msg.NoiseReq:
+                case Msg.PickupReq: case Msg.DropReq: case Msg.UseReq: case Msg.ThrowReq: case Msg.BottleImpact:
+                case Msg.DoorReq: case Msg.HideReq: case Msg.StruggleReq: case Msg.TrapTriggerReq: case Msg.TrapPlaceReq:
+                case Msg.AttackReq: case Msg.DetectReq: case Msg.ScreamReq: case Msg.SearchReq: case Msg.SenseReq:
+                case Msg.EscapeReq: case Msg.KeypadReq:
+                case Msg.DoorGrabReq: case Msg.DoorDragReq: case Msg.ChargeReq: case Msg.DrawerReq:
+                case Msg.ShootReq: case Msg.ChopReq: case Msg.OmarHitReq:
+                case Msg.AdminAuthReq: case Msg.AdminCmdReq:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
 }

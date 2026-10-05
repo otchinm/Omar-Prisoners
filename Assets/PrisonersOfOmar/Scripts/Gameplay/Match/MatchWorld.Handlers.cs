@@ -18,6 +18,7 @@ namespace PrisonersOfOmar.Gameplay
             // requests (host)
             Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.StruggleReq,
             Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.KeypadReq, Msg.EscapeReq,
+            Msg.ChargeReq,
         };
 
         void RegisterHandlers()
@@ -65,6 +66,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.DetectReq, (id, r) => Host?.OnDetectReq(id, r));
             s.On(Msg.ScreamReq, (id, r) => Host?.OnScreamReq(id, r));
             s.On(Msg.SearchReq, (id, r) => Host?.OnSearchReq(id, r));
+            s.On(Msg.ChargeReq, (id, r) => Host?.OnChargeReq(id, r));
             s.On(Msg.KeypadReq, (id, r) => Host?.OnKeypadReq(id, r));
             s.On(Msg.EscapeReq, (id, r) => Host?.OnEscapeReq(id, r));
             RegisterPlayerHandlers(s);

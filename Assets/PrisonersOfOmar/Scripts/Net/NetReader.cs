@@ -24,6 +24,8 @@ namespace PrisonersOfOmar.Net
         void Need(int n) { if (n < 0 || _pos + n > _end) throw new NetReadException("read past end"); }
 
         public byte ReadByte() { Need(1); return _buf[_pos++]; }
+        /// <summary>The next byte without consuming it.</summary>
+        public byte PeekByte() { Need(1); return _buf[_pos]; }
         public sbyte ReadSByte() => (sbyte)ReadByte();
         public bool ReadBool() => ReadByte() != 0;
         public ushort ReadUShort() { Need(2); ushort v = (ushort)(_buf[_pos] | (_buf[_pos + 1] << 8)); _pos += 2; return v; }

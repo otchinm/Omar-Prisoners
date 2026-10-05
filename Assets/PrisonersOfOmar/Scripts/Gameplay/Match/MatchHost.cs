@@ -153,8 +153,25 @@ namespace PrisonersOfOmar.Gameplay
             S.SendToAll(NetChannel.Reliable);
         }
 
+        readonly Dictionary<int, float> _chargeSetAt = new Dictionary<int, float>();
+
+        /// <summary>
+        /// Owner -> host (Msg.ChargeReq): the fuel / battery of a light they hold (lights burn on the owner's machine).
+        /// Only ever lowers the host's copy, and ignores reports racing a refill the host just made.
+        /// </summary>
+        public void OnChargeReq(int sender, NetReader r)
+        {
+            int itemId = r.ReadShort();
+            float c = r.ReadUnit();
+            var it = W.GetItem(itemId);
+            if (it == null || (it.Type != ItemType.Lighter && it.Type != ItemType.Flashlight) || !Holds(sender, itemId, it.Type)) return;
+            if (_chargeSetAt.TryGetValue(itemId, out var at) && W.Time - at < 1.5f) return;
+            if (c < it.Charge) it.Charge = c;
+        }
+
         void SetCharge(int itemId, float charge)
         {
+            _chargeSetAt[itemId] = W.Time;
             var w = S.Begin(Msg.ItemCharge);
             w.WriteShort((short)itemId);
             w.WriteUnit(charge);
@@ -319,7 +336,13 @@ namespace PrisonersOfOmar.Gameplay
             var p = Info(id);
             if (p == null) return;
             OnPlayerLeftPlayer(id);
-            if (p.IsPrisoner)
+            var settled = W.StatusOf(id);
+            if (p.IsPrisoner && settled != null && (settled.Life == LifeState.Escaped || settled.Life == LifeState.Dead))
+            {
+                // already escaped / dead: leaving changes nothing (keeps the ending and the winner as they were)
+                SetChase(id, false);
+            }
+            else if (p.IsPrisoner)
             {
                 Vector3 pos = PosOf(id);
                 if (_inv.TryGetValue(id, out var slots))
@@ -394,7 +417,7 @@ namespace PrisonersOfOmar.Gameplay
             var it = W.GetItem(itemId);
             var st = W.StatusOf(sender);
             if (it == null || it.Consumed || it.Holder >= 0 || it.World == null) return;
-            if (!IsPrisoner(sender) || st == null || st.Life != LifeState.Free || st.Hidden || st.InCar) return;
+            if (!IsPrisoner(sender) || st == null || st.Life != LifeState.Free || st.Hidden || st.InCar || st.Trapped) return;
             if (!Near(sender, it.World.transform.position, 3.5f)) return;
             if (!_inv.TryGetValue(sender, out var slots)) return;
             int slot = -1;
@@ -417,6 +440,8 @@ namespace PrisonersOfOmar.Gameplay
             var it = W.GetItem(itemId);
             if (it == null || !Holds(sender, itemId, it.Type)) return;
             if (Vector3.Distance(pos, PosOf(sender)) > 3f) pos = PosOf(sender);
+            // charge only ever goes down on the owner's side (refills go through the host): never trust more than we know
+            charge = Mathf.Min(charge, it.Charge);
             DropItem(sender, itemId, pos, yaw, charge);
             DeliverNoise(pos, it.Def.DropNoise);
         }
@@ -714,7 +739,10 @@ namespace PrisonersOfOmar.Gameplay
             var me = W.StatusOf(p);
             if (!IsPrisoner(p) || me == null || me.Life != LifeState.Free || me.Trapped) return;
             if (!Near(p, t.InteractPoint, 3.2f)) return;
-            if (t.Victim >= 0 && t.Victim != p)
+            // only a bear trap still holding its victim can be pried open (a snapped wire remembers who tripped it, and
+            // prying it used to free that player from whatever bear trap they were in elsewhere)
+            var vs = t.Victim >= 0 ? W.StatusOf(t.Victim) : null;
+            if (t.Kind == TrapKind.BearTrap && t.Victim >= 0 && t.Victim != p && vs != null && vs.TrappedBy == t.Index)
             {
                 int victim = t.Victim;
                 BroadcastTrap(t, TrapState.Disarmed, -1, false);
@@ -860,6 +888,7 @@ namespace PrisonersOfOmar.Gameplay
         public void DoAttack(int omarId, int target)
         {
             if (OmarStunned || _ended || !W.Running) return;
+            if (W.Time < Tuning.OmarIntroSeconds) return;   // still waking up
             if (OmarBusyWithBed(omarId)) { BroadcastAttack(omarId, 255, 0); return; }
             float last = _lastAttack.TryGetValue(omarId, out var l) ? l : -99f;
             if (W.Time - last < Tuning.AttackCooldown * 0.7f) return;
@@ -1001,12 +1030,19 @@ namespace PrisonersOfOmar.Gameplay
 
         // ================================================================== keypad / escapes
 
+        readonly Dictionary<int, float> _keypadAt = new Dictionary<int, float>();
+
         public void OnKeypadReq(int sender, NetReader r)
         {
             string code = r.ReadString();
             var sh = W.Map.Shelter;
             if (sh == null || sh.Keypad == null || !IsPrisoner(sender)) return;
+            var kst = W.StatusOf(sender);
+            if (kst == null || kst.Life != LifeState.Free || kst.Hidden) return;
             if (!Near(sender, sh.Keypad.bounds.center, 4f)) return;
+            // one try a second: the 4 digits can't be machine-gunned
+            if (_keypadAt.TryGetValue(sender, out var lastTry) && W.Time - lastTry < 1f) return;
+            _keypadAt[sender] = W.Time;
             bool ok = code == string.Concat(W.ShelterCode[0], W.ShelterCode[1], W.ShelterCode[2], W.ShelterCode[3]);
             var w = S.Begin(Msg.KeypadResult);
             w.WriteBool(ok);

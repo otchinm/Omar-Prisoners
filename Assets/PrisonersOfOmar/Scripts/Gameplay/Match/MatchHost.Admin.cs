@@ -34,7 +34,18 @@ namespace PrisonersOfOmar.Gameplay
                 case AdminCmd.FreePlayer: AdminFree(a, me); break;
                 case AdminCmd.CagePlayer: if (IsPrisoner(a) && W.StatusOf(a)?.Life == LifeState.Free) Capture(a); break;
                 case AdminCmd.KillPlayer:
-                    if (IsPrisoner(a)) { var st = Edit(a); st.Life = LifeState.Dead; st.HidingSpot = -1; st.Cage = -1; st.TrappedBy = -1; st.CarSeat = -1; Commit(st); SetChase(a, false); }
+                    if (IsPrisoner(a))
+                    {
+                        var st = Edit(a);
+                        // free whatever they occupied, like a disconnect does (hiding spot, cage, trap, the driver's seat)
+                        if (st.HidingSpot >= 0) BroadcastHide(st.HidingSpot, -1, false);
+                        if (st.Cage >= 0 && st.Cage < W.Cages.Length) BroadcastCage(st.Cage, W.Cages[st.Cage].Open, -1);
+                        if (st.TrappedBy >= 0 && st.TrappedBy < W.Traps.Count) BroadcastTrap(W.Traps[st.TrappedBy], TrapState.Disarmed, -1, false);
+                        if (W.Objectives.CarDriver == a) { var o = EditObj(); o.CarDriver = -1; CommitObj(o); }
+                        st.Life = LifeState.Dead; st.HidingSpot = -1; st.Cage = -1; st.TrappedBy = -1; st.CarSeat = -1;
+                        Commit(st);
+                        SetChase(a, false);
+                    }
                     break;
                 case AdminCmd.InjurePlayer: if (IsPrisoner(a)) { var st = Edit(a); st.Injured = true; Commit(st); } break;
                 case AdminCmd.HealPlayer: AdminHeal(a); break;

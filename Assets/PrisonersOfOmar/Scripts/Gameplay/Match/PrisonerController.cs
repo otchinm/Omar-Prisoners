@@ -443,6 +443,8 @@ namespace PrisonersOfOmar.Gameplay
                 }
             }
 
+            ReportLightCharges();
+
             if (held == null || !_w.Running) { _useHoldItem = ItemType.None; return; }
 
             // hold-to-use consumables
@@ -575,6 +577,31 @@ namespace PrisonersOfOmar.Gameplay
         }
 
         ItemEntity ItemOfType(ItemType t) => _w.GetItem(_w.Inventory.Find(t));
+
+        float _chargeReportAt;
+        readonly System.Collections.Generic.Dictionary<int, float> _reportedCharge = new System.Collections.Generic.Dictionary<int, float>();
+
+        /// <summary>
+        /// Lights burn on the owner's machine: every 2 s tell the host how much is left, so what a captured / disconnected
+        /// player drops (and what the host hands to the next holder) is the real amount, not a full refill.
+        /// </summary>
+        void ReportLightCharges()
+        {
+            if (_w.IsHost || Time.time < _chargeReportAt) return;
+            _chargeReportAt = Time.time + 2f;
+            for (int k = 0; k < 2; k++)
+            {
+                var it = ItemOfType(k == 0 ? ItemType.Lighter : ItemType.Flashlight);
+                if (it == null) continue;
+                if (_reportedCharge.TryGetValue(it.Id, out var last))
+                {
+                    if (it.Charge > last) { _reportedCharge[it.Id] = it.Charge; continue; }   // refilled by the host
+                    if (last - it.Charge < 0.02f) continue;
+                }
+                _reportedCharge[it.Id] = it.Charge;
+                _w.SendChargeReport(it.Id, it.Charge);
+            }
+        }
 
         void Drop(ItemEntity it)
         {

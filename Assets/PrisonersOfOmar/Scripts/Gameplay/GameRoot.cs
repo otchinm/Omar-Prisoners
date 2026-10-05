@@ -180,6 +180,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             yield return null;
             yield return null; // let the loading screen render
+            // the session may have dropped (back at the main menu) or moved on meanwhile: don't build a stray match
+            if (Session == null || Session.State != SessionState.Loading) yield break;
             DestroyMenuScene();
             DestroyMatch();
             try

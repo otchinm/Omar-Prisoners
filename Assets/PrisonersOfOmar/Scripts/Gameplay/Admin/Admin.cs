@@ -231,6 +231,7 @@ namespace PrisonersOfOmar.Gameplay
             if (st == SessionState.Offline || st == SessionState.Connecting)
             {
                 _accepted = false; Pending = false;
+                _authSentFor = -1;   // rejoining (often with the same player id) must prove ourselves again
                 HostAdmins.Clear();
                 ResetLocal();
             }

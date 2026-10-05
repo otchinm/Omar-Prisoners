@@ -720,8 +720,8 @@ namespace PrisonersOfOmar.Gameplay
                 if (State == TrapState.Armed) { p = InteractPrompt.Info(Kind == TrapKind.Tripwire ? "YOUR WIRE" : "YOUR TRAP"); return true; }
                 return false;
             }
-            if (Victim == who.PlayerId) { p = InteractPrompt.Press("STRUGGLE FREE (MASH E)"); return true; }
-            if (Victim >= 0) { p = InteractPrompt.Hold("PRY THE TRAP OPEN", Tuning.TrapPryTime); return true; }
+            if (Kind == TrapKind.BearTrap && Victim == who.PlayerId) { p = InteractPrompt.Press("STRUGGLE FREE (MASH E)"); return true; }
+            if (Kind == TrapKind.BearTrap && Victim >= 0) { p = InteractPrompt.Hold("PRY THE TRAP OPEN", Tuning.TrapPryTime); return true; }
             if (State != TrapState.Armed) return false;
             string what = Kind == TrapKind.Tripwire ? "A TRIPWIRE" : "A BEAR TRAP";
             if (!who.Crouching) { p = InteractPrompt.Info(what + " - CROUCH (C) TO DISARM"); return true; }
@@ -733,7 +733,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             var w = MatchWorld.Instance;
             if (w == null) return;
-            if (Victim == who.PlayerId) { w.SendStruggle(1); return; }
+            if (Kind == TrapKind.BearTrap && Victim == who.PlayerId) { w.SendStruggle(1); return; }
             w.SendUse(UseTarget.Trap, Index, -1);
         }
 
