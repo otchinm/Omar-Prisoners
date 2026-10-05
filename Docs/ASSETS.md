@@ -97,7 +97,22 @@ writing_help (128×64, "HELP" scrawled in blood), writing_omar (128×64, "OMAR S
 | car_front | 128×64 | sedan front: grille + two headlights + plate |
 | car_rear | 128×64 | sedan rear: tail lights + trunk + plate |
 | car_side | 256×64 | sedan side: two doors with windows (dark glass) |
-| car_tire | 64×64 | tire tread / sidewall |
+| car_tire | 128×64 | atlas: sidewall + rusty rim (left half, cylinder caps), tread (right half, round the tyre) |
+| car_glass | 64×64 | tinted car glass: reflections, dust film, water spots (tiles) |
+| car_glass_broken | 64×64 | wreck glass: cracks, holes, mud (tiles) |
+| car_engine | 128×64 | atlas: engine from above (left), battery top / labelled side (right) |
+| enamel | 64×64 | old appliance / tub enamel, chipped to rusty iron (tiles) |
+| porcelain | 64×64 | crazed bathroom porcelain with water lines (tiles; sink, toilet, plates) |
+| plastic | 64×64 | scuffed neutral plastic, coloured by the material tint (tiles) |
+| trash_bag | 64×64 | black bin-bag creases (tiles) |
+| bottle | 32×64 | glass bottle round its axis: label band, neck foil (tinted green / brown) |
+| jar | 32×64 | jar of something pickled, rusty lid on top |
+| bone | 64×64 | stained, cracked bone (tiles) |
+| coal | 64×64 | coal lumps (tiles) |
+| skin_dead | 64×64 | waxy bruised dead skin (tiles) |
+| mirror | 64×64 | tarnished mirror, desilvered edges, crack |
+| stove_front | 64×64 | gas stove front: knobs, oven door window, drawer |
+| wax | 32×32 | candle wax with runs and soot (tiles) |
 | keypad | 32×64 | metal keypad with 0–9 buttons and small LED |
 | fusebox | 64×64 | gray metal fuse box face (labels, empty slot) |
 | radio_set | 128×64 | military radio front panel (dials, meters, frequency display) |

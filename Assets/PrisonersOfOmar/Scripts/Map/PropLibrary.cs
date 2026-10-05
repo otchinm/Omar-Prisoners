@@ -176,7 +176,7 @@ namespace PrisonersOfOmar.Map
                 }
             }
             // dark cavities behind the openings, then the drawers
-            var dark = Mat.Flat(0.035f, 0.028f, 0.022f);
+            var dark = Mat.Lit(Tex.WoodFurniture, new Color(0.13f, 0.11f, 0.09f));
             var rot = MapMath.Yaw(yaw);
             float depth = s.z - 0.04f, zb = zf + depth;
             var uv = new Rect(0, 0, 1, 1);
@@ -321,7 +321,7 @@ namespace PrisonersOfOmar.Map
             }
             var rng = new DeterministicRandom(seed, 7);
             var bucket = Mat.Lit(Tex.BucketFood);
-            var white = Mat.Lit(null, new Color(0.82f, 0.82f, 0.8f));
+            var white = Mat.Lit(Tex.Plastic, new Color(0.95f, 0.95f, 0.92f));
             var black = Mat.Lit(Tex.BarrelWater, new Color(0.35f, 0.35f, 0.35f));
             var box = Mat.Lit(Tex.Cardboard);
             for (int i = 0; i < 4; i++)
@@ -381,7 +381,7 @@ namespace PrisonersOfOmar.Map
             {
                 float y = 1.05f + i * 0.45f;
                 Box(mb, wood, new Vector3(0, y, 0.06f), new Vector3(1.36f, 0.02f, 0.36f));
-                mb.Material = Mat.Flat(0.75f, 0.72f, 0.65f);
+                mb.Material = Mat.Lit(Tex.Porcelain, new Color(0.92f, 0.9f, 0.84f));
                 Gray(mb, 0.9f);
                 for (int p = 0; p < 5; p++)
                 {
@@ -417,7 +417,7 @@ namespace PrisonersOfOmar.Map
             var m = Mat.Lit(green ? Tex.MetalGreen : Tex.MetalDark);
             Gray(mb, 0.7f);
             Box(mb, m, new Vector3(0, 0.95f, 0), new Vector3(w, 1.9f, 0.5f), 0.6f);
-            mb.Material = Mat.Flat(0.05f, 0.05f, 0.05f);
+            mb.Material = Mat.Lit(Tex.MetalDark, new Color(0.15f, 0.15f, 0.15f));
             for (int i = 0; i < 4; i++)
                 mb.AddBox(new Vector3(0, 1.55f + i * 0.05f, -0.252f), new Vector3(w * 0.5f, 0.015f, 0.005f), BoxUV.Local, 1f, 0f, BoxFaces.NegZ);
             Box(mb, Mat.Lit(Tex.MetalDark), new Vector3(w * 0.3f, 1.0f, -0.26f), new Vector3(0.03f, 0.15f, 0.03f));
@@ -525,7 +525,7 @@ namespace PrisonersOfOmar.Map
             Begin(mb, pos, yaw);
             Gray(mb, 0.8f);
             FrontBox(mb, Mat.Lit(Tex.TvBody), Mat.Lit(Tex.WoodFurniture, new Color(0.5f, 0.4f, 0.3f)), new Vector3(0, 0.25f, 0.02f), new Vector3(0.62f, 0.48f, 0.46f));
-            Box(mb, Mat.Flat(0.12f, 0.12f, 0.12f), new Vector3(0, 0.25f, 0.3f), new Vector3(0.42f, 0.36f, 0.14f));
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.24f, 0.21f, 0.18f)), new Vector3(0, 0.25f, 0.3f), new Vector3(0.42f, 0.36f, 0.14f));
             mb.Material = Mat.Lit(Tex.MetalDark);
             mb.AddBeam(new Vector3(0.05f, 0.49f, 0.1f), new Vector3(-0.2f, 0.85f, 0.15f), 0.012f);
             mb.AddBeam(new Vector3(0.08f, 0.49f, 0.1f), new Vector3(0.3f, 0.8f, 0.12f), 0.012f);
@@ -544,7 +544,7 @@ namespace PrisonersOfOmar.Map
         {
             Begin(mb, pos, yaw);
             Gray(mb, 0.82f);
-            var body = Mat.Lit(null, new Color(0.72f, 0.7f, 0.62f));
+            var body = Mat.Lit(Tex.Enamel, new Color(0.92f, 0.9f, 0.85f));
             FrontBox(mb, Mat.Lit(Tex.FridgeFront), body, new Vector3(0, 0.86f, 0), new Vector3(0.75f, 1.68f, 0.7f));
             Box(mb, Mat.Lit(Tex.MetalDark), new Vector3(0.3f, 1.25f, -0.37f), new Vector3(0.04f, 0.35f, 0.04f));
             Gray(mb, 1f);
@@ -569,8 +569,8 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(new Vector3(0, 0.9f, 0), new Vector3(w + 0.02f, 0.04f, 0.62f), BoxUV.Local, 0.4f, 1.0f, BoxFaces.All & ~BoxFaces.NegY);
             if (sink)
             {
-                mb.Material = Mat.Flat(0.25f, 0.25f, 0.23f);
-                mb.AddBox(new Vector3(0, 0.922f, 0), new Vector3(0.5f, 0.005f, 0.38f), BoxUV.Local, 1f, 0f, BoxFaces.PosY);
+                mb.Material = Mat.Lit(Tex.Galvanized, new Color(0.42f, 0.42f, 0.4f));   // the steel basin
+                mb.AddBox(new Vector3(0, 0.922f, 0), new Vector3(0.5f, 0.005f, 0.38f), BoxUV.Local, 0.5f, 0f, BoxFaces.PosY);
                 mb.Material = Mat.Lit(Tex.Galvanized);
                 mb.AddBeam(new Vector3(0, 0.92f, 0.26f), new Vector3(0, 1.15f, 0.26f), 0.03f);
                 mb.AddBeam(new Vector3(0, 1.15f, 0.26f), new Vector3(0, 1.12f, 0.08f), 0.025f);
@@ -594,10 +594,11 @@ namespace PrisonersOfOmar.Map
         {
             Begin(mb, pos, yaw);
             Gray(mb, 0.75f);
-            var enamel = Mat.Lit(null, new Color(0.68f, 0.66f, 0.58f));
-            Box(mb, enamel, new Vector3(0, 0.46f, 0), new Vector3(0.76f, 0.92f, 0.64f));
-            Box(mb, Mat.Flat(0.08f, 0.08f, 0.08f), new Vector3(0, 0.42f, -0.322f), new Vector3(0.55f, 0.4f, 0.01f), 1f, BoxFaces.NegZ);
-            mb.Material = Mat.Flat(0.06f, 0.06f, 0.06f);
+            var enamel = Mat.Lit(Tex.Enamel, new Color(0.9f, 0.88f, 0.8f));
+            // knobs, oven door with its window, drawer on the front; burner grates on top
+            FrontBox(mb, Mat.Lit(Tex.StoveFront), enamel, new Vector3(0, 0.46f, 0), new Vector3(0.76f, 0.92f, 0.64f));
+            Box(mb, enamel, new Vector3(0, 0.46f, 0), new Vector3(0.76f, 0.92f, 0.64f), 0.5f, BoxFaces.NegY);
+            mb.Material = Mat.Lit(Tex.MetalDark, new Color(0.3f, 0.28f, 0.26f));
             for (int i = 0; i < 4; i++)
                 mb.AddCylinder(new Vector3((i % 2 == 0 ? -0.18f : 0.18f), 0.92f, (i < 2 ? -0.14f : 0.14f)), 0.09f, 0.09f, 0.015f, 8, true, false, null, false);
             Box(mb, enamel, new Vector3(0, 1.02f, 0.29f), new Vector3(0.76f, 0.2f, 0.06f));
@@ -609,12 +610,12 @@ namespace PrisonersOfOmar.Map
         public static void PedestalSink(MapContext ctx, MeshBuilder mb, Vector3 pos, float yaw)
         {
             Begin(mb, pos, yaw);
-            var por = Mat.Lit(Tex.TileWhiteDirty, new Color(0.85f, 0.83f, 0.78f));
+            var por = Mat.Lit(Tex.Porcelain);
             Gray(mb, 0.8f);
             mb.Material = por;
             mb.AddCylinder(Vector3.zero, 0.12f, 0.09f, 0.72f, 8, false, false, null, true);
             Box(mb, por, new Vector3(0, 0.8f, 0.02f), new Vector3(0.56f, 0.16f, 0.44f));
-            Box(mb, Mat.Flat(0.2f, 0.2f, 0.18f), new Vector3(0, 0.885f, -0.01f), new Vector3(0.4f, 0.005f, 0.28f), 1f, BoxFaces.PosY);
+            Box(mb, Mat.Lit(Tex.Porcelain, new Color(0.45f, 0.43f, 0.38f)), new Vector3(0, 0.885f, -0.01f), new Vector3(0.4f, 0.005f, 0.28f), 0.4f, BoxFaces.PosY);
             mb.Material = Mat.Lit(Tex.Galvanized);
             mb.AddBeam(new Vector3(0, 0.88f, 0.18f), new Vector3(0, 1.0f, 0.18f), 0.025f);
             mb.AddBeam(new Vector3(0, 1.0f, 0.18f), new Vector3(0, 0.97f, 0.06f), 0.02f);
@@ -628,13 +629,13 @@ namespace PrisonersOfOmar.Map
         public static void Toilet(MapContext ctx, MeshBuilder mb, Vector3 pos, float yaw)
         {
             Begin(mb, pos, yaw);
-            var por = Mat.Lit(Tex.TileWhiteDirty, new Color(0.82f, 0.8f, 0.72f));
+            var por = Mat.Lit(Tex.Porcelain, new Color(0.95f, 0.93f, 0.86f));
             Gray(mb, 0.78f);
             mb.Material = por;
             mb.AddCylinder(new Vector3(0, 0, -0.05f), 0.16f, 0.2f, 0.4f, 8, true, false, null, true);
             Box(mb, por, new Vector3(0, 0.6f, 0.2f), new Vector3(0.42f, 0.4f, 0.18f));
             Box(mb, por, new Vector3(0, 0.81f, 0.2f), new Vector3(0.45f, 0.03f, 0.2f));
-            mb.Material = Mat.Flat(0.25f, 0.2f, 0.12f);
+            mb.Material = Mat.Lit(Tex.WoodFurniture, new Color(0.75f, 0.62f, 0.45f));   // the wooden seat
             mb.AddCylinder(new Vector3(0, 0.4f, -0.05f), 0.2f, 0.2f, 0.025f, 8, true, false, null, false);
             Gray(mb, 1f);
             End(mb);
@@ -647,7 +648,7 @@ namespace PrisonersOfOmar.Map
         public static void Tub(MapContext ctx, MeshBuilder mb, Vector3 pos, float yaw, bool bloody = true)
         {
             Begin(mb, pos, yaw);
-            var en = Mat.Lit(Tex.TileWhiteDirty, new Color(0.8f, 0.78f, 0.72f));
+            var en = Mat.Lit(Tex.Enamel, new Color(0.95f, 0.93f, 0.88f));
             Gray(mb, 0.78f);
             float L = 1.7f, W = 0.75f, H = 0.58f, t = 0.06f;
             Box(mb, en, new Vector3(0, 0.12f, 0), new Vector3(L - 0.1f, 0.06f, W - 0.1f));
@@ -690,7 +691,7 @@ namespace PrisonersOfOmar.Map
         }
 
         public static void Mirror(MeshBuilder mb, Vector3 wallPoint, Vector3 outward, float w = 0.5f, float h = 0.7f)
-            => WallPicture(mb, wallPoint, outward, w, h, Mat.Lit(null, new Color(0.16f, 0.19f, 0.22f)), Mat.Lit(Tex.MetalDark), 0.03f);
+            => WallPicture(mb, wallPoint, outward, w, h, Mat.Lit(Tex.Mirror), Mat.Lit(Tex.MetalDark), 0.03f);
 
         // ------------------------------------------------------------------ technical
 
@@ -761,7 +762,7 @@ namespace PrisonersOfOmar.Map
             mb.Color = Shade.Gray(1f);
             mb.AddQuad(new Vector3(-0.45f, 0.35f, -0.69f), new Vector3(-0.45f, 0.95f, -0.69f), new Vector3(0.45f, 0.95f, -0.69f), new Vector3(0.45f, 0.35f, -0.69f));
             Gray(mb, 0.6f);
-            mb.Material = Mat.Flat(0.05f, 0.04f, 0.04f);
+            mb.Material = Mat.Lit(Tex.MetalDark, new Color(0.26f, 0.22f, 0.2f));
             for (int i = 0; i < 6; i++)
                 mb.AddBox(new Vector3(-0.4f + i * 0.16f, 0.65f, -0.71f), new Vector3(0.04f, 0.62f, 0.04f), BoxUV.Local, 1f);
             Box(mb, rust, new Vector3(0, 0.3f, -0.72f), new Vector3(1.0f, 0.06f, 0.06f));
@@ -884,12 +885,9 @@ namespace PrisonersOfOmar.Map
             if (!lying) mb.Push(new Vector3(0, 0.33f, 0), Quaternion.Euler(0, 0, 90f));
             else mb.Push(Vector3.zero, Quaternion.identity);
             Vector3 b = lying ? Vector3.zero : new Vector3(0, -0.11f, 0);
+            // tread round it, the sidewall and rusty rim on both faces
             mb.Material = Mat.Lit(Tex.CarTire);
-            mb.AddCylinder(b, 0.33f, 0.33f, 0.22f, 10, false, false, null, true);
-            mb.Material = Mat.Flat(0.05f, 0.05f, 0.05f);
-            mb.AddCylinder(b + Vector3.up * 0.218f, 0.33f, 0.33f, 0.005f, 10, true, false, null, false);
-            mb.Material = Mat.Flat(0.01f, 0.01f, 0.01f);
-            mb.AddCylinder(b + Vector3.up * 0.221f, 0.19f, 0.19f, 0.005f, 10, true, false, null, false);
+            mb.AddCylinder(b, 0.33f, 0.33f, 0.22f, 12, true, true, Tex.TireTreadUv, true, 1, Tex.TireSideUv);
             mb.Pop();
             Gray(mb, 1f);
             End(mb);
@@ -996,7 +994,7 @@ namespace PrisonersOfOmar.Map
         public static void SeveredHand(MeshBuilder mb, Vector3 pos, float yaw)
         {
             Begin(mb, pos, yaw);
-            var skin = Mat.Flat(0.75f, 0.5f, 0.42f);
+            var skin = Mat.Lit(Tex.SkinDead);
             Gray(mb, 0.9f);
             mb.Material = skin;
             mb.AddBox(new Vector3(0, 0.025f, 0), new Vector3(0.09f, 0.04f, 0.1f), BoxUV.Local, 0.2f);
@@ -1012,7 +1010,7 @@ namespace PrisonersOfOmar.Map
         public static void Bones(MeshBuilder mb, Vector3 pos, int seed, int count = 6, bool skull = true)
         {
             var rng = new DeterministicRandom(seed, 19);
-            var bone = Mat.Flat(0.72f, 0.68f, 0.58f);
+            var bone = Mat.Lit(Tex.Bone);
             mb.Material = bone;
             Gray(mb, 0.85f);
             for (int i = 0; i < count; i++)
@@ -1027,7 +1025,7 @@ namespace PrisonersOfOmar.Map
             {
                 var p = pos + new Vector3(rng.Range(-0.3f, 0.3f), 0.09f, rng.Range(-0.3f, 0.3f));
                 mb.AddSphere(p, new Vector3(0.09f, 0.09f, 0.11f), 6, 5);
-                mb.Material = Mat.Flat(0.05f, 0.04f, 0.04f);
+                mb.Material = Mat.Lit(Tex.Bone, new Color(0.12f, 0.1f, 0.08f));   // eye sockets
                 mb.AddBox(p + new Vector3(-0.03f, 0.0f, -0.1f), new Vector3(0.025f, 0.025f, 0.01f), BoxUV.Local, 1f);
                 mb.AddBox(p + new Vector3(0.03f, 0.0f, -0.1f), new Vector3(0.025f, 0.025f, 0.01f), BoxUV.Local, 1f);
             }
@@ -1037,9 +1035,9 @@ namespace PrisonersOfOmar.Map
         public static void CoalPile(MeshBuilder mb, Vector3 pos, float w, float d, int seed)
         {
             var rng = new DeterministicRandom(seed, 23);
-            mb.Material = Mat.Flat(0.06f, 0.06f, 0.065f);
+            mb.Material = Mat.Lit(Tex.Coal);
             Gray(mb, 1f);
-            mb.AddSphere(pos, new Vector3(w * 0.5f, 0.45f, d * 0.5f), 8, 4);
+            mb.AddSphere(pos, new Vector3(w * 0.5f, 0.45f, d * 0.5f), 8, 4, new Rect(0, 0, Mathf.Max(1f, w * 1.5f), 1f));
             for (int i = 0; i < 14; i++)
             {
                 var p = pos + new Vector3(rng.Range(-w * 0.6f, w * 0.6f), 0.04f, rng.Range(-d * 0.6f, d * 0.6f));
@@ -1080,19 +1078,21 @@ namespace PrisonersOfOmar.Map
             {
                 var p = pos + new Vector3(rng.Range(-spread, spread), 0, rng.Range(-spread, spread));
                 float t = rng.NextFloat();
-                mb.Material = Mat.Lit(null, t < 0.5f ? new Color(0.15f, 0.3f, 0.12f) : new Color(0.35f, 0.22f, 0.08f));
+                // green or brown glass, a peeling label round the body, the neck above it
+                mb.Material = Mat.Lit(Tex.Bottle, t < 0.5f ? new Color(0.42f, 0.7f, 0.36f) : new Color(0.8f, 0.52f, 0.26f));
                 Gray(mb, 0.9f);
+                Rect body = new Rect(0, 0, 1, 0.7f), neck = new Rect(0, 0.7f, 1, 0.3f);
                 if (rng.Chance(0.3f))
                 {
                     mb.Push(p + Vector3.up * 0.04f, Quaternion.Euler(90f, rng.Range(0f, 360f), 0));
-                    mb.AddCylinder(new Vector3(0, -0.12f, 0), 0.035f, 0.035f, 0.18f, 6, true, false, null, true);
-                    mb.AddCylinder(new Vector3(0, 0.06f, 0), 0.035f, 0.013f, 0.08f, 6, true, false, null, true);
+                    mb.AddCylinder(new Vector3(0, -0.12f, 0), 0.035f, 0.035f, 0.18f, 6, true, false, body, true);
+                    mb.AddCylinder(new Vector3(0, 0.06f, 0), 0.035f, 0.013f, 0.08f, 6, true, false, neck, true);
                     mb.Pop();
                 }
                 else
                 {
-                    mb.AddCylinder(p, 0.035f, 0.035f, 0.18f, 6, false, false, null, true);
-                    mb.AddCylinder(p + Vector3.up * 0.18f, 0.035f, 0.013f, 0.08f, 6, true, false, null, true);
+                    mb.AddCylinder(p, 0.035f, 0.035f, 0.18f, 6, false, false, body, true);
+                    mb.AddCylinder(p + Vector3.up * 0.18f, 0.035f, 0.013f, 0.08f, 6, true, false, neck, true);
                 }
             }
             Gray(mb, 1f);
@@ -1117,7 +1117,7 @@ namespace PrisonersOfOmar.Map
             for (int i = 0; i < count; i++)
             {
                 var p = pos + new Vector3(rng.Range(-spread, spread), 0, rng.Range(-spread * 0.3f, spread * 0.3f));
-                mb.Material = Mat.Flat(0.72f, 0.7f, 0.64f);
+                mb.Material = Mat.Lit(Tex.Porcelain, new Color(0.92f, 0.9f, 0.84f));
                 Gray(mb, 0.9f);
                 mb.AddCylinder(p, 0.1f, 0.12f, 0.02f, 8, true, false, null, false);
                 if (rng.Chance(0.5f))
@@ -1132,7 +1132,7 @@ namespace PrisonersOfOmar.Map
         public static void TrashBags(MeshBuilder mb, Vector3 pos, int seed, int count = 3)
         {
             var rng = new DeterministicRandom(seed, 59);
-            mb.Material = Mat.Lit(null, new Color(0.08f, 0.08f, 0.09f));
+            mb.Material = Mat.Lit(Tex.TrashBag);
             for (int i = 0; i < count; i++)
             {
                 var p = pos + new Vector3(rng.Range(-0.4f, 0.4f), 0.22f, rng.Range(-0.4f, 0.4f));
@@ -1175,9 +1175,10 @@ namespace PrisonersOfOmar.Map
             float yaw = MapMath.PropYawFacing(outward);
             Begin(mb, wallPoint, yaw);
             Gray(mb, 0.8f);
-            Box(mb, Mat.Flat(0.55f, 0.5f, 0.38f), new Vector3(0, 0, -0.04f), new Vector3(0.18f, 0.26f, 0.08f), 0.3f);
-            Box(mb, Mat.Flat(0.5f, 0.45f, 0.33f), new Vector3(-0.1f, 0.0f, -0.09f), new Vector3(0.05f, 0.24f, 0.05f), 0.3f);
-            mb.Material = Mat.Flat(0.08f, 0.08f, 0.08f);
+            // yellowed beige plastic, coiled black cord
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.78f, 0.7f, 0.52f)), new Vector3(0, 0, -0.04f), new Vector3(0.18f, 0.26f, 0.08f), 0.3f);
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.72f, 0.64f, 0.46f)), new Vector3(-0.1f, 0.0f, -0.09f), new Vector3(0.05f, 0.24f, 0.05f), 0.3f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.13f, 0.13f, 0.12f));
             mb.AddBeam(new Vector3(-0.1f, -0.12f, -0.09f), new Vector3(-0.05f, -0.45f, -0.06f), 0.012f);
             mb.AddBeam(new Vector3(-0.05f, -0.45f, -0.06f), new Vector3(0.0f, -0.12f, -0.05f), 0.012f);
             Gray(mb, 1f);
@@ -1235,9 +1236,9 @@ namespace PrisonersOfOmar.Map
 
         public static void Candle(MeshBuilder mb, MeshBuilder glow, Vector3 pos)
         {
-            mb.Material = Mat.Flat(0.8f, 0.76f, 0.62f);
+            mb.Material = Mat.Lit(Tex.Wax);
             Gray(mb, 0.9f);
-            mb.AddCylinder(pos, 0.025f, 0.025f, 0.12f, 6, true, false, null, true);
+            mb.AddCylinder(pos, 0.025f, 0.025f, 0.12f, 6, true, false, new Rect(0, 0, 0.5f, 1f), true);
             Gray(mb, 1f);
             if (glow != null)
             {

@@ -833,28 +833,390 @@ def car_side(ctx):
     return finish(ctx, img, light=0.06)
 
 
-@texture("Props/car_tire", (64, 64), k=8)
+@texture("Props/car_tire", (128, 64))
 def car_tire(ctx):
+    """atlas: left half the sidewall + rusty steel rim (cylinder caps), right half the tread (wraps once round the
+    tyre: u = around, v = across the tread)"""
     W, H = ctx.W, ctx.H
     r = ctx.sub(1)
-    rad = radial(W, H)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    ang = np.arctan2(yy - H / 2, xx - W / 2)
     t = clamp01(0.4 + 0.1 * fft_noise(r, H, W, beta=2.0) + 0.04 * photo(ctx, "gravel_fine"))
     rubber = gradient_map(t, [(0, "#0a0a0a"), (1, "#2e2e2c")])
-    tread = (np.sin(ang * 36) > 0.3).astype(np.float32) * (rad > 0.88) * (rad < 1.0)
-    img = mix(rubber, "#030303", tread * 0.8)
-    img = img * (1.0 + 0.25 * np.cos((rad - 0.75) * 9) * (rad < 0.9))[..., None]
-    hub = (rad < 0.5).astype(np.float32)
+    img = rubber.copy()
+    # --- sidewall (left square)
+    S = H
+    rad = np.sqrt((xx + 0.5 - S / 2) ** 2 + (yy + 0.5 - S / 2) ** 2) / (S / 2)
+    ang = np.arctan2(yy - S / 2, xx - S / 2)
+    side = (xx < S).astype(np.float32)
+    wall = rubber * (1.0 + 0.25 * np.cos((rad - 0.75) * 9) * (rad < 0.9))[..., None]
+    # moulded lettering ring + bead
+    ring = ((rad > 0.7) & (rad < 0.8)).astype(np.float32) * (np.sin(ang * 22) > 0.55)
+    wall = mix(wall, "#3a3a36", ring * 0.45)
+    wall = mix(wall, "#030303", (((rad > 0.9) & (rad < 0.93))).astype(np.float32) * 0.7)
     hubc = gradient_map(clamp01(0.55 + 0.25 * np.cos(ang * 5) * (rad > 0.2) + 0.1 * fft_noise(r, H, W, beta=2.0)), [(0, "#3a3834"), (1, "#8a8680")])
     hubc = mix(hubc, rust_color(ctx, H, W), rust_mask(ctx, H, W, cover=0.4) * 0.8)
-    img = mix(img, hubc, hub)
-    img = mix(img, "#141412", ((rad > 0.48) & (rad < 0.52)).astype(np.float32))
+    wall = mix(wall, hubc, (rad < 0.5).astype(np.float32))
+    wall = mix(wall, "#141412", ((rad > 0.48) & (rad < 0.52)).astype(np.float32))
+    wall = mix(wall, "#c8c4b8", ((rad > 0.2) & (rad < 0.24)).astype(np.float32) * 0.25)
     for i in range(5):
         a = i / 5 * 2 * np.pi
-        img = mix(img, "#1a1816", ellipse_mask(W, H, W / 2 + np.cos(a) * 0.3 * W / 2, H / 2 + np.sin(a) * 0.3 * H / 2, W * 0.03, W * 0.03))
-    img = mix(img, "#0a0a0a", (rad > 1.0).astype(np.float32))
-    img = dirt_pass(ctx, img, 0.35, 0.4, "#3a3022")
+        wall = mix(wall, "#1a1816", ellipse_mask(W, H, S / 2 + np.cos(a) * 0.3 * S / 2, S / 2 + np.sin(a) * 0.3 * S / 2, S * 0.03, S * 0.03))
+    wall = mix(wall, "#2a2420", ellipse_mask(W, H, S / 2, S / 2, S * 0.07, S * 0.07))
+    wall = mix(wall, "#0a0a0a", (rad > 1.0).astype(np.float32))
+    img = mix(img, wall, side)
+    # --- tread (right square): 14 block rows round the tyre, a centre groove and two shoulder grooves
+    u = (xx - S) / S
+    v = yy / S
+    rows = 14
+    ph = (u * rows) % 1.0
+    zig = 0.08 * np.sign(np.sin(u * rows * 2 * np.pi))
+    blocks = (np.abs(ph - 0.5) < 0.36).astype(np.float32)
+    groove = ((np.abs(v - 0.5 - zig) < 0.045) | (np.abs(v - 0.2) < 0.03) | (np.abs(v - 0.8) < 0.03)).astype(np.float32)
+    sipe = (np.abs(((u * rows * 2) % 1.0) - 0.5) < 0.04).astype(np.float32) * ((v > 0.22) & (v < 0.78))
+    tread = rubber * (0.75 + 0.45 * blocks)[..., None]
+    tread = mix(tread, "#020202", np.maximum(groove, sipe * 0.7))
+    # worn: the middle of the blocks polished, the shoulders scuffed, dried mud in the grooves
+    tread = mix(tread, "#3c3a36", smoothstep(0.35, 0.0, np.abs(v - 0.5)) * blocks * 0.25)
+    mud = grime(ctx.sub(3), H, W, cover=0.35, beta=2.4, sharp=0.4)
+    tread = mix(tread, "#3a3022", mud * np.maximum(groove, 0.3) * 0.7)
+    img = mix(img, tread, 1 - side)
+    img = dirt_pass(ctx, img, 0.3, 0.35, "#3a3022")
+    return finish(ctx, img, light=0.04)
+
+
+def glass_base(ctx, H, W, salt=0, dark="#05080a", light="#2e383c"):
+    """tinted car glass (tiles): depth gradient, diagonal sky streaks, a dust film and water spots"""
+    r = ctx.sub(1300 + salt)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    u, v = xx / W, yy / H
+    t = clamp01(0.38 + 0.2 * fft_noise(r, H, W, beta=2.8) + 0.04 * photo(ctx, "gravel_fine", salt=salt))
+    img = gradient_map(t, [(0, dark), (1, light)])
+    ph = (u * 2 + v) % 1.0
+    refl = smoothstep(0.0, 0.04, ph) * (1 - smoothstep(0.06, 0.14, ph)) + 0.5 * smoothstep(0.45, 0.47, ph) * (1 - smoothstep(0.48, 0.5, ph))
+    img = mix(img, "#6a767a", refl * 0.3)
+    dust = grime(ctx.sub(1301 + salt), H, W, cover=0.45, beta=2.4, sharp=0.5)
+    img = mix(img, "#4a463c", dust * 0.35)
+    spots = drips(ctx.sub(1302 + salt), H, W, 10, length=(0.05, 0.25), width=(W / 160, W / 70))
+    img = mix(img, "#5a5850", spots * 0.3)
+    sc = scratches_mask(ctx.sub(1303 + salt), H, W, 12, length=(W * 0.05, W * 0.3), width=1)
+    return mix(img, "#7a8084", sc * 0.25)
+
+
+@texture("Props/car_glass", (64, 64), tile=True, k=8)
+def car_glass(ctx):
+    return finish(ctx, glass_base(ctx, ctx.H, ctx.W), light=0.05, grain=0.02)
+
+
+@texture("Props/car_glass_broken", (64, 64), tile=True, k=8)
+def car_glass_broken(ctx):
+    W, H = ctx.W, ctx.H
+    img = glass_base(ctx, H, W, salt=1, dark="#030405", light="#1e2426")
+    cr = cracks_mask(ctx.sub(2), H, W, n=5, seg=(W * 0.04, W * 0.16), width=2, branch=0.5)
+    img = mix(img, "#8a908c", cr * 0.55)
+    holes = (fft_noise(ctx.sub(3), H, W, beta=2.0) > 1.7).astype(np.float32)
+    img = mix(img, "#a0a49e", outer_rim(holes, 3, True) * 0.5)
+    img = mix(img, "#010101", holes)
+    mud = grime(ctx.sub(4), H, W, cover=0.5, beta=2.2, sharp=0.4)
+    img = mix(img, "#2c261c", mud * 0.55)
+    return finish(ctx, img, light=0.06)
+
+
+@texture("Props/car_engine", (128, 64))
+def car_engine(ctx):
+    """atlas: left half the engine seen from above (valve cover, air cleaner, hoses), right half the battery
+    (top in the upper half, side with the label in the lower half)"""
+    W, H = ctx.W, ctx.H
+    S = H
+    r = ctx.sub(1)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    base = gradient_map(clamp01(0.45 + 0.15 * fft_noise(r, H, W, beta=2.4) + 0.06 * photo(ctx, "gravel")), [(0, "#0c0c0b"), (1, "#3a3834")])
+    img = base.copy()
+    # engine block / valve cover (painted engine red-brown, oily)
+    vc = rect(H, W, 0.06, 0.18, 0.36, 0.82)
+    paint = gradient_map(clamp01(0.5 + 0.2 * fft_noise(ctx.sub(2), H, W, beta=2.2)), [(0, "#240c08"), (1, "#6a2a1c")])
+    img = mix(img, paint, vc)
+    img = mix(img, "#0a0605", outer_rim(vc, 4) * 0.8)
+    for k in range(4):
+        bx = 0.09 + k * 0.08
+        img = mix(img, "#8a8680", ellipse_mask(W, H, bx * W, 0.24 * H, S * 0.02, S * 0.02))
+        img = mix(img, "#8a8680", ellipse_mask(W, H, bx * W, 0.76 * H, S * 0.02, S * 0.02))
+    # ribs + oil cap
+    for k in range(5):
+        img = mix(img, "#3a140c", rect(H, W, 0.09, 0.32 + k * 0.08, 0.33, 0.34 + k * 0.08))
+    img = mix(img, "#1a1a1a", ellipse_mask(W, H, 0.3 * W, 0.3 * H, S * 0.04, S * 0.04))
+    # round air cleaner on top (chrome lid, black can)
+    img = mix(img, "#0e0e0e", ellipse_mask(W, H, 0.21 * W, 0.5 * H, S * 0.2, S * 0.2))
+    lid = clamp01(0.5 + 0.35 * np.cos(np.arctan2(yy - 0.5 * H, xx - 0.21 * W) * 2) + 0.1 * fft_noise(ctx.sub(3), H, W, beta=2.0))
+    img = mix(img, gradient_map(lid, [(0, "#3a3a38"), (1, "#a8a6a0")]), ellipse_mask(W, H, 0.21 * W, 0.5 * H, S * 0.15, S * 0.15))
+    img = mix(img, "#2a2a28", ellipse_mask(W, H, 0.21 * W, 0.5 * H, S * 0.03, S * 0.03))
+    # hoses and wires
+    from PIL import Image as _I, ImageDraw as _D
+    hm = _I.new("L", (W, H), 0)
+    d = _D.Draw(hm)
+    d.line([(0.37 * W, 0.3 * H), (0.42 * W, 0.12 * H), (0.48 * W, 0.08 * H)], fill=255, width=int(S * 0.05))
+    d.line([(0.37 * W, 0.7 * H), (0.44 * W, 0.86 * H), (0.49 * W, 0.94 * H)], fill=255, width=int(S * 0.04))
+    d.line([(0.02 * W, 0.1 * H), (0.1 * W, 0.06 * H), (0.3 * W, 0.08 * H)], fill=180, width=int(S * 0.015))
+    hose = np.asarray(hm, np.float32) / 255.0
+    img = mix(img, "#101010", hose)
+    img = mix(img, "#2a2a28", (hose > 0.9).astype(np.float32) * 0.0 + blur(hose, 2) * (1 - hose) * 0.3)
+    # oil and grime over all of it
+    oil = grime(ctx.sub(4), H, W, cover=0.35, beta=2.6, sharp=0.4)
+    left = (xx < S).astype(np.float32)
+    img = mix(img, "#060504", oil * 0.55 * left)
+    # --- battery (right half): top v 0..0.5 (image top), side v 0.5..1
+    bat = 1 - left
+    case = gradient_map(clamp01(0.45 + 0.12 * fft_noise(ctx.sub(5), H, W, beta=2.4)), [(0, "#0a0a0a"), (1, "#2a2a28")])
+    img = mix(img, case, bat)
+    # top: vent caps row, two terminals (red +, black -) with green-white corrosion
+    for k in range(6):
+        img = mix(img, "#3a3a38", ellipse_mask(W, H, (0.6 + k * 0.055) * W, 0.25 * H, S * 0.035, S * 0.035))
+    for cx, colr in ((0.58, "#7a1410"), (0.92, "#141414")):
+        img = mix(img, colr, ellipse_mask(W, H, cx * W, 0.1 * H, S * 0.06, S * 0.05))
+        img = mix(img, "#8a8a80", ellipse_mask(W, H, cx * W, 0.1 * H, S * 0.03, S * 0.025))
+    cor = grime(ctx.sub(6), H, W, cover=0.3, beta=2.2, sharp=0.3) * (yy < 0.22 * H)
+    img = mix(img, "#a8b89a", cor * 0.7 * bat)
+    img = mix(img, "#050505", rect(H, W, 0.5, 0.48, 1.0, 0.52))
+    # side: faded label
+    img = mix(img, "#7a6a2a", rect(H, W, 0.56, 0.6, 0.94, 0.86) * 0.85)
+    img, _ = put_text(img, ["12V HEAVY DUTY"], FONT_ROAD, 60, (0.58 * W, 0.64 * H, 0.92 * W, 0.74 * H), "#141008", stretch=True)
+    img, _ = put_text(img, ["DO NOT TIP"], FONT_ROAD, 40, (0.6 * W, 0.76 * H, 0.9 * W, 0.83 * H), "#3a1008", stretch=True)
+    img = dirt_pass(ctx, img, 0.35, 0.45, "#1a160e")
+    return finish(ctx, img, light=0.06)
+
+
+# --------------------------------------------------------------------------------------
+# household / clutter surfaces that used to be plain colours
+# --------------------------------------------------------------------------------------
+@texture("Props/enamel", (64, 64), tile=True, k=8)
+def enamel(ctx):
+    """old appliance enamel (fridge, stove, cooler lid): yellowed off-white, chipped to black iron with rust halos"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.6 + 0.1 * fft_noise(ctx.sub(1), H, W, beta=2.8) + 0.04 * photo(ctx, "moon"))
+    img = gradient_map(t, [(0, "#8a8474"), (0.6, "#c8c2b0"), (1, "#dcd8c8")])
+    yel = grime(ctx.sub(2), H, W, cover=0.5, beta=2.6, sharp=0.6)
+    img = mix(img, "#a89a6a", yel * 0.35)
+    ch = chips(ctx, H, W, cover=0.05, salt=3, sharp=0.02)
+    img = mix(img, "#4a3a2a", outer_rim(ch > 0.5, 3, True) * 0.6)
+    img = mix(img, "#120e0c", ch)
+    img = mix(img, rust_color(ctx, H, W), blur(ch, 4, tile=True) * (1 - ch) * 0.6)
+    dr = drips(ctx.sub(4), H, W, 8, length=(0.1, 0.5), width=(W / 200, W / 90))
+    img = mix(img, "#6a5a3a", dr * 0.35)
+    sc = scratches_mask(ctx.sub(5), H, W, 10, length=(W * 0.05, W * 0.25), width=1)
+    img = mix(img, "#6a6458", sc * 0.3)
+    img = dirt_pass(ctx, img, 0.3, 0.3, "#3a3022")
+    return finish(ctx, img, light=0.06)
+
+
+@texture("Props/porcelain", (64, 64), tile=True, k=8)
+def porcelain(ctx):
+    """bathroom porcelain (toilet, sink, tub, plates): glaze with crazing, rust-brown water lines and grime"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.62 + 0.08 * fft_noise(ctx.sub(1), H, W, beta=3.0) + 0.03 * photo(ctx, "moon", salt=2))
+    img = gradient_map(t, [(0, "#9a988c"), (0.6, "#d0cec2"), (1, "#e2e0d6")])
+    cr = cracks_mask(ctx.sub(2), H, W, n=8, seg=(W * 0.03, W * 0.1), width=1, branch=0.6)
+    img = mix(img, "#6a6656", cr * 0.45)
+    fill, ring = water_stains(ctx.sub(3), H, W, n=2, rmin=0.2, rmax=0.4)
+    img = mix(img, "#a89060", fill * 0.25)
+    img = mix(img, "#6a4a22", ring * 0.4)
+    dr = drips(ctx.sub(4), H, W, 6, length=(0.15, 0.6), width=(W / 160, W / 60))
+    img = mix(img, "#7a5a2a", dr * 0.35)
+    img = dirt_pass(ctx, img, 0.3, 0.35, "#3a3226")
+    return finish(ctx, img, light=0.05)
+
+
+@texture("Props/plastic", (64, 64), tile=True, k=8)
+def plastic(ctx):
+    """scuffed moulded plastic in a light neutral grey: the material tint gives it its colour (phone, cooler, lids)"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.55 + 0.08 * fft_noise(ctx.sub(1), H, W, beta=2.6) + 0.05 * photo(ctx, "gravel_fine"))
+    img = gradient_map(t, [(0, "#8a8a88"), (1, "#d2d2ce")])
+    # moulded texture (fine stipple) and scuffs
+    img = img * (1.0 + 0.05 * photo(ctx, "gravel_fine", salt=4))[..., None]
+    sc = scratches_mask(ctx.sub(2), H, W, 20, length=(W * 0.03, W * 0.2), width=1)
+    img = mix(img, "#f0f0ec", sc * 0.2)
+    scuff = grime(ctx.sub(3), H, W, cover=0.35, beta=2.4, sharp=0.5)
+    img = mix(img, "#5a5652", scuff * 0.35)
+    img = dirt_pass(ctx, img, 0.3, 0.35, "#2a241c")
+    return finish(ctx, img, light=0.05)
+
+
+@texture("Props/trash_bag", (64, 64), tile=True, k=8)
+def trash_bag(ctx):
+    """black bin-bag plastic: glossy creases and folds, stretched thin and grey at the corners, grime"""
+    W, H = ctx.W, ctx.H
+    F1, F2, _ = worley(ctx.sub(1), H, W, 18)
+    crease = smoothstep(W * 0.035, 0.0, F2 - F1)
+    t = clamp01(0.3 + 0.18 * fft_noise(ctx.sub(2), H, W, beta=2.2) + 0.3 * crease)
+    img = gradient_map(t, [(0, "#030304"), (0.5, "#121316"), (1, "#4a4c52")])
+    hl = smoothstep(0.75, 1.0, clamp01(0.5 + 0.5 * fft_noise(ctx.sub(3), H, W, beta=1.8))) * crease
+    img = mix(img, "#7a7e86", hl * 0.5)
+    img = dirt_pass(ctx, img, 0.3, 0.4, "#2a241a")
+    return finish(ctx, img, light=0.06, grain=0.02)
+
+
+@texture("Props/bottle", (32, 64), k=8)
+def bottle(ctx):
+    """glass bottle round its axis (u around, v up): body with a peeling paper label, shoulder, neck with a foil cap.
+    Neutral so the material tint makes it green / brown glass."""
+    W, H = ctx.W, ctx.H
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    u, v = xx / W, 1 - yy / H
+    t = clamp01(0.4 + 0.15 * fft_noise(ctx.sub(1), H, W, beta=2.6))
+    img = gradient_map(t, [(0, "#2a2a2a"), (1, "#8a8a86")])
+    # vertical highlight (seen from any side: two around)
+    hl = np.exp(-(((u * 2) % 1.0 - 0.3) / 0.05) ** 2)
+    img = mix(img, "#e8e8e0", hl * 0.45)
+    lab = ((v > 0.2) & (v < 0.5)).astype(np.float32) * (np.abs(u - 0.5) < 0.42)
+    torn = (fft_noise(ctx.sub(2), H, W, beta=2.0) > 1.2).astype(np.float32)
+    lab = lab * (1 - torn)
+    paper = gradient_map(clamp01(0.55 + 0.15 * fft_noise(ctx.sub(3), H, W, beta=2.2)), [(0, "#8a7a52"), (1, "#d8c89a")])
+    img = mix(img, paper, lab)
+    img = mix(img, "#7a1a12", lab * ((v > 0.37) & (v < 0.42)).astype(np.float32))
+    img, _ = put_text(img, ["XXX"], FONT_ROAD, 60, (0.28 * W, (1 - 0.35) * H, 0.72 * W, (1 - 0.24) * H), "#2a1a10", stretch=True)
+    # neck foil + cap
+    img = mix(img, "#a89a6a", (v > 0.9).astype(np.float32) * 0.8)
+    img = dirt_pass(ctx, img, 0.35, 0.4, "#2a2418")
+    return finish(ctx, img, light=0.04)
+
+
+@texture("Props/jar", (32, 64), k=8)
+def jar(ctx):
+    """mason jar of something pickled (u around, v up): cloudy brine with pale lumps, rusty screw lid on top"""
+    W, H = ctx.W, ctx.H
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    u, v = xx / W, 1 - yy / H
+    t = clamp01(0.45 + 0.2 * fft_noise(ctx.sub(1), H, W, beta=2.2))
+    img = gradient_map(t, [(0, "#2a2410"), (0.6, "#6a5a2a"), (1, "#9a8a52")])
+    F1, _, _ = worley(ctx.sub(2), H, W, 7, tile=True)
+    lumps = smoothstep(W * 0.28, W * 0.12, F1) * (v < 0.8)
+    img = mix(img, "#c8b090", lumps * 0.6)
+    img = mix(img, "#3a1a10", smoothstep(W * 0.1, W * 0.03, F1) * (v < 0.8) * 0.5)
+    hl = np.exp(-(((u * 2) % 1.0 - 0.3) / 0.06) ** 2)
+    img = mix(img, "#e0dcc8", hl * 0.35 * (v < 0.8))
+    # air gap and lid
+    img = mix(img, "#3a3a32", ((v > 0.8) & (v < 0.86)).astype(np.float32) * 0.8)
+    lid = (v >= 0.86).astype(np.float32)
+    img = mix(img, rust_color(ctx, H, W), lid)
+    img = mix(img, "#1a120a", lid * ((np.abs(((v - 0.86) * 60) % 1.0 - 0.5) < 0.15)).astype(np.float32) * 0.6)
+    img = dirt_pass(ctx, img, 0.35, 0.4, "#2a2214")
+    return finish(ctx, img, light=0.04)
+
+
+@texture("Props/bone", (64, 64), tile=True, k=8)
+def bone(ctx):
+    """old bone: ivory with pores, hairline cracks, brown staining and dried blood"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.55 + 0.12 * fft_noise(ctx.sub(1), H, W, beta=2.4) + 0.08 * photo(ctx, "moon", salt=5))
+    img = gradient_map(t, [(0, "#7a6a4a"), (0.55, "#c8b890"), (1, "#e0d4b4")])
+    pores = (photo(ctx, "gravel_fine", salt=6) < -0.35).astype(np.float32)
+    img = mix(img, "#5a4a32", pores * 0.5)
+    cr = cracks_mask(ctx.sub(2), H, W, n=4, seg=(W * 0.05, W * 0.14), width=1)
+    img = mix(img, "#4a3a22", cr * 0.6)
+    st = grime(ctx.sub(3), H, W, cover=0.35, beta=2.4, sharp=0.5)
+    img = mix(img, "#6a4a22", st * 0.45)
+    bl = grime(ctx.sub(4), H, W, cover=0.12, beta=2.2, sharp=0.3)
+    img = mix(img, "#3a0a06", bl * 0.6)
+    return finish(ctx, img, light=0.05)
+
+
+@texture("Props/coal", (64, 64), tile=True, k=8)
+def coal(ctx):
+    """heap of coal lumps: faceted black cells with glints along the edges, dust between"""
+    W, H = ctx.W, ctx.H
+    F1, F2, ids = worley(ctx.sub(1), H, W, 40)
+    edge = smoothstep(W * 0.03, 0.0, F2 - F1)
+    facet = (ids * 0.6180339) % 1.0
+    t = clamp01(0.25 + 0.35 * facet + 0.1 * fft_noise(ctx.sub(2), H, W, beta=2.0))
+    img = gradient_map(t, [(0, "#030303"), (0.6, "#16161a"), (1, "#3a3c44")])
+    img = mix(img, "#6a6c74", edge * (facet > 0.6) * 0.5)
+    img = mix(img, "#010101", edge * (facet <= 0.6) * 0.7)
+    dust = grime(ctx.sub(3), H, W, cover=0.3, beta=2.4, sharp=0.5)
+    img = mix(img, "#2a2826", dust * 0.4)
+    return finish(ctx, img, light=0.05, grain=0.02)
+
+
+@texture("Props/skin_dead", (64, 64), tile=True, k=8)
+def skin_dead(ctx):
+    """dead skin: waxy grey-pink, livid bruising, veins, dirt in the creases, dried blood"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.55 + 0.12 * fft_noise(ctx.sub(1), H, W, beta=2.8) + 0.05 * photo(ctx, "moon", salt=8))
+    img = gradient_map(t, [(0, "#7a5e56"), (0.6, "#b49488"), (1, "#c8aca0")])
+    br = grime(ctx.sub(2), H, W, cover=0.3, beta=2.6, sharp=0.6)
+    img = mix(img, "#5a3a5a", br * 0.45)
+    vein = scratches_mask(ctx.sub(3), H, W, 10, length=(W * 0.1, W * 0.35), width=1)
+    img = mix(img, "#4a4a6a", blur(vein, 1.5, tile=True) * 0.5)
+    dirt = grime(ctx.sub(4), H, W, cover=0.3, beta=2.2, sharp=0.4)
+    img = mix(img, "#2a2018", dirt * 0.4)
+    bl = grime(ctx.sub(5), H, W, cover=0.08, beta=2.2, sharp=0.3)
+    img = mix(img, "#4a0806", bl * 0.55)
+    return finish(ctx, img, light=0.05)
+
+
+@texture("Props/mirror", (64, 64), k=8)
+def mirror(ctx):
+    """tarnished bathroom mirror: a dim grey-blue reflection, black desilvering creeping in from the edges, a crack,
+    soap / grime smears"""
+    W, H = ctx.W, ctx.H
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    u, v = xx / W, yy / H
+    t = clamp01(0.35 + 0.3 * (1 - v) + 0.12 * fft_noise(ctx.sub(1), H, W, beta=3.0))
+    img = gradient_map(t, [(0, "#0a0c10"), (0.6, "#3a4450"), (1, "#7a8690")])
+    ph = (u * 1.4 + v * 0.6) % 1.0
+    img = mix(img, "#a8b0b4", (smoothstep(0.1, 0.13, ph) * (1 - smoothstep(0.18, 0.24, ph))) * 0.3)
+    edge = np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v))
+    ds = clamp01(smoothstep(0.16, 0.0, edge + 0.06 * fft_noise(ctx.sub(2), H, W, beta=1.8)))
+    spots = (fft_noise(ctx.sub(3), H, W, beta=1.6) > 1.6).astype(np.float32)
+    img = mix(img, "#050505", np.maximum(ds, spots) * 0.85)
+    cr = cracks_mask(ctx.sub(4), H, W, n=1, seg=(W * 0.08, W * 0.2), width=2, tile=False, branch=0.6, steps=6)
+    img = mix(img, "#c8d0d4", cr * 0.6)
+    smear = grime(ctx.sub(5), H, W, cover=0.4, beta=2.2, sharp=0.6)
+    img = mix(img, "#6a6a62", smear * 0.25)
+    return finish(ctx, img, light=0.05)
+
+
+@texture("Props/stove_front", (64, 64), k=8)
+def stove_front(ctx):
+    """front of the old gas stove: control strip with four knobs, the oven door with its smoky window and handle,
+    the drawer at the bottom; enamel, chipped and greasy"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.6 + 0.1 * fft_noise(ctx.sub(1), H, W, beta=2.8))
+    img = gradient_map(t, [(0, "#8a8474"), (0.6, "#c4bea8"), (1, "#d8d2c0")])
+    # control strip
+    img = mix(img, "#2a2826", rect(H, W, 0.04, 0.03, 0.96, 0.16))
+    for k in range(4):
+        img = knob(img, (0.16 + k * 0.22) * W, 0.095 * H, 0.045 * W, "#c8c4b8", "#2a2826")
+    # oven door + window
+    m, sh = bevel(H, W, 0.06, 0.22, 0.94, 0.8, 0.02 * W, True)
+    img = apply_bevel(img, sh, 0.3)
+    win = rect(H, W, 0.18, 0.36, 0.82, 0.66)
+    glassc = gradient_map(clamp01(0.3 + 0.2 * fft_noise(ctx.sub(2), H, W, beta=2.6) + 0.3 * (1 - (np.mgrid[0:H, 0:W][0] / H))), [(0, "#040302"), (1, "#3a3024")])
+    img = mix(img, glassc, win)
+    img = mix(img, "#1a120a", outer_rim(win, 3) * 0.8)
+    img = mix(img, "#a8a6a0", rect(H, W, 0.2, 0.25, 0.8, 0.29))
+    img = mix(img, "#3a3a38", rect(H, W, 0.2, 0.285, 0.8, 0.3))
+    # drawer
+    m2, sh2 = bevel(H, W, 0.06, 0.84, 0.94, 0.97, 0.015 * W, True)
+    img = apply_bevel(img, sh2, 0.3)
+    img = mix(img, "#3a3a38", rect(H, W, 0.42, 0.89, 0.58, 0.91))
+    ch = chips(ctx, H, W, cover=0.04, salt=3, sharp=0.02)
+    img = mix(img, "#120e0c", ch)
+    grease = drips(ctx.sub(4), H, W, 10, length=(0.1, 0.5), width=(W / 160, W / 60), tile=False)
+    img = mix(img, "#5a4220", grease * 0.45)
+    img = dirt_pass(ctx, img, 0.35, 0.4, "#2a2016")
+    return finish(ctx, img, light=0.06)
+
+
+@texture("Props/wax", (32, 32), tile=True, k=8)
+def wax(ctx):
+    """old candle wax: yellowed, with runs, soot and a few hairs of dust"""
+    W, H = ctx.W, ctx.H
+    t = clamp01(0.6 + 0.12 * fft_noise(ctx.sub(1), H, W, beta=2.6))
+    img = gradient_map(t, [(0, "#8a7a52"), (0.6, "#d0c494"), (1, "#e4dab0")])
+    dr = drips(ctx.sub(2), H, W, 7, length=(0.2, 0.7), width=(W / 50, W / 20))
+    img = mix(img, "#f0e8c8", dr * 0.4)
+    img = mix(img, "#6a5a3a", outer_rim(dr > 0.5, 2, True) * 0.3)
+    soot = grime(ctx.sub(3), H, W, cover=0.25, beta=2.4, sharp=0.5)
+    img = mix(img, "#2a2218", soot * 0.35)
     return finish(ctx, img, light=0.04)
 
 

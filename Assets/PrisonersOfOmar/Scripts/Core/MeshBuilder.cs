@@ -303,10 +303,11 @@ namespace PrisonersOfOmar
         /// <summary>
         /// Cylinder / cone frustum standing on <paramref name="bottomCenter"/> along local +Y.
         /// UV: u wraps around (uvRect.x..xMax), v goes bottom..top (uvRect.y..yMax).
-        /// Caps use a planar mapping into the same rect.
+        /// Caps use a planar mapping into the same rect, or into <paramref name="capUv"/> when given (a tyre: tread round
+        /// the side, the sidewall on the caps).
         /// </summary>
         public void AddCylinder(Vector3 bottomCenter, float radiusBottom, float radiusTop, float height, int sides,
-            bool capTop = true, bool capBottom = false, Rect? uvRect = null, bool smooth = true, int heightSegments = 1)
+            bool capTop = true, bool capBottom = false, Rect? uvRect = null, bool smooth = true, int heightSegments = 1, Rect? capUv = null)
         {
             sides = Mathf.Max(3, sides);
             heightSegments = Mathf.Max(1, heightSegments);
@@ -350,8 +351,9 @@ namespace PrisonersOfOmar
                     AddQuad(b0, t0, t1, b1, new Vector2(u0, r.yMin), new Vector2(u0, r.yMax), new Vector2(u1, r.yMax), new Vector2(u1, r.yMin));
                 }
             }
-            if (capTop && radiusTop > 0.0001f) Cap(bottomCenter + Vector3.up * height, radiusTop, sides, true, r);
-            if (capBottom && radiusBottom > 0.0001f) Cap(bottomCenter, radiusBottom, sides, false, r);
+            Rect cr = capUv ?? r;
+            if (capTop && radiusTop > 0.0001f) Cap(bottomCenter + Vector3.up * height, radiusTop, sides, true, cr);
+            if (capBottom && radiusBottom > 0.0001f) Cap(bottomCenter, radiusBottom, sides, false, cr);
         }
 
         void Cap(Vector3 center, float radius, int sides, bool up, Rect r)

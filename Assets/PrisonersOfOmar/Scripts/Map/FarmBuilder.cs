@@ -126,7 +126,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(p + V(0, 1.72f, 0), V(1.35f, 0.18f, 0.2f), BoxUV.Local, 0.5f);
             mb.Material = Mat.Lit(Tex.Cloth, new Color(0.75f, 0.7f, 0.55f));
             mb.AddSphere(p + V(0, 2.08f, 0), V(0.18f, 0.22f, 0.18f), 6, 4);
-            mb.Material = Mat.Flat(0.05f, 0.04f, 0.04f);
+            mb.Material = Mat.Lit(Tex.Cloth, new Color(0.1f, 0.08f, 0.07f));   // sewn-on eyes
             mb.AddBox(p + V(-0.06f, 2.12f, -0.17f), V(0.05f, 0.05f, 0.02f), BoxUV.Local, 1f);
             mb.AddBox(p + V(0.06f, 2.12f, -0.17f), V(0.05f, 0.05f, 0.02f), BoxUV.Local, 1f);
             Props.Billboard(mb, Mat.Cutout(Tex.GrassTall2, new Color(0.9f, 0.8f, 0.5f)), p + V(0, 0.8f, 0), 0.6f, 0.5f, 2, 0f, 0.6f, 0.9f);
@@ -221,7 +221,7 @@ namespace PrisonersOfOmar.Map
             Props.Bones(mb, V(13.8f, 0.02f, 60.3f), 2104, 4, true);
             Arch.FloorDecal(mb, Mat.Decal("blood_pool"), V(21.5f, 0.02f, 59.5f), 1.4f, 1.2f, 30f);
             // oil lantern hanging from a beam (not electric)
-            mb.Material = Mat.Flat(0.08f, 0.08f, 0.08f);
+            mb.Material = Mat.Lit(Tex.MetalRusty, new Color(0.45f, 0.42f, 0.4f));   // the lantern's chain
             mb.AddBeam(V(20.5f, 5.24f, 60f), V(20.5f, 3.75f, 60f), 0.015f);
             mb.Material = Mat.Lit(Tex.MetalRusty);
             mb.AddBox(V(20.5f, 3.62f, 60f), V(0.16f, 0.25f, 0.16f), BoxUV.Local, 0.3f);

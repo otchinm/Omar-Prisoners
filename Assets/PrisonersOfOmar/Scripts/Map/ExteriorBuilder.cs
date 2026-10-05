@@ -803,7 +803,7 @@ namespace PrisonersOfOmar.Map
             mb.Push(head, Quaternion.LookRotation(dir, Vector3.up));
             mb.AddBox(V(0, 0, 0), V(0.45f, 0.35f, 0.3f), BoxUV.Local, 0.4f);
             mb.Pop();
-            mb.Material = Mat.Flat(0.05f, 0.05f, 0.05f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.12f, 0.12f, 0.11f));   // the feed cable up the pole
             mb.AddBeam(pos + Vector3.up * 2.5f, pos + Vector3.up * (h - 0.6f), 0.025f);
             mb.Color = Shade.Gray(1f);
             var g = ctx.GlowBuilder(GlowExt);

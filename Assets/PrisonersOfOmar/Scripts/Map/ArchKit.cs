@@ -633,7 +633,7 @@ namespace PrisonersOfOmar.Map
             Vector3 bulb = ceilingPoint - Vector3.up * drop;
             var col = mb.Color;
             mb.Color = Shade.Gray(0.7f);
-            mb.Material = Mat.Flat(0.08f, 0.08f, 0.08f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.14f, 0.13f, 0.12f));   // cloth-covered cord
             mb.AddBeam(ceilingPoint, bulb + Vector3.up * 0.08f, 0.012f);
             mb.Material = Mat.Lit(Tex.MetalDark);
             mb.AddBox(bulb + Vector3.up * 0.07f, new Vector3(0.05f, 0.06f, 0.05f), BoxUV.Local, 0.2f);
@@ -645,7 +645,7 @@ namespace PrisonersOfOmar.Map
             mb.Color = col;
             if (broken)
             {
-                mb.Material = Mat.Flat(0.2f, 0.2f, 0.18f);
+                mb.Material = Mat.Lit(Tex.CarGlassBroken, new Color(0.9f, 0.88f, 0.8f));   // the shattered bulb
                 mb.AddSphere(bulb + Vector3.up * 0.02f, new Vector3(0.03f, 0.025f, 0.03f), 5, 3);
                 return null;
             }

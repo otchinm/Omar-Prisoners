@@ -1,5 +1,7 @@
 // Offline QA harness for the runtime map builder (no Unity needed):
-//   dotnet run -c Release -- <outDir> [seed] [--no-render]
+//   dotnet run -c Release -- <outDir> [seed] [--no-render] [--textured]
+// --textured samples the real textures (Assets/PrisonersOfOmar/Resources/*.png, point filtered like the game) instead of
+// the flat palette colours, to check UV mapping and untextured surfaces.
 // Builds the map against a managed UnityEngine stub (box-collider physics with Unity query semantics),
 // checks determinism, exports MapData + colliders + nav to <outDir>/map.json (read by plan.py) and renders
 // perspective views (approximate PS1 vertex lighting from the PsxLights + fog) to <outDir>/views/*.png.
@@ -24,6 +26,7 @@ static class Program
         string outDir = args.Length > 0 ? args[0] : "map_out";
         int seed = args.Length > 1 && int.TryParse(args[1], out int s) ? s : 12345;
         bool render = !args.Contains("--no-render");
+        Raster.Textured = args.Contains("--textured");
         Directory.CreateDirectory(outDir);
         UnityEngine.Debug.Quiet = true;
 
@@ -474,6 +477,8 @@ static class Raster
         public readonly List<Color> C = new List<Color>();       // vertex color * material base
         public readonly List<int> T = new List<int>();           // triangle indices
         public readonly List<byte> Kind = new List<byte>();      // per triangle: 0 opaque, 1 cutout, 2 blend, 3 emissive, 4 additive
+        public readonly List<Vector2> UV = new List<Vector2>();
+        public readonly List<Tex> TriTex = new List<Tex>();      // per triangle (null: flat colour) - --textured only
         public readonly List<(Vector3 p, Color c, float i, float r, bool spot, Vector3 dir, float angle, bool on)> Lights = new List<(Vector3, Color, float, float, bool, Vector3, float, bool)>();
         public int Tris => T.Count / 3;
     }
@@ -515,22 +520,141 @@ static class Raster
         { "blood_pool", new Color(0.35f, 0.02f, 0.02f) }, { "blood_splatter_1", new Color(0.4f, 0.03f, 0.03f) }, { "blood_splatter_2", new Color(0.4f, 0.03f, 0.03f) }, { "blood_splatter_3", new Color(0.4f, 0.03f, 0.03f) },
         { "blood_smear", new Color(0.4f, 0.04f, 0.03f) }, { "blood_handprint", new Color(0.45f, 0.04f, 0.03f) }, { "graffiti_scrawl_1", new Color(0.02f, 0.02f, 0.02f) }, { "graffiti_scrawl_2", new Color(0.02f, 0.02f, 0.02f) },
         { "grime", new Color(0.1f, 0.09f, 0.07f) }, { "water_stain", new Color(0.3f, 0.25f, 0.15f) }, { "parking_line", new Color(0.85f, 0.7f, 0.1f) }, { "road_dashes", new Color(0.9f, 0.9f, 0.85f) },
+        { "car_glass", new Color(0.12f, 0.14f, 0.15f) }, { "car_glass_broken", new Color(0.08f, 0.08f, 0.08f) }, { "car_engine", new Color(0.15f, 0.12f, 0.1f) },
+        { "enamel", new Color(0.75f, 0.72f, 0.64f) }, { "porcelain", new Color(0.78f, 0.76f, 0.7f) }, { "plastic", new Color(0.7f, 0.7f, 0.68f) },
+        { "trash_bag", new Color(0.08f, 0.08f, 0.09f) }, { "bottle", new Color(0.45f, 0.45f, 0.42f) }, { "jar", new Color(0.45f, 0.4f, 0.25f) },
+        { "bone", new Color(0.72f, 0.66f, 0.5f) }, { "coal", new Color(0.07f, 0.07f, 0.08f) }, { "skin_dead", new Color(0.65f, 0.52f, 0.48f) },
+        { "mirror", new Color(0.2f, 0.24f, 0.28f) }, { "stove_front", new Color(0.6f, 0.58f, 0.5f) }, { "wax", new Color(0.8f, 0.75f, 0.58f) },
         { "writing_help", new Color(0.5f, 0.03f, 0.03f) }, { "writing_omar", new Color(0.5f, 0.03f, 0.03f) }, { "cracks", new Color(0.1f, 0.1f, 0.1f) },
     };
 
-    static (Color baseColor, byte kind) MaterialInfo(Material m)
+    static (Color baseColor, byte kind, Tex tex) MaterialInfo(Material m)
     {
         string n = m?.name ?? "color_Lit";
         int us = n.LastIndexOf('_');
         string tex = us > 0 ? n.Substring(0, us) : n;
         string surf = us > 0 ? n.Substring(us + 1) : "Lit";
         string file = tex.Contains("/") ? tex.Substring(tex.LastIndexOf('/') + 1) : tex;
+        byte kind = surf switch { "LitCutout" => 1, "UnlitCutout" => 1, "Decal" => 2, "Transparent" => 2, "Emissive" => 3, "Unlit" => 3, "Additive" => 4, _ => 0 };
+        Tex t = Textured && tex != "color" ? LoadTex(tex) : null;
+        if (t != null)
+        {
+            // the texel does the colour: only the tint stays (decal opacity from the texture's alpha)
+            Color tc = m.color;
+            return (tc, kind, t);
+        }
         Color c = Palette.TryGetValue(file, out var p) ? p : new Color(1, 1, 1);
         c = c * m.color;
-        byte kind = surf switch { "LitCutout" => 1, "UnlitCutout" => 1, "Decal" => 2, "Transparent" => 2, "Emissive" => 3, "Unlit" => 3, "Additive" => 4, _ => 0 };
         if (surf == "Decal" && file == "blob_shadow") c.a = 0.45f;
         else if (surf == "Decal") c.a = 0.65f;
-        return (c, kind);
+        return (c, kind, null);
+    }
+
+    // ------------------------------------------------------------------ textures (--textured)
+    public sealed class Tex { public int W, H; public float[] Px; }
+    public static bool Textured;
+    static readonly Dictionary<string, Tex> TexCache = new Dictionary<string, Tex>();
+    static string _resRoot;
+
+    static Tex LoadTex(string path)
+    {
+        if (TexCache.TryGetValue(path, out var t)) return t;
+        if (_resRoot == null)
+        {
+            var d = new DirectoryInfo(Directory.GetCurrentDirectory());
+            while (d != null && !Directory.Exists(Path.Combine(d.FullName, "Assets", "PrisonersOfOmar"))) d = d.Parent;
+            _resRoot = d != null ? Path.Combine(d.FullName, "Assets", "PrisonersOfOmar", "Resources") : "";
+        }
+        string f = Path.Combine(_resRoot, path + ".png");
+        try { t = File.Exists(f) ? DecodePng(File.ReadAllBytes(f)) : null; } catch { t = null; }
+        TexCache[path] = t;
+        return t;
+    }
+
+    static int BE(byte[] b, int o) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+
+    /// <summary>8 bit, non-interlaced PNG (grey, RGB, palette, grey+alpha, RGBA) to linear-ish 0..1 RGBA floats, top row first.</summary>
+    static Tex DecodePng(byte[] d)
+    {
+        int pos = 8, W = 0, H = 0, bd = 0, ct = 0, il = 0;
+        byte[] plte = null, trns = null;
+        var idat = new MemoryStream();
+        while (pos + 8 <= d.Length)
+        {
+            int len = BE(d, pos);
+            string type = Encoding.ASCII.GetString(d, pos + 4, 4);
+            if (type == "IHDR") { W = BE(d, pos + 8); H = BE(d, pos + 12); bd = d[pos + 16]; ct = d[pos + 17]; il = d[pos + 20]; }
+            else if (type == "PLTE") plte = d.Skip(pos + 8).Take(len).ToArray();
+            else if (type == "tRNS") trns = d.Skip(pos + 8).Take(len).ToArray();
+            else if (type == "IDAT") idat.Write(d, pos + 8, len);
+            else if (type == "IEND") break;
+            pos += 12 + len;
+        }
+        if (bd != 8 || il != 0 || W <= 0 || H <= 0) return null;
+        int ch = ct switch { 0 => 1, 2 => 3, 3 => 1, 4 => 2, 6 => 4, _ => 0 };
+        if (ch == 0) return null;
+        idat.Position = 0;
+        var raw = new MemoryStream();
+        using (var z = new ZLibStream(idat, CompressionMode.Decompress)) z.CopyTo(raw);
+        var r = raw.ToArray();
+        int stride = W * ch;
+        var cur = new byte[stride];
+        var prev = new byte[stride];
+        var px = new float[W * H * 4];
+        int p = 0;
+        for (int y = 0; y < H; y++)
+        {
+            int filter = r[p++];
+            Array.Copy(r, p, cur, 0, stride);
+            p += stride;
+            for (int i = 0; i < stride; i++)
+            {
+                int a = i >= ch ? cur[i - ch] : 0, b = prev[i], c = i >= ch ? prev[i - ch] : 0;
+                int v = cur[i];
+                switch (filter)
+                {
+                    case 1: v += a; break;
+                    case 2: v += b; break;
+                    case 3: v += (a + b) >> 1; break;
+                    case 4:
+                        int pp = a + b - c, pa = Math.Abs(pp - a), pb = Math.Abs(pp - b), pc = Math.Abs(pp - c);
+                        v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+                        break;
+                }
+                cur[i] = (byte)v;
+            }
+            for (int x = 0; x < W; x++)
+            {
+                float R, G, B, A = 1f;
+                int o = x * ch;
+                switch (ct)
+                {
+                    case 0: R = G = B = cur[o] / 255f; break;
+                    case 4: R = G = B = cur[o] / 255f; A = cur[o + 1] / 255f; break;
+                    case 3:
+                        int k = cur[o];
+                        R = plte[k * 3] / 255f; G = plte[k * 3 + 1] / 255f; B = plte[k * 3 + 2] / 255f;
+                        A = trns != null && k < trns.Length ? trns[k] / 255f : 1f;
+                        break;
+                    case 6: R = cur[o] / 255f; G = cur[o + 1] / 255f; B = cur[o + 2] / 255f; A = cur[o + 3] / 255f; break;
+                    default: R = cur[o] / 255f; G = cur[o + 1] / 255f; B = cur[o + 2] / 255f; break;
+                }
+                int q = (y * W + x) * 4;
+                // sRGB -> linear-ish (the writer applies 1/1.2 back): keeps the dark textures dark
+                px[q] = Mathf.Pow(R, 1.6f); px[q + 1] = Mathf.Pow(G, 1.6f); px[q + 2] = Mathf.Pow(B, 1.6f); px[q + 3] = A;
+            }
+            var tmp = prev; prev = cur; cur = tmp;
+        }
+        return new Tex { W = W, H = H, Px = px };
+    }
+
+    /// <summary>Point sample, wrapping (Unity UV origin bottom-left).</summary>
+    static void Sample(Tex t, float u, float v, out float r, out float g, out float b, out float a)
+    {
+        u -= Mathf.Floor(u); v -= Mathf.Floor(v);
+        int x = Math.Min(t.W - 1, (int)(u * t.W)), y = Math.Min(t.H - 1, (int)((1f - v) * t.H));
+        int q = (y * t.W + x) * 4;
+        r = t.Px[q]; g = t.Px[q + 1]; b = t.Px[q + 2]; a = t.Px[q + 3];
     }
 
     public static Scene Collect(List<GameObject> world)
@@ -553,12 +677,13 @@ static class Raster
                 s.P.Add(m.MultiplyPoint3x4(mesh.vertices[i]));
                 s.N.Add((rot * (i < mesh.normals.Length ? mesh.normals[i] : Vector3.up)).normalized);
                 s.C.Add(i < mesh.colors32.Length ? (Color)mesh.colors32[i] : Color.white);
+                s.UV.Add(i < mesh.uv.Length ? mesh.uv[i] : Vector2.zero);
             }
             // per-vertex material colors: a vertex can be shared by submeshes, so duplicate color into triangles at draw time
             for (int sub = 0; sub < mesh.subMeshCount; sub++)
             {
                 var mat = sub < mr.sharedMaterials.Length ? mr.sharedMaterials[sub] : null;
-                var (bc, kind) = MaterialInfo(mat);
+                var (bc, kind, tex) = MaterialInfo(mat);
                 var tris = mesh.GetTriangles(sub);
                 for (int t = 0; t < tris.Length; t += 3)
                 {
@@ -566,12 +691,13 @@ static class Raster
                     for (int k = 0; k < 3; k++)
                     {
                         int vi = baseIdx + tris[t + k];
-                        s.P.Add(s.P[vi]); s.N.Add(s.N[vi]);
+                        s.P.Add(s.P[vi]); s.N.Add(s.N[vi]); s.UV.Add(s.UV[vi]);
                         var vc = s.C[vi] * bc; vc.a = bc.a;
                         s.C.Add(vc);
                         s.T.Add(s.P.Count - 1);
                     }
                     s.Kind.Add(kind);
+                    s.TriTex.Add(tex);
                 }
             }
         }
@@ -634,19 +760,20 @@ static class Raster
             int i0 = s.T[t * 3], i1 = s.T[t * 3 + 1], i2 = s.T[t * 3 + 2];
             foreach (int i in new[] { i0, i1, i2 })
                 if (!done[i]) { vs[i] = inv * (s.P[i] - eye); vcol[i] = Shade(i, kind); done[i] = true; }
-            var poly = new List<(Vector3 v, Color c)> { (vs[i0], vcol[i0]), (vs[i1], vcol[i1]), (vs[i2], vcol[i2]) };
+            var poly = new List<(Vector3 v, Color c, Vector2 uv)> { (vs[i0], vcol[i0], s.UV[i0]), (vs[i1], vcol[i1], s.UV[i1]), (vs[i2], vcol[i2], s.UV[i2]) };
             if (poly.All(p => p.v.z < near)) continue;
             if (poly.Any(p => p.v.z < near)) poly = ClipNear(poly, near);
             if (poly.Count < 3) continue;
-            var scr = poly.Select(p => (x: (p.v.x * f / aspect / p.v.z * 0.5f + 0.5f) * W, y: (0.5f - p.v.y * f / p.v.z * 0.5f) * H, z: p.v.z, c: p.c)).ToList();
-            for (int k = 1; k + 1 < scr.Count; k++) Tri(scr[0], scr[k], scr[k + 1], kind, color, depth, W, H);
+            var tex = s.TriTex[t];
+            var scr = poly.Select(p => (x: (p.v.x * f / aspect / p.v.z * 0.5f + 0.5f) * W, y: (0.5f - p.v.y * f / p.v.z * 0.5f) * H, z: p.v.z, c: p.c, uv: p.uv)).ToList();
+            for (int k = 1; k + 1 < scr.Count; k++) Tri(scr[0], scr[k], scr[k + 1], kind, tex, color, depth, W, H);
         }
         WritePng(path, color, W, H);
     }
 
-    static List<(Vector3 v, Color c)> ClipNear(List<(Vector3 v, Color c)> poly, float near)
+    static List<(Vector3 v, Color c, Vector2 uv)> ClipNear(List<(Vector3 v, Color c, Vector2 uv)> poly, float near)
     {
-        var o = new List<(Vector3, Color)>();
+        var o = new List<(Vector3, Color, Vector2)>();
         for (int i = 0; i < poly.Count; i++)
         {
             var a = poly[i]; var b = poly[(i + 1) % poly.Count];
@@ -655,13 +782,13 @@ static class Raster
             if (ain != bin)
             {
                 float t = (near - a.v.z) / (b.v.z - a.v.z);
-                o.Add((Vector3.LerpUnclamped(a.v, b.v, t), Color.Lerp(a.c, b.c, t)));
+                o.Add((Vector3.LerpUnclamped(a.v, b.v, t), Color.Lerp(a.c, b.c, t), a.uv + (b.uv - a.uv) * t));
             }
         }
         return o;
     }
 
-    static void Tri((float x, float y, float z, Color c) a, (float x, float y, float z, Color c) b, (float x, float y, float z, Color c) c, byte kind, float[] col, float[] dep, int W, int H)
+    static void Tri((float x, float y, float z, Color c, Vector2 uv) a, (float x, float y, float z, Color c, Vector2 uv) b, (float x, float y, float z, Color c, Vector2 uv) c, byte kind, Tex tex, float[] col, float[] dep, int W, int H)
     {
         float area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
         if (Mathf.Abs(area) < 1e-6f) return;
@@ -681,12 +808,19 @@ static class Raster
                 float iz = w0 * iz0 + w1 * iz1 + w2 * iz2;
                 float z = 1f / iz;
                 int idx = y * W + x;
-                if (kind == 1 && ((x + y) & 1) == 0) continue;
                 bool blend = kind == 2 || kind == 4;
                 if (blend ? z > dep[idx] + 0.02f : z >= dep[idx]) continue;
                 float wa = w0 * iz0 * z, wb = w1 * iz1 * z, wc = w2 * iz2 * z;
                 float r = a.c.r * wa + b.c.r * wb + c.c.r * wc, g = a.c.g * wa + b.c.g * wb + c.c.g * wc, bl = a.c.b * wa + b.c.b * wb + c.c.b * wc;
                 float al = a.c.a;
+                if (tex != null)
+                {
+                    Sample(tex, a.uv.x * wa + b.uv.x * wb + c.uv.x * wc, a.uv.y * wa + b.uv.y * wb + c.uv.y * wc, out float tr, out float tg, out float tb, out float ta);
+                    if (kind == 1 && ta < 0.5f) continue;
+                    r *= tr; g *= tg; bl *= tb;
+                    if (kind == 2) al *= ta;
+                }
+                else if (kind == 1 && ((x + y) & 1) == 0) continue;
                 if (kind == 2) { col[idx * 3] = col[idx * 3] * (1 - al) + r * al; col[idx * 3 + 1] = col[idx * 3 + 1] * (1 - al) + g * al; col[idx * 3 + 2] = col[idx * 3 + 2] * (1 - al) + bl * al; continue; }
                 if (kind == 4) { col[idx * 3] += r * 0.5f; col[idx * 3 + 1] += g * 0.5f; col[idx * 3 + 2] += bl * 0.5f; continue; }
                 dep[idx] = z;

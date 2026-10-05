@@ -12,7 +12,7 @@ namespace PrisonersOfOmar.Map
             mb.Push(pos, MapMath.Yaw(yaw) * (fallen ? Quaternion.Euler(0, 0, 80f) : Quaternion.identity), Vector3.one * scale);
             if (fallen) mb.Push(new Vector3(0.0f, -0.02f, 0), Quaternion.identity);
             var pink = Mat.Lit(Tex.Flamingo);
-            var leg = Mat.Flat(0.12f, 0.12f, 0.1f);
+            var leg = Mat.Lit(Tex.MetalDark, new Color(0.45f, 0.45f, 0.42f));
             Gray(mb, 0.95f);
             mb.Material = leg;
             mb.AddBeam(new Vector3(-0.03f, 0f, 0f), new Vector3(-0.03f, 0.5f, 0.0f), 0.012f);
@@ -25,7 +25,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBeam(n1, n2, 0.04f);
             mb.AddBeam(n2, n3, 0.04f);
             mb.AddSphere(n3 + new Vector3(0, 0.02f, 0.02f), new Vector3(0.045f, 0.045f, 0.06f), 5, 3);
-            mb.Material = Mat.Flat(0.08f, 0.07f, 0.07f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.14f, 0.12f, 0.12f));
             mb.AddBeam(n3 + new Vector3(0, 0.01f, 0.06f), n3 + new Vector3(0, -0.04f, 0.13f), 0.02f);
             if (fallen) mb.Pop();
             Gray(mb, 1f);
@@ -44,7 +44,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(new Vector3(0, height - 0.6f, 0), new Vector3(2.0f, 0.12f, 0.12f), BoxUV.Local, 0.8f);
             mb.AddBeam(new Vector3(0, height - 1.3f, 0), new Vector3(-0.7f, height - 0.66f, 0), 0.05f);
             mb.AddBeam(new Vector3(0, height - 1.3f, 0), new Vector3(0.7f, height - 0.66f, 0), 0.05f);
-            mb.Material = Mat.Flat(0.25f, 0.3f, 0.28f);
+            mb.Material = Mat.Lit(Tex.Porcelain, new Color(0.42f, 0.55f, 0.48f));   // green glass insulators
             var pts = new Vector3[3];
             for (int i = 0; i < 3; i++)
             {
@@ -157,8 +157,8 @@ namespace PrisonersOfOmar.Map
             var side = Mat.Lit(Tex.CarSide, wreck ? new Color(0.65f, 0.5f, 0.42f) : Color.white);
             var front = Mat.Lit(Tex.CarFront, wreck ? new Color(0.6f, 0.5f, 0.45f) : Color.white);
             var rear = Mat.Lit(Tex.CarRear, wreck ? new Color(0.6f, 0.5f, 0.45f) : Color.white);
-            var glass = wreck ? Mat.Flat(0.03f, 0.03f, 0.035f) : Mat.Lit(null, new Color(0.08f, 0.1f, 0.12f));
-            var dark = Mat.Flat(0.07f, 0.07f, 0.07f);
+            var glass = Mat.Lit(wreck ? Tex.CarGlassBroken : Tex.CarGlass);
+            var dark = Mat.Lit(Tex.MetalDark, new Color(0.32f, 0.3f, 0.28f));
             float hl = 2.35f, hw = 0.9f, y0 = 0.32f, y1 = 0.95f, y2 = 1.42f;
             float cabF = 0.95f, cabR = -1.2f, roofF = 0.35f, roofR = -0.9f, cw = 0.8f, rw = 0.7f;
             Gray(mb, 0.82f);
@@ -191,10 +191,15 @@ namespace PrisonersOfOmar.Map
                 // engine bay visible under the (separate) hood
                 mb.Material = dark;
                 mb.AddQuad(new Vector3(-hw + 0.05f, y1 - 0.25f, cabF), new Vector3(-hw + 0.05f, y1 - 0.25f, hl - 0.05f), new Vector3(hw - 0.05f, y1 - 0.25f, hl - 0.05f), new Vector3(hw - 0.05f, y1 - 0.25f, cabF));
-                mb.Material = Mat.Lit(Tex.MetalDark);
-                mb.AddBox(new Vector3(0.1f, y1 - 0.1f, 1.6f), new Vector3(0.7f, 0.3f, 0.5f), BoxUV.Local, 0.4f);
-                mb.Material = Mat.Flat(0.12f, 0.12f, 0.1f);
-                mb.AddBox(new Vector3(-0.55f, y1 - 0.12f, 1.2f), new Vector3(0.3f, 0.2f, 0.22f), BoxUV.Local, 0.4f);
+                // engine (valve cover / air cleaner on top) and the battery
+                var engine = Mat.Lit(Tex.CarEngine);
+                mb.Material = engine;
+                var blockSides = new Rect(0.01f, 0.02f, 0.06f, 0.12f);
+                mb.AddBox(new Vector3(0.1f, y1 - 0.1f, 1.6f), new Vector3(0.7f, 0.3f, 0.5f),
+                    new BoxUVRects { PosY = new Rect(0f, 0f, 0.5f, 1f), PosX = blockSides, NegX = blockSides, PosZ = blockSides, NegZ = blockSides, NegY = blockSides });
+                var batSide = new Rect(0.5f, 0f, 0.5f, 0.5f);
+                mb.AddBox(new Vector3(-0.55f, y1 - 0.12f, 1.2f), new Vector3(0.3f, 0.2f, 0.22f),
+                    new BoxUVRects { PosY = new Rect(0.5f, 0.5f, 0.5f, 0.5f), PosX = batSide, NegX = batSide, PosZ = batSide, NegZ = batSide, NegY = batSide });
             }
             // roof + windshield + rear window
             mb.Material = paint;
@@ -224,12 +229,18 @@ namespace PrisonersOfOmar.Map
                 for (int sz = -1; sz <= 1; sz += 2)
                 {
                     if (wreck && rng.Chance(0.35f)) continue;
-                    mb.Push(new Vector3(sx * (hw - 0.08f), 0.33f, sz * 1.45f), Quaternion.Euler(0, 0, 90f));
-                    mb.Material = Mat.Lit(Tex.CarTire);
-                    mb.AddCylinder(new Vector3(0, -0.11f, 0), 0.33f, 0.33f, 0.22f, 10, true, true, null, true);
-                    mb.Pop();
+                    Wheel(mb, new Vector3(sx * (hw - 0.08f), 0.33f, sz * 1.45f), 0.33f, 0.22f);
                 }
             Gray(mb, 1f);
+        }
+
+        /// <summary>Tyre on its rim standing on the tread, axle along local X: tread round it, sidewall + rim on both faces.</summary>
+        public static void Wheel(MeshBuilder mb, Vector3 center, float radius, float width, int sides = 12)
+        {
+            mb.Push(center, Quaternion.Euler(0, 0, 90f));
+            mb.Material = Mat.Lit(Tex.CarTire);
+            mb.AddCylinder(new Vector3(0, -width * 0.5f, 0), radius, radius, width, sides, true, true, Tex.TireTreadUv, true, 1, Tex.TireSideUv);
+            mb.Pop();
         }
 
         /// <summary>Hood panel in hood-pivot space (pivot at the windshield base, hood extends along +Z).</summary>
@@ -259,7 +270,7 @@ namespace PrisonersOfOmar.Map
         {
             mb.Push(pos, MapMath.Yaw(yaw) * Quaternion.Euler(-2.5f, 0, 3f));
             var rust = Mat.Lit(Tex.CarWreck);
-            var dark = Mat.Flat(0.05f, 0.05f, 0.05f);
+            var dark = Mat.Lit(Tex.CarGlassBroken);
             Gray(mb, 0.78f);
             mb.Material = rust;
             mb.AddBox(new Vector3(0, 0.62f, 1.55f), new Vector3(1.85f, 0.6f, 1.6f), BoxUV.Local, 1.2f);
@@ -275,13 +286,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBox(new Vector3(0.9f, 0.75f, -1.45f), new Vector3(0.06f, 0.55f, 2.3f), BoxUV.Local, 1.2f);
             mb.AddBox(new Vector3(-0.9f, 0.75f, -1.45f), new Vector3(0.06f, 0.55f, 2.3f), BoxUV.Local, 1.2f);
             mb.AddBox(new Vector3(0, 0.75f, -2.57f), new Vector3(1.85f, 0.55f, 0.06f), BoxUV.Local, 1.2f);
-            mb.Material = Mat.Lit(Tex.CarTire);
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                mb.Push(new Vector3(sx * 0.82f, 0.33f, 1.55f), Quaternion.Euler(0, 0, 90f));
-                mb.AddCylinder(new Vector3(0, -0.11f, 0), 0.33f, 0.33f, 0.22f, 10, true, true, null, true);
-                mb.Pop();
-            }
+            for (int sx = -1; sx <= 1; sx += 2) Wheel(mb, new Vector3(sx * 0.82f, 0.33f, 1.55f), 0.33f, 0.22f);
             mb.Material = Mat.Lit(Tex.MetalDark);
             mb.AddBox(new Vector3(0.5f, 0.2f, -1.6f), new Vector3(0.2f, 0.4f, 0.2f), BoxUV.Local, 0.4f);
             mb.AddBox(new Vector3(-0.5f, 0.2f, -1.2f), new Vector3(0.2f, 0.4f, 0.2f), BoxUV.Local, 0.4f);
@@ -351,7 +356,7 @@ namespace PrisonersOfOmar.Map
             Gray(mb, 0.75f);
             mb.Material = Mat.Lit(Tex.MetalGreen, new Color(0.55f, 0.6f, 0.5f));
             mb.AddBox(new Vector3(0, 0.7f, 0), new Vector3(1.9f, 1.2f, 1.2f), BoxUV.Local, 1f, 1f);
-            mb.Material = Mat.Flat(0.08f, 0.08f, 0.08f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.17f, 0.18f, 0.17f));
             mb.Push(new Vector3(0, 1.32f, 0.55f), Quaternion.Euler(-25f, 0, 0));
             mb.AddBox(new Vector3(0, 0, -0.6f), new Vector3(1.9f, 0.04f, 1.2f), BoxUV.Local, 1f);
             mb.Pop();
@@ -383,9 +388,9 @@ namespace PrisonersOfOmar.Map
         {
             mb.Push(pos, MapMath.Yaw(yaw));
             Gray(mb, 0.8f);
-            mb.Material = Mat.Lit(null, new Color(0.65f, 0.15f, 0.12f));
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.85f, 0.22f, 0.17f));
             mb.AddBox(new Vector3(0, 0.2f, 0), new Vector3(0.6f, 0.4f, 0.38f), BoxUV.Local, 1f);
-            mb.Material = Mat.Lit(null, new Color(0.75f, 0.75f, 0.72f));
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.92f, 0.92f, 0.88f));
             mb.AddBox(new Vector3(0, 0.42f, 0), new Vector3(0.62f, 0.05f, 0.4f), BoxUV.Local, 1f);
             Gray(mb, 1f);
             mb.Pop();
@@ -440,15 +445,10 @@ namespace PrisonersOfOmar.Map
             mb.AddBeam(new Vector3(0, 1.4f, 0.3f), new Vector3(0, 2.3f, 0.3f), 0.08f);
             mb.AddBeam(new Vector3(0, 1.45f, -0.3f), new Vector3(0.0f, 1.75f, -0.1f), 0.04f);
             mb.AddCylinder(new Vector3(0, 1.75f, -0.1f), 0.18f, 0.18f, 0.04f, 8, true, true, null, false);
-            mb.Material = Mat.Lit(Tex.CarTire);
             for (int sx = -1; sx <= 1; sx += 2)
             {
-                mb.Push(new Vector3(sx * 0.75f, 0.75f, -0.6f), Quaternion.Euler(0, 0, 90f));
-                mb.AddCylinder(new Vector3(0, -0.2f, 0), 0.75f, 0.75f, 0.4f, 10, true, true, null, true);
-                mb.Pop();
-                mb.Push(new Vector3(sx * 0.6f, 0.42f, 1.35f), Quaternion.Euler(0, 0, 90f));
-                mb.AddCylinder(new Vector3(0, -0.12f, 0), 0.42f, 0.42f, 0.24f, 8, true, true, null, true);
-                mb.Pop();
+                Wheel(mb, new Vector3(sx * 0.75f, 0.75f, -0.6f), 0.75f, 0.4f, 14);
+                Wheel(mb, new Vector3(sx * 0.6f, 0.42f, 1.35f), 0.42f, 0.24f, 10);
             }
             Gray(mb, 1f);
             mb.Pop();

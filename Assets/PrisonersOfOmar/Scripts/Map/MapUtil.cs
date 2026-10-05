@@ -86,7 +86,25 @@ namespace PrisonersOfOmar.Map
         public const string CarFront = Props + "car_front";
         public const string CarRear = Props + "car_rear";
         public const string CarSide = Props + "car_side";
+        /// <summary>Atlas: sidewall + rim in the left half (<see cref="TireSideUv"/>), tread in the right half (<see cref="TireTreadUv"/>).</summary>
         public const string CarTire = Props + "car_tire";
+        public static readonly Rect TireSideUv = new Rect(0f, 0f, 0.5f, 1f), TireTreadUv = new Rect(0.5f, 0f, 0.5f, 1f);
+        public const string CarGlass = Props + "car_glass";
+        public const string CarGlassBroken = Props + "car_glass_broken";
+        /// <summary>Atlas: engine top in the left half, battery in the right half (top above, labelled side below).</summary>
+        public const string CarEngine = Props + "car_engine";
+        public const string Enamel = Props + "enamel";
+        public const string Porcelain = Props + "porcelain";
+        public const string Plastic = Props + "plastic";
+        public const string TrashBag = Props + "trash_bag";
+        public const string Bottle = Props + "bottle";
+        public const string Jar = Props + "jar";
+        public const string Bone = Props + "bone";
+        public const string Coal = Props + "coal";
+        public const string SkinDead = Props + "skin_dead";
+        public const string Mirror = Props + "mirror";
+        public const string StoveFront = Props + "stove_front";
+        public const string Wax = Props + "wax";
         public const string Keypad = Props + "keypad";
         public const string FuseBox = Props + "fusebox";
         public const string RadioSet = Props + "radio_set";

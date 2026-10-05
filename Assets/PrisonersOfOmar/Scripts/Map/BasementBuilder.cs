@@ -59,11 +59,12 @@ namespace PrisonersOfOmar.Map
             }
             mb.Color = Shade.Gray(1f);
             Props.Bookshelf(ctx, mb, V(2.76f, F, 1.0f), 90f, 1.4f, 1.8f, 1001);
-            var jar = Mat.Lit(null, new Color(0.45f, 0.4f, 0.25f));
-            mb.Material = jar;
+            // jars of something pickled (screw lid on top)
+            mb.Material = Mat.Lit(Tex.Jar);
             for (int lvl = 1; lvl < 4; lvl++)
                 for (int i = 0; i < 4; i++)
-                    if ((lvl + i) % 3 != 0) mb.AddCylinder(V(2.72f, F + Props.BookshelfLevel(lvl, 1.8f), 0.45f + i * 0.28f), 0.05f, 0.05f, 0.14f, 6, true, false, null, true);
+                    if ((lvl + i) % 3 != 0) mb.AddCylinder(V(2.72f, F + Props.BookshelfLevel(lvl, 1.8f), 0.45f + i * 0.28f), 0.05f, 0.05f, 0.14f, 6, true, false,
+                        new Rect(0, 0, 1, 0.92f), true, 1, new Rect(0.1f, 0.88f, 0.8f, 0.1f));
             Props.Crate(ctx, mb, V(-2.4f, F, -7.35f), 8f, 0.6f);
             Props.Crate(ctx, mb, V(-2.35f, F + 0.6f, -7.35f), 30f, 0.4f, true, false);
             Props.FloorMattress(mb, V(-2.25f, F, 7.0f), 90f, true);
@@ -341,7 +342,7 @@ namespace PrisonersOfOmar.Map
             mb.AddBeam(V(-11.2f, TunnelCeil - 0.12f, -3.1f), V(-25.1f, TunnelCeil - 0.12f, -3.1f), 0.09f);
             mb.AddBeam(V(-25.1f, TunnelCeil - 0.12f, -3.1f), V(-25.1f, TunnelCeil - 0.12f, 6.9f), 0.09f);
             mb.AddBeam(V(-25.1f, TunnelCeil - 0.12f, 6.9f), V(-40f, TunnelCeil - 0.12f, 6.9f), 0.09f);
-            mb.Material = Mat.Flat(0.05f, 0.05f, 0.05f);
+            mb.Material = Mat.Lit(Tex.Plastic, new Color(0.12f, 0.12f, 0.11f));   // the old cable along the ceiling
             mb.AddBeam(V(-11.2f, TunnelCeil - 0.2f, -4.9f), V(-26.9f, TunnelCeil - 0.25f, -4.9f), 0.03f);
             mb.AddBeam(V(-26.9f, TunnelCeil - 0.25f, -4.9f), V(-26.9f, TunnelCeil - 0.2f, 5.1f), 0.03f);
             mb.Color = Shade.Gray(1f);
