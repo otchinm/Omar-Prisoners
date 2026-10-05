@@ -1029,7 +1029,7 @@ def corpse_leg(spec, rng, h, w, th, t):
 
 
 # --------------------------------------------------------------------------------------------- grandmother
-GRANNY_DRESS = "#c9a666"          # faded mustard-yellow house dress (clearly darker than her pale skin)
+GRANNY_DRESS = "#b08a52"          # faded mustard-yellow house dress (clearly darker than her pale skin)
 GRANNY_FLOWERS = ("#a8422e", "#8e2e2a", "#c46a34", "#5e7038")
 
 
@@ -1064,7 +1064,7 @@ def old_skin(spec, rng, h, w):
 
 
 def torso_granny(spec, rng, h, w, th, t):
-    img = floral(h, w, rng)
+    img = floral(h, w, rng, density=1.8, scale=1.25)   # a busy print that still reads at 426x240 through the VHS grade
     # round collar + a row of small buttons down the front
     img = mix(img, rgb("#e8e0c8"), band(t, 0.95, 0.985) * 0.85)
     for bt in (0.86, 0.76, 0.66, 0.56):
@@ -1082,7 +1082,7 @@ def torso_granny(spec, rng, h, w, th, t):
 def arm_granny(spec, rng, h, w, th, t):
     # long floral sleeves down to the wrist with a pale lace cuff (only the bony hands show)
     sk = old_skin(spec, rng, h, w)
-    cl = floral(h, w, rng, density=1.4, scale=0.8)
+    cl = floral(h, w, rng, density=2.0, scale=0.8)
     cl = shade(cl, 1 + 0.12 * np.sin(t * 60 + np.deg2rad(th) * 2) * np.exp(-((t - 0.45) / 0.12) ** 2))
     img = mix(sk, cl, smoothstep(0.055, 0.065, t))
     img = mix(img, rgb("#ece4d0"), band(t, 0.06, 0.11) * 0.85)
@@ -1094,7 +1094,7 @@ def arm_granny(spec, rng, h, w, th, t):
 def leg_granny(spec, rng, h, w, th, t):
     # the dress reaches mid-calf; pale shins; white socks
     sk = old_skin(spec, rng, h, w)
-    dress = floral(h, w, rng, density=1.1)
+    dress = floral(h, w, rng, density=1.8)
     hem = 0.30 + 0.01 * np.sin(np.deg2rad(th) * 5)
     img = mix(sk, dress, smoothstep(hem - 0.005, hem + 0.005, t))
     img = mix(img, rgb("#7a5a34"), band(t, hem, hem + 0.025) * 0.7)
@@ -1406,7 +1406,7 @@ CHARACTERS = {
         leg=mannequin_limb(pale_plastic, [0.08, 0.5, 0.95]), extra="surface", misc="none",
         shoe=lambda spec, rng, h, w, view: pale_plastic(h, w, rng)),
     "grandma": dict(
-        seed=909, female=True, skin="#d6c2b2", redness=0.08, mottle=0.2, eyes="#1e1a14", sclera="#d0c8b4",
+        seed=909, female=True, skin="#d4ccc8", redness=0.0, mottle=0.2, eyes="#1e1a14", sclera="#d0c8b4",
         brows="#b8b2a4", brow_thick=1.8, lips="#8a6060", lip_alpha=0.5, shadow="#4a3434", liner=0.6,
         hair_style="bob", fringe_sweep=1.0, hair="#c4c2bc", hair_hi="#f0eeea", hair_contrast=0.32, straight_cut=True,
         torso=torso_granny, arm=arm_granny, leg=leg_granny, shoe=sneaker("#e2ded4", "#c8c4b8", sole="#d8d4c8", dirty=0.5),

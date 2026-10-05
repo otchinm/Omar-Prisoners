@@ -103,6 +103,92 @@ namespace PrisonersOfOmar.Characters
 
             SetTargets(GrandmaMode.WatchingTv, 0f, out _torsoE, out _headE, out _shLE, out _shRE, out _elLE, out _elRE, out _jawOpen);
             ApplyPose();
+            _lap = LapDrape(spec, layer);
+        }
+
+        MeshRenderer _lap;
+
+        /// <summary>
+        /// The house dress over her lap: a rigid sheet built in the seated pose and parented to the hips (the legs never
+        /// move relative to the hips, see ApplyPose), from the belly over both thighs, round the knees and down the shins
+        /// to mid-calf. Skinning a standing skirt to the thighs cannot do this (it folds under them).
+        /// </summary>
+        MeshRenderer LapDrape(BodySpec b, int layer)
+        {
+            Transform hips = _body.Hips;
+            Vector3 hipL = transform.InverseTransformPoint(_body.LeftUpperLeg.position), hipR = transform.InverseTransformPoint(_body.RightUpperLeg.position);
+            Vector3 kneeL = transform.InverseTransformPoint(_body.LeftLowerLeg.position), kneeR = transform.InverseTransformPoint(_body.RightLowerLeg.position);
+            Vector3 hip = (hipL + hipR) * 0.5f, knee = (kneeL + kneeR) * 0.5f;
+            float s = b.Scale;
+            float halfLegs = Mathf.Abs(hipR.x - hipL.x) * 0.5f;
+            float wHip = halfLegs + b.LegRx[7] * 1.2f + 0.012f * s, wKnee = halfLegs + b.LegRx[4] * 1.7f + 0.02f * s;
+            float topHip = b.LegRz[7] + 0.016f * s, topKnee = b.LegRz[4] + 0.018f * s;
+            float hem = 0.20f * s;                                   // how far the hem hangs below the knee (mid-calf)
+            // rows from the belly to the hem: centre, half width, height above the centre line, v in the torso strip
+            Vector3 mid = Vector3.Lerp(hip, knee, 0.5f);
+            var rows = new[]
+            {
+                (c: hip + new Vector3(0f, topHip + 0.03f * s, 0.035f * s), w: wHip * 0.92f, v: 0.38f, top: true),
+                (c: hip + new Vector3(0f, topHip, 0.10f * s), w: wHip, v: 0.32f, top: true),
+                (c: mid + new Vector3(0f, (topHip + topKnee) * 0.5f, 0f), w: (wHip + wKnee) * 0.5f, v: 0.25f, top: true),
+                (c: knee + new Vector3(0f, topKnee, 0.0f), w: wKnee, v: 0.17f, top: true),
+                (c: knee + new Vector3(0f, topKnee * 0.45f, b.LegRz[4] + 0.035f * s), w: wKnee * 1.03f, v: 0.11f, top: false),
+                (c: knee + new Vector3(0f, -hem, b.LegRz[3] + 0.05f * s), w: wKnee * 1.1f, v: 0.0f, top: false),
+            };
+            const int M = 8;                                          // columns across (+ a side flap each side)
+            int cols = M + 3;
+            var P = new Vector3[rows.Length, cols];
+            var UV = new Vector2[rows.Length, cols];
+            for (int r = 0; r < rows.Length; r++)
+            {
+                var row = rows[r];
+                for (int c = 0; c < cols; c++)
+                {
+                    int cc = Mathf.Clamp(c - 1, 0, M);
+                    float u = cc / (float)M * 2f - 1f;                // -1 .. 1 across
+                    float x = u * row.w;
+                    Vector3 p = row.c + new Vector3(x, 0f, 0f);
+                    // sag between the knees, rounded over each thigh
+                    float between = Mathf.Clamp01(1f - Mathf.Abs(x) / Mathf.Max(0.01f, halfLegs));
+                    if (row.top) p.y -= 0.02f * s * between * between + 0.03f * s * Mathf.Pow(Mathf.Abs(u), 4f);
+                    else p.z -= 0.02f * s * between * between;
+                    if (c == 0 || c == cols - 1)
+                    {
+                        // side flaps hang down over the outside of the thighs / shins
+                        p.x += Mathf.Sign(u) * 0.012f * s;
+                        if (row.top) p.y -= 0.09f * s; else p.x += Mathf.Sign(u) * 0.01f * s;
+                    }
+                    P[r, c] = p;
+                    UV[r, c] = CharacterAtlas.Torso.UV(0.5f - 0.2f * (x / wKnee) - (c == 0 ? -0.04f : c == cols - 1 ? 0.04f : 0f), row.v);
+                }
+            }
+            var mb = new MeshBuilder();
+            mb.SetMaterial(HumanoidFactory.MaterialsFor(b.Texture, 1)[0]);
+            var toHips = hips.worldToLocalMatrix * transform.localToWorldMatrix;
+            var idx = new int[rows.Length, cols, 2];
+            for (int r = 0; r < rows.Length; r++)
+                for (int c = 0; c < cols; c++)
+                {
+                    Vector3 dr = P[Mathf.Min(r + 1, rows.Length - 1), c] - P[Mathf.Max(r - 1, 0), c];
+                    Vector3 dc = P[r, Mathf.Min(c + 1, cols - 1)] - P[r, Mathf.Max(c - 1, 0)];
+                    Vector3 n = Vector3.Cross(dr, dc).normalized;
+                    if (Vector3.Dot(n, new Vector3(0f, 1f, 0.6f)) < 0f) n = -n;
+                    Vector3 hp = toHips.MultiplyPoint3x4(P[r, c]);
+                    Vector3 hn = toHips.MultiplyVector(n).normalized;
+                    idx[r, c, 0] = mb.AddVertex(hp, hn, UV[r, c]);
+                    idx[r, c, 1] = mb.AddVertex(hp, -hn, UV[r, c]);
+                }
+            for (int r = 0; r < rows.Length - 1; r++)
+                for (int c = 0; c < cols - 1; c++)
+                {
+                    int a = idx[r, c, 0], bb = idx[r, c + 1, 0], cq = idx[r + 1, c + 1, 0], d = idx[r + 1, c, 0];
+                    // outside (normal side): clockwise seen from above / front
+                    mb.AddTriangle(a, d, cq); mb.AddTriangle(a, cq, bb);
+                    a = idx[r, c, 1]; bb = idx[r, c + 1, 1]; cq = idx[r + 1, c + 1, 1]; d = idx[r + 1, c, 1];
+                    mb.AddTriangle(a, cq, d); mb.AddTriangle(a, bb, cq);
+                }
+            var go = mb.Build("LapDrape", hips, layer);
+            return go.GetComponent<MeshRenderer>();
         }
 
         Transform Wheel(Transform root, int layer, Material mat, float x, float radius, Vector3 centre, float width, bool spokes)
@@ -162,6 +248,7 @@ namespace PrisonersOfOmar.Characters
                 _deadSkin = true;
                 var smr = _body.BodyRenderer;
                 smr.sharedMaterials = HumanoidFactory.MaterialsFor(BodySpec.Grandma(true).Texture, smr.sharedMesh != null ? smr.sharedMesh.subMeshCount : 1);
+                if (_lap != null) _lap.sharedMaterials = HumanoidFactory.MaterialsFor(BodySpec.Grandma(true).Texture, 1);
             }
         }
 
@@ -219,7 +306,7 @@ namespace PrisonersOfOmar.Characters
             _body.RightFoot.localRotation = Quaternion.Euler(4f, 6f, 0f);
             // stooped back
             _body.Spine.localRotation = Quaternion.Euler(_torsoE.x * 0.45f, _torsoE.y * 0.5f, _torsoE.z * 0.5f);
-            _body.Chest.localRotation = Quaternion.Euler(_torsoE.x * 0.4f + 6f, _torsoE.y * 0.5f, _torsoE.z * 0.5f);
+            _body.Chest.localRotation = Quaternion.Euler(_torsoE.x * 0.4f + 2f, _torsoE.y * 0.5f, _torsoE.z * 0.5f);
             _body.Neck.localRotation = Quaternion.Euler((_headE.x + _headPitch * 0.8f) * 0.4f, (_headE.y + _headYaw) * 0.4f, _headE.z * 0.4f);
             _body.Head.localRotation = Quaternion.Euler((_headE.x + _headPitch * 0.8f) * 0.6f, (_headE.y + _headYaw) * 0.6f, _headE.z * 0.6f);
             _body.LeftUpperArm.localRotation = Quaternion.Euler(_shLE);
@@ -246,7 +333,8 @@ namespace PrisonersOfOmar.Characters
                     float nod = Mathf.Sin(t * 0.9f) * 3f + Noise(t * 0.4f, 1f) * 4f;
                     float twitch = Mathf.Max(0f, Noise(t * 3.5f, 7f) - 0.55f) * 60f;
                     torso = new Vector3(9f + Mathf.Sin(t * 0.6f) * 1.2f, 0f, 2f);
-                    head = new Vector3(14f + nod, Noise(t * 0.2f, 3f) * 6f, 6f + Noise(t * 0.3f, 4f) * 4f);
+                    head = new Vector3(3f + nod, Noise(t * 0.2f, 3f) * 6f,   // looks at the TV (her face and fringe are visible)
+                         6f + Noise(t * 0.3f, 4f) * 4f);
                     // elbows on the armrests, forearms lying forward along them
                     shL = new Vector3(-10f, 0f, -17f); shR = new Vector3(-10f + twitch * 0.2f, 0f, 17f);
                     elL = new Vector3(-72f, 8f, 0f); elR = new Vector3(-72f - twitch * 0.5f, -8f, twitch * 0.3f);
@@ -260,7 +348,7 @@ namespace PrisonersOfOmar.Characters
                     float push = cyc < 0.55f ? cyc / 0.55f : 1f - (cyc - 0.55f) / 0.45f;
                     float moving = Mathf.Clamp01(_speed / 0.4f);
                     torso = new Vector3(12f + 8f * push * moving, 0f, 0f);
-                    head = new Vector3(8f, Noise(t * 0.5f, 3f) * 10f, 0f);
+                    head = new Vector3(2f, Noise(t * 0.5f, 3f) * 10f, 0f);
                     float sx = Mathf.Lerp(-30f, -5f + -45f * push, moving), ex = Mathf.Lerp(-55f, -20f - 40f * (1f - push), moving);
                     shL = new Vector3(sx, 0f, -16f); shR = new Vector3(sx, 0f, 16f);
                     elL = new Vector3(ex, 0f, 0f); elR = new Vector3(ex, 0f, 0f);

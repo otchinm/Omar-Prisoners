@@ -409,7 +409,7 @@ namespace PrisonersOfOmar.Characters
             b.Hair = HairStyle.LongBangs;
             b.BobHair = true;
             b.FringeSweep = 1f;           // white bob with a side-swept fringe over one eye (the reference)
-            b.SkirtLen = 0.46f;           // a long house dress over her lap and knees
+            b.SkirtLen = 0.10f;           // a long house dress over her lap and knees
             b.SleeveT = 0.06f;            // long sleeves to the wrist
             b.RoundShoulders = true;
             b.HeadH = 0.142f * b.Height; // old, shrunken body: the head looks big
