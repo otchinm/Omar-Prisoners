@@ -174,7 +174,8 @@ namespace PrisonersOfOmar.UI
                 }
                 y += lh;
             }
-            y += 4;
+            y += 10;
+            ui.Rect(ui.Width * 0.5f - 30, y - 6, 60, 1, new Color(0.55f, 0.55f, 0.52f, 0.35f));
             bool backSel = _field == count - 1;
             ui.Text(backSel ? "▶ BACK ◀" : "BACK", ui.Width * 0.5f, y, backSel ? VhsUI.White : VhsUI.Dim, 1, Align.Center);
             var br = new Rect(ui.Width * 0.5f - 40, y - 2, 80, lh);
@@ -235,7 +236,7 @@ namespace PrisonersOfOmar.UI
             }
             for (int i = 0; i < Rows; i++)
             {
-                var r = new Rect(x, y + i * lh - 2, w, lh);
+                var r = new Rect(x, y + i * lh + (i == Rows - 1 ? 10 : 0) - 2, w, lh);
                 if (input && ui.Hover(r) && ui.MouseMoved) _sel = i;
             }
             int d;
@@ -260,7 +261,8 @@ namespace PrisonersOfOmar.UI
             d = ui.Stepper("VSYNC", Settings.VSync ? "ON" : "OFF", x, y, w, _sel == 10, input); if (d != 0) { Settings.VSync = !Settings.VSync; Settings.ApplyDisplay(); } y += lh;
             ui.Text((_sel == NameRow ? "▶ " : "  ") + "NAME", x, y, _sel == NameRow ? VhsUI.White : VhsUI.Dim);
             ui.TextField(ref _name, x + 120, y, (int)w - 120, input && _sel == NameRow, 14, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- .");
-            y += lh;
+            y += lh + 10;   // BACK stands apart from the settings above it
+            ui.Rect(ui.Width * 0.5f - 30, y - 6, 60, 1, new Color(0.55f, 0.55f, 0.52f, 0.35f));
             bool backSel = _sel == 12;
             ui.Text(backSel ? "▶ BACK ◀" : "BACK", ui.Width * 0.5f, y, backSel ? VhsUI.White : VhsUI.Dim, 1, Align.Center);
             bool back = input && (Input.GetKeyDown(KeyCode.Escape) || (backSel && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)))
@@ -341,8 +343,9 @@ namespace PrisonersOfOmar.UI
             UIStyle.Dim(ui, 0.6f);
             var r = UIStyle.Panel(ui, new Rect(ui.Width * 0.5f - 150, ui.Height * 0.5f - 45, 300, 90), 0.9f);
             ui.Text(_title, r.center.x, r.y + 8, VhsUI.Red, 1, Align.Center);
-            ui.TextWrapped(_text, r.center.x, r.y + 28, (int)r.width - 20, VhsUI.White, 1, Align.Center);
-            ui.Text("OK", r.center.x, r.yMax - 16, VhsUI.White, 1, Align.Center);
+            // long errors switch to the compact font so they never run into OK
+            ui.TextWrappedFit(_text, r.center.x, r.y + 28, (int)r.width - 20, r.height - 28 - 24, VhsUI.White, Align.Center);
+            ui.Text("OK", r.center.x, r.yMax - 18, VhsUI.White, 1, Align.Center);
             if (input && _t > 0.3f && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) || ui.Click))
                 UIManager.Instance.Remove(this);
         }

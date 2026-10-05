@@ -274,9 +274,10 @@ namespace PrisonersOfOmar.UI
 
         /// <summary>
         /// Vertical text menu. Keyboard (W/S/arrows, Enter/Space/E) + mouse (hover selects, click activates).
-        /// Returns the activated index or -1.
+        /// Returns the activated index or -1. <paramref name="lastGap"/> pushes the last item (BACK / LEAVE) further down,
+        /// with a faint rule in the gap, so it is not mistaken for one more option of the list.
         /// </summary>
-        public int Menu(string[] items, ref int selected, float cx, float y, int scale = 1, int spacing = 4, bool input = true, bool[] disabled = null)
+        public int Menu(string[] items, ref int selected, float cx, float y, int scale = 1, int spacing = 4, bool input = true, bool[] disabled = null, int lastGap = 0)
         {
             int lh = LineHeight(scale) + spacing;
             int activated = -1;
@@ -291,12 +292,15 @@ namespace PrisonersOfOmar.UI
             {
                 bool off = disabled != null && i < disabled.Length && disabled[i];
                 int w = TextWidth(items[i], scale);
-                var r = new Rect(cx - w * 0.5f - 6, y + i * lh - 2, w + 12, lh);
+                float iy = y + i * lh + (lastGap > 0 && items.Length > 1 && i == items.Length - 1 ? lastGap : 0);
+                if (lastGap > 0 && items.Length > 1 && i == items.Length - 1)
+                    Rect(cx - 30, iy - spacing - lastGap * 0.5f - 1, 60, 1, new Color(0.55f, 0.55f, 0.52f, 0.35f));
+                var r = new Rect(cx - w * 0.5f - 6, iy - 2, w + 12, lh);
                 if (input && !off && Hover(r) && MouseMoved && selected != i) { selected = i; AudioManager.Play2D(Snd.UiMove, 0.5f, 1f, AudioCategory.Ui); }
                 bool sel = i == selected;
                 Color c = off ? new Color(0.35f, 0.35f, 0.35f) : sel ? White : Dim;
                 string label = sel && !off ? "▶ " + items[i] + " ◀" : items[i];
-                Text(label, cx, y + i * lh, c, scale, Align.Center);
+                Text(label, cx, iy, c, scale, Align.Center);
                 if (input && !off && Click && Hover(r)) activated = i;
             }
             if (input && activated < 0 && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space)))

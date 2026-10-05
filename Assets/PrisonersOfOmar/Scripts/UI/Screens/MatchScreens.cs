@@ -328,8 +328,8 @@ namespace PrisonersOfOmar.UI
                 var s = NetSession.Instance;
                 bool host = s != null && s.IsHost;
                 string[] items = host ? new[] { "BACK TO THE LOBBY", "MAIN MENU" } : new[] { "MAIN MENU" };
-                float my = ui.Height - items.Length * (ui.LineHeight() + 2) - 14;
-                int a = ui.Menu(items, ref _sel, ui.Width * 0.5f, my, 1, 2, input);
+                float my = ui.Height - items.Length * (ui.LineHeight() + 5) - 16;
+                int a = ui.Menu(items, ref _sel, ui.Width * 0.5f, my, 1, 5, input);
                 if (!host) ui.Text("WAITING FOR THE HOST...", ui.Width * 0.5f, my - ui.LineHeight() - 4, VhsUI.Dim, 1, Align.Center);
                 if (a >= 0)
                 {

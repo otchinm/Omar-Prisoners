@@ -126,13 +126,14 @@ namespace PrisonersOfOmar.UI
             // readiness comes from the host's roster (except right after we toggled it)
             var me0 = s.LocalPlayer;
             if (!host && me0 != null && Time.unscaledTime - _readySentAt > 1.5f) _ready = me0.Ready;
-            UIStyle.Header(ui, s.Practice ? "PLAY ALONE" : "LOBBY", 8);
-            if (host && !s.Practice) ui.Text("YOUR ADDRESS: " + _hostAddresses + "  PORT " + Settings.Port, ui.Width * 0.5f, 8 + ui.LineHeight(), VhsUI.Dim, 1, Align.Center);
+            // the header uses the big UI font (18 px lines): the address goes under it, the panels under that
+            UIStyle.Header(ui, s.Practice ? "PLAY ALONE" : "LOBBY", 6);
+            if (host && !s.Practice) ui.Text("YOUR ADDRESS: " + _hostAddresses + "  PORT " + Settings.Port, ui.Width * 0.5f, 6 + VhsFont.Small.LineHeight + 1, VhsUI.Dim, 1, Align.Center);
 
             // ---- player list (left column)
             float colW = ui.Width * 0.5f - 16;
-            float lx = 12, ly = 36;
-            int lh = ui.LineHeight() + 1;
+            float lx = 12, ly = 44;
+            int lh = ui.LineHeight() + 2;
             var panel = UIStyle.Panel(ui, new Rect(lx - 4, ly - 4, colW, lh * 5 + 8), 0.55f);
             for (int i = 0; i < s.Players.Count && i < 5; i++)
             {
@@ -146,14 +147,15 @@ namespace PrisonersOfOmar.UI
                 string role = p.Role == PlayerRole.Omar ? (p.IsBot ? "OMAR AI" : "OMAR") : p.Role == PlayerRole.Spectator ? "WATCH" : "#" + (Choices.IndexOf(p.Skin) + 1);
                 ui.Text(role + ready + ping, panel.xMax - 5, ly + i * lh, c, 1, Align.Right);
             }
-            if (s.FindOmar() == null) ui.Text("OMAR: THE AI", lx, panel.yMax + 3, new Color(0.65f, 0.2f, 0.2f));
+            float infoY = panel.yMax + 4;
+            if (s.FindOmar() == null) { ui.Text("OMAR: THE AI", lx, infoY, new Color(0.65f, 0.2f, 0.2f)); infoY += ui.LineHeight() + 1; }
             int diff = Mathf.Clamp((int)s.Settings.Difficulty, 0, 3);
-            if (!host) ui.Text(DifficultyNames[diff] + " - " + DifficultyLines[diff], lx, panel.yMax + 3 + ui.LineHeight(), VhsUI.Dim);
+            if (!host) { ui.Text(DifficultyNames[diff] + " - " + DifficultyLines[diff], lx, infoY, VhsUI.Dim); infoY += ui.LineHeight() + 1; }
 
             // ---- character (right column)
             float rx = ui.Width * 0.5f + 6, rw = ui.Width * 0.5f - 16;
             float ph = Mathf.Min(110f, ui.Height * 0.42f), pw = ph * 0.75f;
-            var pr = new Rect(Mathf.Round(rx + rw * 0.5f - pw * 0.5f), 34, Mathf.Round(pw), Mathf.Round(ph));
+            var pr = new Rect(Mathf.Round(rx + rw * 0.5f - pw * 0.5f), 40, Mathf.Round(pw), Mathf.Round(ph));
             ui.Rect(pr, new Color(0, 0, 0, 0.5f));
             if (_rt != null) ui.Image(_rt, pr, Color.white);
             ui.Frame(pr, new Color(0.5f, 0.5f, 0.5f, 0.6f));
@@ -175,12 +177,12 @@ namespace PrisonersOfOmar.UI
                 items.Add("START"); actions.Add(3);
             }
             items.Add("LEAVE"); actions.Add(4);
-            float my = panel.yMax + ui.LineHeight() + 8;
+            float my = Mathf.Max(infoY + 6, panel.yMax + 10);
             var arr = items.ToArray();
             var disabled = new bool[arr.Length];
             string why = "";
             if (host) { bool ok = s.CanStart(out why); disabled[actions.IndexOf(3)] = !ok; }
-            int a = ui.Menu(arr, ref _sel, lx - 4 + colW * 0.5f, my, 1, 1, input, disabled);
+            int a = ui.Menu(arr, ref _sel, lx - 4 + colW * 0.5f, my, 1, 4, input, disabled, 8); // LEAVE stands apart
             if (host && !string.IsNullOrEmpty(why)) ui.Text(why, ui.Width * 0.5f, ui.Height - 13, new Color(0.7f, 0.3f, 0.3f), 1, Align.Center);
             else if (host && _sel < actions.Count && actions[_sel] == 2) UIStyle.Footer(ui, DifficultyLines[diff]);
             else UIStyle.Footer(ui, "A / D  CHANGE CHARACTER");
