@@ -717,6 +717,17 @@ def paint_hand(spec, rng):
     img = mix(img, nail_col, nail * 0.85)
     img = mix(img, np.clip(nail_col * 1.25 + 0.08, 0, 1), ell(cu * 40, v * 160, 20, 2.5, 8, 2.2, 1.0) * nail * 0.6)
     img = shade(img, 1 - 0.15 * smoothstep(0.6, 1.0, v))  # wrist
+    if spec.get("hand_scabs"):
+        # a butcher's hands: dirt worked into the knuckle creases and round the nails, split knuckles with dried blood
+        crease = np.zeros_like(v)
+        for kv, kw in ((0.33, 0.02), (0.17, 0.016), (0.52, 0.03)):
+            crease = np.maximum(crease, (np.abs(v - kv) < kw) * (np.abs(cu - 0.5) < 0.38) * 1.0)
+        img = shade(img, 1 - 0.32 * crease)
+        img = shade(img, 1 - 0.38 * smoothstep(0.2, 0.0, v) * (np.abs(cu - 0.5) > 0.22))   # dirt round the nails
+        scab = np.exp(-((v - 0.56) / 0.035) ** 2) * np.exp(-((cu - 0.5) / 0.12) ** 2) * (v > 0.5)
+        scab = scab * (np.random.RandomState(spec.get("seed", 0) + 77).rand(h, w).astype(np.float32) > 0.35)   # own stream: the rest of the atlas stays put
+        img = mix(img, rgb("#4a1410"), np.clip(scab * 1.1, 0, 0.8))
+        img = shade(img, 1 - 0.18 * sep * fing)
     if spec.get("hand_blood"):
         img = mix(img, blood_color(rng, h, w), blood(h, w, rng, amount=spec["hand_blood"], scale=5, splatter=1) * 0.85)
     if spec.get("hand_grime"):
@@ -926,7 +937,8 @@ def paint_swatch(spec, rng):
     cell = 16 * S
     cols = {
         "dark": rgb("#121012"), "white": rgb("#d8d4cc"), "metal": rgb("#8a8884"), "blood": rgb("#5a0808"),
-        "skin": rgb(spec.get("skin", "#b09080")), "hair": rgb(spec.get("hair", "#3a2a20")),
+        # the skin cell only dresses the hands (sides of the third person palm / fist / thumb): use the hand colour
+        "skin": rgb(spec.get("hand_skin", spec.get("skin", "#b09080"))), "hair": rgb(spec.get("hair", "#3a2a20")),
     }
     for name, (cx, cy) in A.SWATCH_CELLS.items():
         c = cols[name]
@@ -1392,7 +1404,8 @@ CHARACTERS = {
         stubble=0.3, stubble_color="#2a221c", torso=torso_p7, arm=arm_p7, leg=leg_slacks, shoe=oxford(),
         nails="#c09078", extra="hair", misc="hair"),
     "omar": dict(
-        seed=505, head="mask", skin="#4a403c", hand_skin="#3a3432", nails="#2a2422", hand_blood=0.55, hand_grime=0.6,
+        seed=505, head="mask", skin="#4a403c", hand_skin="#7a6252", nails="#3e3028", hand_blood=0.34, hand_grime=0.42,
+        hand_scabs=True,
         hair_style="none", torso=torso_omar, arm=arm_omar, leg=leg_omar, shoe=boot(), extra="apron", misc="skirt",
         hair="#3a3428"),
     "mannequin_burnt": dict(
