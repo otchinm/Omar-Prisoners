@@ -21,11 +21,12 @@ namespace PrisonersOfOmar.UI
         RenderTexture _rt;
         Transform _previewRoot;
         HumanoidRig _preview;
-        int _previewChoice = -1;
+        CharacterSkin? _previewSkin;   // what the 3D preview shows (by skin: list indices shift when a secret one is added)
         float _yaw;
         string _hostAddresses;
         // CODE field: the text being typed, whether it has the keyboard, the feedback line under the menu
         string _code = "";
+        string _codeBefore = "";   // the field's text when typing started (Esc / a click outside puts it back)
         bool _editCode;
         string _codeMsg = "";
         bool _codeOk;
@@ -125,9 +126,9 @@ namespace PrisonersOfOmar.UI
 
         void UpdatePreview()
         {
-            if (_previewChoice != _choice)
+            if (_previewSkin != ChosenSkin)
             {
-                _previewChoice = _choice;
+                _previewSkin = ChosenSkin;
                 if (_preview != null) Object.Destroy(_preview.gameObject);
                 try
                 {
@@ -169,8 +170,15 @@ namespace PrisonersOfOmar.UI
             s_unlockedCode = code;
             _choice = AddChoice(skin.Value);
             _codeOk = true;
+            string name = HumanoidFactory.DisplayName(skin.Value);
             bool taken = s.Players.Exists(o => o.Id != s.LocalId && o.IsPrisoner && o.Skin == skin.Value);
-            _codeMsg = taken ? "CODE ACCEPTED - SOMEBODY ALREADY PLAYS " + HumanoidFactory.DisplayName(skin.Value) : "CODE ACCEPTED: " + HumanoidFactory.DisplayName(skin.Value);
+            var me = s.LocalPlayer;
+            int prisoners = 0;
+            foreach (var o in s.Players) if (o.IsPrisoner && o.Id != s.LocalId) prisoners++;
+            bool full = (me == null || !me.IsPrisoner) && prisoners >= GameInfo.MaxPrisoners;
+            _codeMsg = taken ? "CODE ACCEPTED - SOMEBODY ALREADY PLAYS " + name
+                : full ? "CODE ACCEPTED - NO FREE PRISONER SLOT FOR " + name
+                : "CODE ACCEPTED: " + name;
             AudioManager.Play2D(Snd.UiSelect, 0.9f, 0.8f, AudioCategory.Ui);
             SendChoice();
         }
@@ -194,7 +202,7 @@ namespace PrisonersOfOmar.UI
                     AudioManager.Play2D(Snd.UiType, 0.5f, Random.Range(0.95f, 1.08f), AudioCategory.Ui);
                 }
             }
-            if (Input.GetKeyDown(KeyCode.Escape)) { _editCode = false; AudioManager.Play2D(Snd.UiBack, 0.6f, 1f, AudioCategory.Ui); }
+            if (Input.GetKeyDown(KeyCode.Escape)) { _editCode = false; _code = _codeBefore; AudioManager.Play2D(Snd.UiBack, 0.6f, 1f, AudioCategory.Ui); }
         }
 
         public override void Draw(VhsUI ui, bool input)
@@ -249,7 +257,7 @@ namespace PrisonersOfOmar.UI
             bool clickRight = input && ui.Click && ui.Hover(new Rect(pr.xMax, pr.y, 30, pr.height));
 
             // ---- actions (left column, under the list)
-            if (!input) _editCode = false;
+            if (!input && _editCode) { _editCode = false; _code = _codeBefore; }
             bool editing = _editCode;
             if (editing) EditCode(s);   // before the menu: the keys typed into the field must not drive it
             var items = new System.Collections.Generic.List<string>();
@@ -279,7 +287,7 @@ namespace PrisonersOfOmar.UI
             int cw = ui.TextWidth("CODE: " + (_code.Length > 4 ? _code : "____") + " ");
             var codeRect = new Rect(Mathf.Round(mcx - cw * 0.5f - 3), my + codeRow * mlh - 2, cw + 6, mlh - 1);
             ui.Frame(codeRect, _editCode ? VhsUI.White : new Color(0.5f, 0.5f, 0.5f, 0.55f));
-            if (_editCode && input && ui.Click && !ui.Hover(codeRect)) _editCode = false;
+            if (_editCode && input && ui.Click && !ui.Hover(codeRect)) { _editCode = false; _code = _codeBefore; }
             bool msg = Time.unscaledTime - _codeMsgAt < 3f;
             if (_editCode) UIStyle.Footer(ui, "TYPE THE CODE   ENTER OK   ESC CANCEL");
             else if (msg) ui.Text(_codeMsg, ui.Width * 0.5f, ui.Height - 13, _codeOk ? new Color(0.55f, 0.8f, 0.55f) : new Color(0.8f, 0.35f, 0.3f), 1, Align.Center);
@@ -316,7 +324,7 @@ namespace PrisonersOfOmar.UI
                     if (!s.HostStartMatch()) UIManager.Instance.Push(new MessageScreen("CAN'T START", s.LastError));
                     break;
                 case 4: GameRoot.Instance.LeaveSession(); break;
-                case 5: _editCode = true; break;
+                case 5: _editCode = true; _codeBefore = _code; break;
             }
             if (Input.GetKeyDown(KeyCode.Escape)) GameRoot.Instance.LeaveSession();
 
