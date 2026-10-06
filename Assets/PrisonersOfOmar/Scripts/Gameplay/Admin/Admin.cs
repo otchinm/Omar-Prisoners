@@ -56,6 +56,8 @@ namespace PrisonersOfOmar.Gameplay
         ForceStart, SetRole, SetDifficulty,
         // ---- self (added later: kept at the end so the byte values above never change)
         SeeMyself,
+        // ---- iteration 3 puzzles (Docs/ITERATION3_PLAN.md)
+        ShowCodes, SolveSockets, OpenCodeLocks, UnlockDrawers, WatchTape, ShowPuzzles,
     }
 
     public sealed class AdminCmdInfo
@@ -148,6 +150,11 @@ namespace PrisonersOfOmar.Gameplay
             Add(AdminCmd.PrimeDrums, J, "POUR FUEL ON THE DRUMS", AdminArg.None);
             Add(AdminCmd.ExplodeDrums, J, "BLOW UP THE DRUMS", AdminArg.None);
             Add(AdminCmd.OpenShelter, J, "OPEN THE SHELTER", AdminArg.None);
+            Add(AdminCmd.ShowCodes, J, "SHOW ALL CODES", AdminArg.None, hint: "SHELTER, PADLOCKS, CLOCK...");
+            Add(AdminCmd.SolveSockets, J, "COMPLETE ALL ITEM SOCKETS", AdminArg.None, hint: "VCR, SCALES, CLOCK...");
+            Add(AdminCmd.OpenCodeLocks, J, "OPEN ALL CODE LOCKS", AdminArg.None);
+            Add(AdminCmd.UnlockDrawers, J, "UNLOCK ALL PADLOCKED DRAWERS", AdminArg.None);
+            Add(AdminCmd.WatchTape, J, "WATCH THE TAPE", AdminArg.None, local: true, hint: "PLAYS IT HERE, NOTHING CHANGES");
 
             Add(AdminCmd.TriggerEvent, E, "TRIGGER EVENT", AdminArg.Event);
             Add(AdminCmd.AddMinutes, M, "SKIP TIME", AdminArg.Number, def: 10f, hint: "MINUTES OF MATCH TIME");
@@ -161,6 +168,7 @@ namespace PrisonersOfOmar.Gameplay
             Add(AdminCmd.ShowGrandma, D, "SHOW GRANDMOTHER", AdminArg.Toggle, local: true);
             Add(AdminCmd.ShowItems, D, "SHOW ITEMS", AdminArg.Toggle, local: true);
             Add(AdminCmd.ShowTraps, D, "SHOW TRAPS", AdminArg.Toggle, local: true);
+            Add(AdminCmd.ShowPuzzles, D, "SHOW PUZZLES + CODES", AdminArg.Toggle, local: true);
             Add(AdminCmd.ShowNav, D, "SHOW AI PATHS", AdminArg.Toggle, local: true);
             Add(AdminCmd.ShowNetStats, D, "NET / FPS STATS", AdminArg.Toggle, local: true);
 
@@ -466,6 +474,9 @@ namespace PrisonersOfOmar.Gameplay
                 case AdminCmd.TeleportToCrosshair:
                     if (w != null) { var p = CrosshairPoint(out var n); TeleportSelf(w, p + n * 0.5f); }
                     break;
+                case AdminCmd.WatchTape:
+                    if (w != null && w.TapeShots.Length > 0) UI.UIManager.Instance?.Push(new UI.TapeScreen(w.TapeShots)); else AddLog("NO TAPE ON THIS MAP");
+                    break;
             }
         }
 
@@ -488,7 +499,8 @@ namespace PrisonersOfOmar.Gameplay
             {
                 var i = AdminCmds.Get(c);
                 if (i != null && i.Local && c != AdminCmd.ShowPlayers && c != AdminCmd.ShowOmar && c != AdminCmd.ShowGrandma &&
-                    c != AdminCmd.ShowItems && c != AdminCmd.ShowTraps && c != AdminCmd.ShowNav && c != AdminCmd.ShowNetStats) _toggles[c] = false;
+                    c != AdminCmd.ShowItems && c != AdminCmd.ShowTraps && c != AdminCmd.ShowNav && c != AdminCmd.ShowNetStats &&
+                    c != AdminCmd.ShowPuzzles) _toggles[c] = false;
             }
         }
 
@@ -512,7 +524,41 @@ namespace PrisonersOfOmar.Gameplay
             list.Add("OMAR'S SPAWN");
             foreach (var area in w.Map.AreaOrder) if (!list.Contains(area)) list.Add(area);
             foreach (var kv in w.Map.Markers) if (!list.Contains(kv.Key)) list.Add(kv.Key);
+            // (iteration 3) every puzzle: item sockets, code locks, padlocked drawers
+            foreach (var p in PuzzlePoints(w)) if (!list.Contains(p.Key)) list.Add(p.Key);
             return list;
+        }
+
+        /// <summary>(iteration 3) Teleport names of the puzzles and the point to look at.</summary>
+        static List<KeyValuePair<string, UnityEngine.Vector3>> PuzzlePoints(MatchWorld w)
+        {
+            var list = new List<KeyValuePair<string, UnityEngine.Vector3>>();
+            foreach (var s in w.Sockets) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + s.Info.Name.ToUpperInvariant(), s.InteractPoint));
+            foreach (var lk in w.CodeLocks)
+                if (!lk.Embedded) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + lk.Info.Name.ToUpperInvariant(), lk.InteractPoint));
+            foreach (var d in w.Drawers)
+                if (d.Lock != DrawerLockKind.None)
+                    list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PADLOCK " + d.Index + ": " + NoteTexts.PlaceName(w.Map.AreaAt(d.InteractPoint)) + (d.Lock == DrawerLockKind.Code ? " (CODE)" : " (KEY)"), d.InteractPoint));
+            return list;
+        }
+
+        /// <summary>A floor spot in front of a puzzle: halfway from the closest nav node of its room, or that node.</summary>
+        static UnityEngine.Vector3 InFrontOf(MatchWorld w, UnityEngine.Vector3 target)
+        {
+            var nav = w.Map.Nav;
+            var best = target;
+            if (nav != null)
+            {
+                float bd = float.MaxValue;
+                foreach (int n in nav.NodesInArea(w.Map.AreaAt(target)))
+                {
+                    float d = (nav.Nodes[n] - target).sqrMagnitude;
+                    if (d < bd) { bd = d; best = nav.Nodes[n]; }
+                }
+                if (bd == float.MaxValue) { int n = nav.Nearest(target); if (n >= 0) best = nav.Nodes[n]; }
+            }
+            var mid = UnityEngine.Vector3.Lerp(best, new UnityEngine.Vector3(target.x, best.y, target.z), 0.55f);
+            return UnityEngine.Physics.CheckSphere(mid + UnityEngine.Vector3.up * 1f, 0.3f, Layers.Solid, UnityEngine.QueryTriggerInteraction.Ignore) ? best : mid;
         }
 
         static bool TryLocation(MatchWorld w, string name, out UnityEngine.Vector3 p)
@@ -533,6 +579,9 @@ namespace PrisonersOfOmar.Gameplay
                 }
                 return true;
             }
+            if (name.StartsWith("PUZZLE: ") || name.StartsWith("PADLOCK "))
+                foreach (var pp in PuzzlePoints(w))
+                    if (pp.Key == name) { p = InFrontOf(w, pp.Value); return true; }
             if (w.Map.Markers.TryGetValue(name, out var t) && t != null)
             {
                 p = t.position + t.forward * 1.2f;

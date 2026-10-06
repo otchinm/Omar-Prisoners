@@ -150,6 +150,23 @@ namespace PrisonersOfOmar.Gameplay
                 case AdminCmd.PrimeDrums: { var o = EditObj(); o.BarrelsPoured = true; CommitObj(o); break; }
                 case AdminCmd.ExplodeDrums: if (!W.Objectives.Exploded) Explode(); break;
                 case AdminCmd.OpenShelter: { var o = EditObj(); o.ShelterOpen = true; CommitObj(o); break; }
+                // ---- iteration 3 puzzles
+                case AdminCmd.ShowCodes:
+                    if (W.CodeLocks.Count == 0) Admin.HostLog(sender, "NO CODE LOCKS");
+                    foreach (var lk in W.CodeLocks)
+                        Admin.HostLog(sender, (lk.Info.Label ?? lk.Info.Name) + " (" + NoteTexts.PlaceName(lk.Info.Area) + "): " + lk.Pretty()
+                            + (lk.Open ? " - OPEN" : "") + (lk == W.TapeLock ? " - ON THE TAPE" : ""));
+                    break;
+                case AdminCmd.SolveSockets:
+                    for (int i = 0; i < W.Sockets.Length; i++) ForceSolveSocket(i);
+                    Admin.HostLog(sender, W.Sockets.Length + " SOCKET(S) DONE");
+                    break;
+                case AdminCmd.OpenCodeLocks:
+                    for (int i = 0; i < W.CodeLocks.Count; i++) OpenCodeLockHost(i, sender);
+                    break;
+                case AdminCmd.UnlockDrawers:
+                    foreach (var d in W.Drawers) if (d.Locked) UnlockDrawer(d, 4, 0f);
+                    break;
 
                 // ---------------------------------------------------------------- events / match
                 case AdminCmd.TriggerEvent: Event((WorldEventKind)a); break;

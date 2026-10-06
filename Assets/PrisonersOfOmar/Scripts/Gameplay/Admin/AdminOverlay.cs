@@ -53,6 +53,20 @@ namespace PrisonersOfOmar.Gameplay
                     if (t.State != TrapState.Armed) continue;
                     Label(ui, cam, t.InteractPoint + Vector3.up * 0.3f, t.Kind == TrapKind.Tripwire ? "WIRE" : "TRAP", VhsUI.Red);
                 }
+            if (Admin.IsOn(AdminCmd.ShowPuzzles))
+            {
+                // (iteration 3) sockets with their progress, code locks and padlocks with their codes
+                var gold = new Color(1f, 0.85f, 0.35f);
+                foreach (var s in w.Sockets)
+                    if ((s.InteractPoint - eye).sqrMagnitude < 40f * 40f)
+                        Label(ui, cam, s.InteractPoint + Vector3.up * 0.3f, s.Info.Name.ToUpperInvariant() + " " + s.Count + "/" + s.Info.Needed + (s.Solved ? " DONE" : ""), gold);
+                foreach (var lk in w.CodeLocks)
+                    if (!lk.Embedded && (lk.InteractPoint - eye).sqrMagnitude < 40f * 40f)
+                        Label(ui, cam, lk.InteractPoint + Vector3.up * 0.3f, (lk.Info.Label ?? lk.Info.Name) + " " + lk.Pretty() + (lk.Open ? " OPEN" : ""), gold);
+                foreach (var d in w.Drawers)
+                    if (d.Lock != DrawerLockKind.None && (d.InteractPoint - eye).sqrMagnitude < 40f * 40f)
+                        Label(ui, cam, d.InteractPoint + Vector3.up * 0.15f, (d.Lock == DrawerLockKind.Code ? "DIAL " + (d.CodeLock != null ? d.CodeLock.Pretty() : "?") : "KEY") + (d.Locked ? "" : " OPEN"), gold);
+            }
             if (Admin.IsOn(AdminCmd.ShowNav) && w.Map != null && w.Map.Nav != null)
             {
                 var nav = w.Map.Nav;
