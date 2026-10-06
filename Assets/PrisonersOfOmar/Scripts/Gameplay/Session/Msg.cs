@@ -103,6 +103,9 @@ namespace PrisonersOfOmar.Gameplay
         AdminTeleport = 146, // host -> one player: move yourself here (admin "bring player" / "bring Omar")
         AdminItemSpawn = 147, // host -> all: a new item appears (admin give / spawn)
         CageRattle = 148,    // host -> all: a caged prisoner rattles the lock (cage, prisoner) - loud, Omar may come to punish them
+
+        // ================== iteration 3 (Docs/ITERATION3_PLAN.md): 160..199 ==================
+        SocketState = 160,   // host -> all: an item socket took an item / completed (socket, count, solved, item type, player)
     }
 
     public static class MsgRules

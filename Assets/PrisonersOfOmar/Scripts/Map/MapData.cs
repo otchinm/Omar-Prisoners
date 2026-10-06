@@ -77,6 +77,10 @@ namespace PrisonersOfOmar.Map
         /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
         public readonly List<Bounds> CrawlSpaces = new List<Bounds>();
 
+        // ---- iteration 3 (plan: Docs/ITERATION3_PLAN.md) --------------------------------------
+        /// <summary>Item sockets: world objects that take items (VCR, scales, clock...). Index = network id.</summary>
+        public readonly List<SocketInfo> Sockets = new List<SocketInfo>();
+
         /// <summary>First registered area whose bounds contain <paramref name="p"/> (or "Exterior").</summary>
         public string AreaAt(Vector3 p)
         {
@@ -267,6 +271,50 @@ namespace PrisonersOfOmar.Map
         public Bounds VentArea;
         /// <summary>A good viewing pose at the grate (eye position + facing the table).</summary>
         public Pose VentView;
+    }
+
+    /// <summary>What completing an item socket does by itself (feature code can add more, keyed on <see cref="SocketInfo.Name"/>).</summary>
+    public enum SocketResult : byte
+    {
+        None = 0,
+        /// <summary>Unlocks door <see cref="SocketInfo.ResultDoor"/>.</summary>
+        UnlockDoor,
+        /// <summary>A new <see cref="SocketInfo.ResultItem"/> appears at <see cref="SocketInfo.ResultPose"/> (falls out, pops out...).</summary>
+        DropItem,
+    }
+
+    /// <summary>(iteration 3) A world object that takes items: put N accepted items in (one at a time, each consumed and shown
+    /// at <see cref="SlotPoses"/>) and it completes.</summary>
+    public sealed class SocketInfo
+    {
+        /// <summary>Unique name, gameplay hooks feature results on it ("Vcr", "ButcherScales", "GrandfatherClock"...).</summary>
+        public string Name;
+        public string Area;
+        /// <summary>What the prompt calls it: "THE VCR".</summary>
+        public string Label;
+        /// <summary>Prompt = Verb + item + Prep + Label: "PUT" + "MEAT" + "ON" + "THE SCALES".</summary>
+        public string Verb = "PUT", Prep = "IN";
+        /// <summary>Shown when you have nothing it takes ("A VCR. THE TAPE SLOT IS EMPTY.").</summary>
+        public string EmptyText;
+        /// <summary>Shown once it is complete (null = no prompt any more).</summary>
+        public string DoneText;
+        /// <summary>Trigger collider (Layers.Interactable).</summary>
+        public Collider Interact;
+        /// <summary>Item types it takes.</summary>
+        public ItemType[] Accepts = new ItemType[0];
+        /// <summary>Items needed to complete it.</summary>
+        public int Needed = 1;
+        /// <summary>World poses where the inserted items are shown, in insertion order (missing = hidden inside).</summary>
+        public Pose[] SlotPoses = new Pose[0];
+        /// <summary>Seconds E is held to put one item in (0 = a press).</summary>
+        public float HoldTime = 1f;
+        public float InsertNoise = 3f, SolveNoise = 8f;
+        /// <summary>Resources paths of the sounds (null = defaults).</summary>
+        public string InsertSound, SolveSound;
+        public SocketResult Result;
+        public int ResultDoor = -1;
+        public ItemType ResultItem;
+        public Pose ResultPose;
     }
 
     public sealed class NoteSpotInfo

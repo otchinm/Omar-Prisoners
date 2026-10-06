@@ -133,6 +133,7 @@ namespace PrisonersOfOmar.Gameplay
         Hiding,        // id = spot (enter / leave)
         VentCover,     // take one screw out of the cage room vent cover (screwdriver)
         VentHatch,     // push the kitchen ceiling grate out from inside the duct
+        Socket,        // (iteration 3) id = item socket index: put the item in
     }
 
     public enum WorldEventKind : byte

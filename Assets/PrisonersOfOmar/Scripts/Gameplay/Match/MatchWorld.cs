@@ -189,6 +189,7 @@ namespace PrisonersOfOmar.Gameplay
             try { BuildKitchen(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildVent(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildDrawers(); } catch (Exception e) { Debug.LogException(e); }
+            BuildPuzzles();
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();
@@ -335,6 +336,7 @@ namespace PrisonersOfOmar.Gameplay
 
             TickPlayer(dt);
             TickWorld(dt);
+            TickPuzzles(dt);
             for (int i = 0; i < Cages.Length; i++) Cages[i].Tick(dt);
             TickMannequins();
             for (int i = 0; i < Traps.Count; i++) Traps[i].Tick(dt);

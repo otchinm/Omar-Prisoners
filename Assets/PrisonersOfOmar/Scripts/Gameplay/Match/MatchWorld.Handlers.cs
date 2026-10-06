@@ -72,6 +72,7 @@ namespace PrisonersOfOmar.Gameplay
             RegisterPlayerHandlers(s);
             RegisterWorldHandlers(s);
             RegisterAdminHandlers(s);
+            RegisterPuzzleHandlers(s);
         }
 
         void UnregisterHandlers()
@@ -80,6 +81,7 @@ namespace PrisonersOfOmar.Gameplay
             UnregisterPlayerHandlers(Session);
             UnregisterWorldHandlers(Session);
             UnregisterAdminHandlers(Session);
+            UnregisterPuzzleHandlers(Session);
         }
 
         // ------------------------------------------------------------------ avatars
