@@ -6,6 +6,20 @@ namespace PrisonersOfOmar.Characters
     internal enum GlassesStyle { None, Round, Rect }
     internal enum HeadShape { Human, Sack, Featureless }
 
+    /// <summary>
+    /// (secret, Prisoner8) A finer, sculpted head instead of the classic 12-sided one: profile rings at any heights,
+    /// front-weighted vertex angles (dense round the face, sparse at the back under the hair), face relief (sockets,
+    /// cheekbones, lips, chin, ears) and a separate low-poly nose (BodyMeshGenerator.SculptedHead). Same texture
+    /// mapping as the classic head (u from theta, v from the height), so the painted face lines up.
+    /// </summary>
+    internal sealed class HeadSculpt
+    {
+        public float[] Y;        // ring heights in head units (chin 0, crown 1); the last one is the crown pole
+        public Ring[] Rings;     // profile of each ring (head units)
+        public float[] Square;   // superellipse exponent of each ring
+        public float[] Theta;    // vertex angles, 180 down to -180 (0 = front, + = character's right)
+    }
+
     /// <summary>Elliptic cross-section: half width (X), front depth (+Z), back depth (-Z), z of the centre. Meters.</summary>
     internal struct Ring
     {
@@ -64,6 +78,8 @@ namespace PrisonersOfOmar.Characters
         public bool BobHair;                     // LongBangs cut short at the jaw / neck (the grandmother, the camerawoman)
         /// <summary>(iteration 2) Bob with a side-swept fringe and jaw-length side locks (texture: hairline "bob" + bob_sweep).</summary>
         public float FringeSweep;
+        /// <summary>(secret) Sculpted head (null = the classic head of <see cref="HeadRings"/>).</summary>
+        public HeadSculpt Sculpt;
 
         public float Scale => Height / 1.8f;
 
@@ -124,6 +140,32 @@ namespace PrisonersOfOmar.Characters
             new Ring(0.318f, 0.370f, 0.430f, 0.00f),  // forehead
             new Ring(0.262f, 0.272f, 0.342f, -0.01f), // upper skull
             new Ring(0.0f, 0.0f, 0.0f, -0.03f),       // crown (pole)
+        };
+
+        /// <summary>Prisoner8's sculpted head: lean oval face, narrow defined jaw and chin, high cheekbones, eyes set
+        /// in under a straight brow; the nose is its own part (BodyMeshGenerator.SculptedNose).</summary>
+        static readonly HeadSculpt LeanSculpt = new HeadSculpt
+        {
+            Y = new[] { -0.50f, -0.22f, -0.06f, 0.03f, 0.11f, 0.19f, 0.27f, 0.36f, 0.45f, 0.54f, 0.64f, 0.77f, 0.89f, 1.00f },
+            Rings = new[]
+            {
+                new Ring(0.236f, 0.218f, 0.240f, -0.06f),  // neck base
+                new Ring(0.196f, 0.186f, 0.202f, -0.05f),  // neck
+                new Ring(0.196f, 0.250f, 0.214f, -0.045f), // under the jaw
+                new Ring(0.210f, 0.318f, 0.228f, -0.035f), // jaw line, bottom of the chin
+                new Ring(0.228f, 0.352f, 0.262f, -0.02f),  // chin, jaw
+                new Ring(0.246f, 0.370f, 0.302f, -0.01f),  // mouth
+                new Ring(0.262f, 0.380f, 0.338f, 0.00f),   // upper lip, base of the nose
+                new Ring(0.282f, 0.378f, 0.378f, 0.00f),   // cheekbones
+                new Ring(0.296f, 0.366f, 0.410f, 0.00f),   // eyes (set in)
+                new Ring(0.302f, 0.384f, 0.432f, 0.00f),   // brow
+                new Ring(0.300f, 0.366f, 0.432f, 0.00f),   // forehead
+                new Ring(0.278f, 0.322f, 0.408f, -0.005f), // top of the forehead
+                new Ring(0.214f, 0.240f, 0.326f, -0.01f),  // skull
+                new Ring(0.0f, 0.0f, 0.0f, -0.03f),        // crown (pole)
+            },
+            Square = new[] { 2f, 2f, 2f, 2.5f, 2.4f, 2.1f, 2.1f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2f },
+            Theta = new[] { 180f, 150f, 118f, 90f, 68f, 48f, 30f, 14f, 0f, -14f, -30f, -48f, -68f, -90f, -118f, -150f, -180f },
         };
 
         static readonly Ring[] SackHead =
@@ -383,9 +425,9 @@ namespace PrisonersOfOmar.Characters
             LegRz = Arr(s, 0.054f, 0.055f, 0.060f, 0.055f, 0.055f, 0.060f, 0.072f, 0.081f, 0.086f);
             ShoulderX = 0.200f * s; ElbowX = 0.222f * s; WristX = 0.230f * s;
             ShoulderSlope = 0.018f;
-            HeadRings = LeanHead;
-            HeadH = 0.137f * Height;   // a long lean face
-            Nose = 0.094f;             // long straight nose
+            HeadRings = LeanHead;      // profile for the hair / eye helpers; the mesh is the sculpted head below
+            HeadH = 0.139f * Height;   // a long lean face
+            Sculpt = LeanSculpt;
             Hair = HairStyle.Curly;
             HandScale = 1.04f;
             FootLen = 0.29f; FootW = 0.105f; ShoeH = 0.115f;   // chunky white sneakers

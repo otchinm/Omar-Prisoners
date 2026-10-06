@@ -199,6 +199,15 @@ def paint_face(spec, rng, th, y, X, Y):
     lum *= 1 + 0.05 * ell(X, Y, 0, 12, 20, 11, 6)
     lum *= 1 - 0.16 * ell(X, Y, 0, 29, 15, 3.5, 2.5)
     lum *= 1 - 0.08 * ell(X, Y, 0, 51, 4, 7, 3)
+    if spec.get("lean_face"):
+        # (secret, prisoner8) lean face: light on the cheekbones, soft hollows under them, the jaw line, a long
+        # straight nose (the nose itself is a separate part of the sculpted head: these are its painted planes)
+        lum *= 1 + 0.08 * sym_ell(X, Y, 46, 84, 16, 9, 7)
+        lum *= 1 - 0.10 * sym_ell(X, Y, 46, 52, 13, 15, 9)
+        lum *= 1 + 0.08 * ell(X, Y, 0, 96, 4.0, 20, 4)       # bridge highlight
+        lum *= 1 - 0.08 * sym_ell(X, Y, 8.5, 92, 3.5, 20, 4)  # sides of the bridge
+        lum *= 1 + 0.06 * ell(X, Y, 0, 73, 5, 4, 2.5)         # tip
+        lum *= 1 - 0.10 * smoothstep(-4, 6, Y) * (1 - smoothstep(8, 16, Y)) * smoothstep(20, 50, ath) * (1 - smoothstep(70, 90, ath))
     img = shade(img, lum)
     # cheeks blush
     if spec.get("blush"):
@@ -239,6 +248,9 @@ def paint_face(spec, rng, th, y, X, Y):
         cx, cy = 32.0 * sx, 104.0
         if spec.get("eyes_closed") or spec.get("dead_eyes"):
             pass
+        if spec.get("eye_style") == "almond":
+            img = paint_almond_eye(img, spec, rng, X, Y, sx)
+            continue
         white = ell(X, Y, cx, cy, 12.0, 4.2, 1.0)
         img = mix(img, sclera, white)
         img = mix(img, sclera * 0.7, ell(X, Y, cx + 9 * sx, cy, 4, 3.5, 1) * white * 0.6)
@@ -260,9 +272,6 @@ def paint_face(spec, rng, th, y, X, Y):
         by = 125.5 + 6.0 * np.sin(np.clip(rel, 0, 1) * np.pi * 0.85) * spec.get("brow_arch", 1.0)
         thick = spec.get("brow_thick", 3.4) * (1.0 - 0.45 * np.clip(rel, 0, 1))
         brow = np.clip(1 - np.abs(Y - by) / thick, 0, 1) * smoothstep(-0.05, 0.05, rel) * (1 - smoothstep(0.9, 1.05, rel))
-        if spec.get("brow_solid"):
-            # thick straight brows: a solid band with feathered edges, hairs breaking the outline
-            brow = np.clip(brow * 2.2 + (rng.rand(*brow.shape).astype(np.float32) - 0.5) * 0.6 * (brow > 0.05), 0, 1)
         img = mix(img, rgb(spec["brows"]), brow * 0.9)
     if spec.get("dead_eyes"):
         img = mix(img, rgb("#1a1412"), sym_ell(X, Y, 32, 104, 13, 6, 2) * 0.85)
@@ -1447,6 +1456,44 @@ def curl_tile(h, w, spec, rng):
     return shade(img, np.clip(1.08 - 0.5 * smoothstep(0.35, 1.0, rr), 0.4, 1.2))
 
 
+def paint_almond_eye(img, spec, rng, X, Y, sx):
+    """(secret, prisoner8) A man's eye, bigger and almond shaped: dark brown iris half under the upper lid, a dark
+    lash line, the lid crease, a thin lower lid; a thick straight brow sitting low over it."""
+    tone = rgb(spec["skin"])
+    cx, cy = spec.get("eye_x", 32.0) * sx, spec.get("eye_y", 104.0)
+    rx, up, lo = spec.get("eye_rx", 14.0), spec.get("eye_up", 5.4), spec.get("eye_lo", 3.6)
+    sclera = rgb(spec.get("sclera", "#d6cec2"))
+    iris = rgb(spec["eyes"])
+    white = almond(X, Y, cx, cy, rx, up, lo, 0.05, 0.9)
+    img = mix(img, sclera, white)
+    img = mix(img, sclera * 0.72, ell(X, Y, cx + 10.5 * sx, cy, 4.5, 4, 1.2) * white * 0.55)   # outer corner shade
+    img = mix(img, sclera * 0.8, ell(X, Y, cx - 11.0 * sx, cy - 0.5, 3.0, 3, 1.0) * white * 0.45)  # inner corner
+    ix, iy = cx - 0.6 * sx, cy - 0.2
+    ir = spec.get("iris_r", 5.4)
+    img = mix(img, iris, ell(X, Y, ix, iy, ir, ir * 1.04, 0.8) * white)
+    img = mix(img, iris * 0.55, ell(X, Y, ix, iy, ir, ir * 1.04, 0.8) * (1 - ell(X, Y, ix, iy, ir * 0.78, ir * 0.8, 0.8)) * white * 0.8)
+    img = mix(img, rgb("#050303"), ell(X, Y, ix, iy, ir * 0.40, ir * 0.42, 0.6) * white)
+    img = mix(img, rgb("#f2f2f0"), ell(X, Y, ix - 1.7 * sx, iy + 1.9, 1.1, 1.1, 0.4) * white * 0.95)
+    # the upper lid shades the top of the eye ball
+    img = shade(img, 1 - 0.22 * white * smoothstep(cy + up - 3.0, cy + up, Y))
+    # lash line along the upper lid (thicker to the outer corner), lid crease above, thin lower lid
+    outer = np.clip((X * sx - (abs(cx) - 4.0)) / 12.0, 0, 1)
+    lash = almond(X, Y, cx, cy + 0.2, rx + 1.0, up + 1.3 + 0.8 * outer, lo, 0.05, 0.7) * (1 - white) * (Y > cy - 0.8 + 2.0 * outer)
+    img = mix(img, rgb("#100806"), lash * 0.95)
+    crease = almond(X, Y, cx, cy + 1.5, rx + 1.5, up + 4.2, 0.6, 0.05, 1.4) * (1 - almond(X, Y, cx, cy + 1.2, rx + 1.0, up + 2.6, 0.6, 0.05, 1.2))
+    img = mix(img, tone * 0.66, crease * (Y > cy) * 0.55)
+    lower = almond(X, Y, cx, cy - 0.2, rx + 0.5, 1.0, lo + 1.0, 0.05, 0.7) * (1 - white) * (Y < cy)
+    img = mix(img, rgb("#4a2a20"), lower * 0.5)
+    img = mix(img, tone * 0.82, ell(X, Y, cx, cy - lo - 3.5, rx - 2, 2.2, 1.6) * 0.35)   # soft shadow under the eye
+    # brow: thick, straight, low, slightly thicker at the inner end, a little tail
+    rel = (X * sx - spec.get("brow_x0", 11.0)) / spec.get("brow_len", 34.0)
+    by = spec.get("brow_y", 121.0) + 2.0 * np.sin(np.clip(rel, 0, 1) * np.pi * 0.8) * spec.get("brow_arch", 1.0) - 2.5 * np.clip(rel - 0.8, 0, 1)
+    thick = spec.get("brow_thick", 4.4) * (1.0 - 0.35 * np.clip(rel, 0, 1))
+    brow = np.clip((1 - np.abs(Y - by) / thick) * 2.2, 0, 1) * smoothstep(-0.04, 0.05, rel) * (1 - smoothstep(0.92, 1.05, rel))
+    brow = np.clip(brow + (rng.rand(*brow.shape).astype(np.float32) - 0.5) * 0.6 * (brow > 0.05), 0, 1)
+    return mix(img, rgb(spec["brows"]), brow * 0.92)
+
+
 def paint_jaw_beard(img, spec, rng, th, X, Y):
     """Thin beard along the jaw line joined to the sideburns and to a goatee round the mouth, light moustache.
     The jaw edge of the head mesh is the chin ring (y 0), so the beard runs round the head there."""
@@ -1609,10 +1656,11 @@ CHARACTERS = {
     # (secret, lobby code HTN) tall young man, a mop of dark curls, jaw-line beard + goatee, navy heather tee,
     # black trousers, chunky white sneakers
     "prisoner8": dict(
-        seed=1808, skin="#c99c7a", redness=0.22, mottle=0.06, eyes="#22140c", brows="#140e0a", brow_thick=4.6,
-        brow_arch=0.25, brow_solid=True, lips="#a06a5c", lip_alpha=0.45, hair_style="curly", hair="#33231a", hair_hi="#7a5638",
-        jaw_beard=0.72, mustache_light=0.45, stubble=0.10, stubble_color="#1e1610", torso=torso_p8, arm=arm_p8,
-        leg=leg_p8, shoe=chunky_white, nails="#c8a088", extra="hair", misc="hair"),
+        seed=1808, skin="#c69a76", redness=0.18, mottle=0.06, eyes="#22120a", brows="#140e0a", brow_thick=4.4,
+        brow_arch=0.25, brow_y=120.0, eye_style="almond", eye_rx=14.0, eye_up=4.8, eye_lo=3.4, iris_r=6.0,
+        sclera="#cdc4b6", lean_face=True, lips="#a0645a", lip_alpha=0.6, hair_style="curly", hair="#33231a",
+        hair_hi="#7a5638", jaw_beard=0.72, mustache_light=0.45, stubble=0.10, stubble_color="#1e1610", torso=torso_p8,
+        arm=arm_p8, leg=leg_p8, shoe=chunky_white, nails="#c8a088", extra="hair", misc="hair"),
     "omar": dict(
         seed=505, head="mask", skin="#4a403c", hand_skin="#7a6252", nails="#3e3028", hand_blood=0.34, hand_grime=0.42,
         hand_scabs=True,

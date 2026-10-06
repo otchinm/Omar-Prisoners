@@ -75,6 +75,7 @@ namespace PrisonersOfOmar.Characters
 
         static Ring HeadRingAt(BodySpec b, float yRel)
         {
+            if (b.Sculpt != null) return SculptRingAt(b.Sculpt, yRel, out _);
             var ys = CharacterAtlas.HeadRingY;
             for (int k = 0; k < ys.Length - 1; k++)
             {
@@ -120,7 +121,8 @@ namespace PrisonersOfOmar.Characters
         public static void Build(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
         {
             Torso(b, sk, mb);
-            Head(b, sk, mb);
+            if (b.Sculpt != null) SculptedHead(b, sk, mb);
+            else Head(b, sk, mb);
             for (int side = 0; side < 2; side++)
             {
                 Leg(b, sk, mb, side);
@@ -464,6 +466,218 @@ namespace PrisonersOfOmar.Characters
                 if (x <= xy[i + 2]) return Mathf.Lerp(xy[i + 1], xy[i + 3], Mathf.InverseLerp(xy[i], xy[i + 2], x));
             }
             return xy[xy.Length - 1];
+        }
+
+        // ------------------------------------------------------------------------------------------ sculpted head
+        /// <summary>Profile ring (and its superellipse exponent) of a sculpted head at height yRel.</summary>
+        static Ring SculptRingAt(HeadSculpt hs, float yRel, out float square)
+        {
+            var ys = hs.Y;
+            if (yRel <= ys[0]) { square = hs.Square[0]; return hs.Rings[0]; }
+            for (int k = 0; k < ys.Length - 1; k++)
+            {
+                if (yRel <= ys[k + 1])
+                {
+                    float t = Mathf.InverseLerp(ys[k], ys[k + 1], yRel);
+                    Ring a = hs.Rings[k], c = hs.Rings[k + 1];
+                    square = Mathf.Lerp(hs.Square[k], hs.Square[k + 1], t);
+                    return new Ring(Mathf.Lerp(a.W, c.W, t), Mathf.Lerp(a.F, c.F, t), Mathf.Lerp(a.B, c.B, t), Mathf.Lerp(a.C, c.C, t));
+                }
+            }
+            square = hs.Square[ys.Length - 1];
+            return hs.Rings[ys.Length - 1];
+        }
+
+        static float Gauss(float x, float c, float w) { float d = (x - c) / w; return Mathf.Exp(-d * d); }
+
+        /// <summary>Face relief of the sculpted head (head units, out from the head axis): eye sockets under a straight
+        /// brow, high cheekbones over lean cheeks, lips, a firm chin, the ears.</summary>
+        static float FaceRelief(float th, float y)
+        {
+            float a = Mathf.Abs(th);
+            float r = 0f;
+            r -= 0.020f * Gauss(a, 22f, 11f) * Gauss(y, 0.45f, 0.05f);   // eye sockets
+            r += 0.007f * Gauss(a, 22f, 20f) * Gauss(y, 0.54f, 0.035f);  // brow ridge
+            r += 0.014f * Gauss(a, 56f, 13f) * Gauss(y, 0.37f, 0.055f);  // cheekbones
+            r -= 0.018f * Gauss(a, 46f, 14f) * Gauss(y, 0.22f, 0.055f);  // lean cheeks under them
+            r += 0.012f * Gauss(a, 0f, 13f) * Gauss(y, 0.185f, 0.03f);   // lips
+            r -= 0.005f * Gauss(a, 22f, 7f) * Gauss(y, 0.18f, 0.03f);    // mouth corners
+            r += 0.018f * Gauss(a, 0f, 15f) * Gauss(y, 0.10f, 0.04f);    // chin
+            r += 0.006f * Gauss(a, 0f, 10f) * Gauss(y, 0.27f, 0.025f);   // under the nose
+            r += 0.046f * Gauss(a, 90f, 8f) * Gauss(y, 0.41f, 0.09f);    // ears
+            return r;
+        }
+
+        /// <summary>Point of the sculpted head surface at theta / yRel (root space): profile ring + face relief, and the
+        /// hair volume pushed out like the classic head (<see cref="HairThickness"/>) when <paramref name="hair"/>.</summary>
+        static Vector3 SculptPoint(BodySpec b, Skeleton sk, float th, float yRel, bool hair = true)
+        {
+            var hs = b.Sculpt;
+            float hh = b.HeadH, axisZ = HeadAxisZ(b);
+            Ring r = SculptRingAt(hs, yRel, out float sq);
+            Vector2 q = RingPoint(r, th, sq);
+            float x = q.x * hh, z = q.y * hh + axisZ, y = sk.ChinY + yRel * hh;
+            bool pole = yRel >= hs.Y[hs.Y.Length - 1] - 1e-4f;
+            Vector2 dir = new Vector2(x, z - axisZ);
+            float len = dir.magnitude;
+            if (!pole && len > 1e-6f)
+            {
+                float rel = FaceRelief(th, yRel) * hh;
+                x += dir.x / len * rel; z += dir.y / len * rel;
+            }
+            if (hair)
+            {
+                float d = HairThickness(b, th, yRel) * b.Scale;
+                if (d > 0f)
+                {
+                    if (pole) z -= d;
+                    else if (len > 1e-6f) { x += dir.x / len * d; z += dir.y / len * d; }
+                    y += d * 0.9f * Mathf.Clamp01((yRel - 0.74f) / 0.26f);   // the crown rises (like the classic head)
+                }
+            }
+            return new Vector3(x, y, z);
+        }
+
+        /// <summary>Head atlas u of a vertex angle (the classic head's front-weighted <see cref="CharacterAtlas.HeadU"/>).</summary>
+        static float HeadUAt(float th)
+        {
+            var U = CharacterAtlas.HeadU;
+            float step = 360f / CharacterAtlas.HeadSides;
+            float f = Mathf.Clamp((180f - th) / step, 0f, U.Length - 1);
+            int i = Mathf.Min(Mathf.FloorToInt(f), U.Length - 2);
+            return Mathf.Lerp(U[i], U[i + 1], f - i);
+        }
+
+        /// <summary>Head atlas v of a height (piecewise linear over the classic rings).</summary>
+        static float HeadVAt(float yRel)
+        {
+            var Y = CharacterAtlas.HeadRingY; var V = CharacterAtlas.HeadRingV;
+            if (yRel <= Y[0]) return V[0];
+            for (int k = 0; k < Y.Length - 1; k++)
+                if (yRel <= Y[k + 1]) return Mathf.Lerp(V[k], V[k + 1], Mathf.InverseLerp(Y[k], Y[k + 1], yRel));
+            return V[V.Length - 1];
+        }
+
+        static void SculptedHead(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
+        {
+            var hs = b.Sculpt;
+            var reg = CharacterAtlas.Head;
+            int R = hs.Y.Length, N = hs.Theta.Length - 1;
+            mb.BeginPart();
+            int first = mb.V.Count;
+            for (int k = 0; k < R; k++)
+            {
+                float yRel = hs.Y[k];
+                for (int i = 0; i <= N; i++)
+                {
+                    float th = hs.Theta[i];
+                    float ath = Mathf.Abs(th);
+                    SkinWeight w;
+                    if (yRel <= -0.36f) w = SkinWeight.Two(BoneId.Neck, BoneId.Chest, 0.3f);
+                    else if (yRel <= -0.14f) w = SkinWeight.Two(BoneId.Neck, BoneId.Head, 0.25f);
+                    else if (yRel <= 0f) w = SkinWeight.Two(BoneId.Head, BoneId.Neck, ath > 100f ? 0.35f : 0.12f);
+                    else w = SkinWeight.One(BoneId.Head);
+                    mb.Add(SculptPoint(b, sk, th, yRel), reg.UV(HeadUAt(th), HeadVAt(yRel)), w);
+                }
+            }
+            int row = N + 1;
+            for (int k = 0; k < R - 1; k++)
+                for (int i = 0; i < N; i++)
+                {
+                    int a = first + k * row + i;
+                    if (k == R - 2) { mb.Tri(SkinMeshBuilder.Opaque, a, a + row, a + 1); continue; }   // crown pole
+                    mb.Quad(SkinMeshBuilder.Opaque, a, a + row, a + row + 1, a + 1);
+                }
+            mb.EndSmoothPart();
+            SculptedNose(b, sk, mb);
+        }
+
+        /// <summary>Point of the face surface (no hair) at lateral offset x (head units) and height yRel, pushed out by
+        /// <paramref name="lift"/> head units along the surface normal (roughly: away from the head axis).</summary>
+        static Vector3 FacePoint(BodySpec b, Skeleton sk, float x, float yRel, float lift)
+        {
+            // the face's x grows with theta round the front: find theta by bisection
+            float lo = -80f, hi = 80f, xm = x * b.HeadH;
+            for (int it = 0; it < 24; it++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (SculptPoint(b, sk, mid, yRel, false).x < xm) lo = mid; else hi = mid;
+            }
+            float th = (lo + hi) * 0.5f;
+            Vector3 p = SculptPoint(b, sk, th, yRel, false);
+            Vector3 n = new Vector3(p.x, 0f, p.z - HeadAxisZ(b));
+            n = n.sqrMagnitude > 1e-8f ? n.normalized : Vector3.forward;
+            return p + n * (lift * b.HeadH);
+        }
+
+        /// <summary>
+        /// The sculpted head's nose: a small separate part (20 triangles) - a straight narrow bridge from between the
+        /// eyes to a defined tip, nostril wings, the underside - instead of pulling the whole middle of the face forward.
+        /// Textured with the face (projected round the head axis), smooth shaded on its own.
+        /// </summary>
+        static void SculptedNose(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
+        {
+            var w = SkinWeight.One(BoneId.Head);
+            var reg = CharacterAtlas.Head;
+            float hh = b.HeadH, axisZ = HeadAxisZ(b);
+            // vertices: x, yRel, lift off the face (head units)
+            Vector3 N = FacePoint(b, sk, 0f, 0.505f, 0.004f);      // nasion, between the eyes
+            Vector3 D = FacePoint(b, sk, 0f, 0.405f, 0.036f);      // middle of the bridge
+            Vector3 T = FacePoint(b, sk, 0f, 0.318f, 0.074f);      // tip
+            Vector3 Cl = FacePoint(b, sk, 0f, 0.288f, 0.050f);     // under the tip
+            Vector3 Sn = FacePoint(b, sk, 0f, 0.266f, 0.004f);     // where the nose meets the lip
+            var side = new Vector3[2, 6];
+            for (int sIdx = 0; sIdx < 2; sIdx++)
+            {
+                float sx = sIdx == 0 ? 1f : -1f;
+                side[sIdx, 0] = FacePoint(b, sk, sx * 0.026f, 0.490f, -0.004f);   // E: side root by the inner eye corner
+                side[sIdx, 1] = FacePoint(b, sk, sx * 0.036f, 0.385f, -0.004f);   // M: side base on the cheek
+                side[sIdx, 2] = FacePoint(b, sk, sx * 0.021f, 0.330f, 0.054f);    // Ts: side of the tip
+                side[sIdx, 3] = FacePoint(b, sk, sx * 0.050f, 0.297f, 0.014f);    // A: nostril wing
+                side[sIdx, 4] = FacePoint(b, sk, sx * 0.034f, 0.273f, 0.004f);    // Ab: bottom of the wing
+                side[sIdx, 5] = FacePoint(b, sk, sx * 0.015f, 0.402f, 0.026f);    // Bs: side of the bridge
+            }
+            Vector3 inside = FacePoint(b, sk, 0f, 0.37f, 0.012f);  // a point inside the nose: faces point away from it
+            mb.BeginPart();
+            int Add(Vector3 p)
+            {
+                float th = Mathf.Atan2(p.x, p.z - axisZ) * Mathf.Rad2Deg;
+                return mb.Add(p, reg.UV(HeadUAt(th), HeadVAt((p.y - sk.ChinY) / hh)), w);
+            }
+            void Tri(Vector3 a, Vector3 c, Vector3 d)
+            {
+                // clockwise seen from outside: the face normal Cross(c - a, d - a) must point away from the inside
+                Vector3 n = Vector3.Cross(c - a, d - a);
+                if (Vector3.Dot(n, (a + c + d) / 3f - inside) < 0f) { var t = c; c = d; d = t; }
+                mb.Tri(SkinMeshBuilder.Opaque, Add(a), Add(c), Add(d));
+            }
+            for (int sIdx = 0; sIdx < 2; sIdx++)
+            {
+                Vector3 E = side[sIdx, 0], M = side[sIdx, 1], Ts = side[sIdx, 2], A = side[sIdx, 3], Ab = side[sIdx, 4], Bs = side[sIdx, 5];
+                Tri(N, E, Bs); Tri(N, Bs, D);     // bridge top
+                Tri(E, M, Bs); Tri(Bs, M, Ts);    // side of the nose
+                Tri(Bs, Ts, D); Tri(D, Ts, T);    // bridge down to the tip
+                Tri(M, A, Ts); Tri(Ts, A, T);     // wing up to the tip
+                Tri(T, A, Cl); Tri(A, Ab, Cl);    // underside, nostril
+                Tri(Cl, Ab, Sn); Tri(M, Ab, A);   // to the lip, outer side of the wing
+            }
+            mb.EndSmoothPart();
+        }
+
+        /// <summary>Point on the (hair-thickened) sculpted head mesh at theta / yRel, interpolated like its quads.</summary>
+        static Vector3 SculptScalpPoint(BodySpec b, Skeleton sk, float th, float yRel)
+        {
+            var hs = b.Sculpt;
+            var Y = hs.Y; var T = hs.Theta;
+            int k = 0;
+            while (k < Y.Length - 2 && yRel > Y[k + 1]) k++;
+            float ty = Mathf.Clamp01(Mathf.InverseLerp(Y[k], Y[k + 1], yRel));
+            int i = 0;
+            while (i < T.Length - 2 && th < T[i + 1]) i++;   // thetas run from 180 down to -180
+            float ti = Mathf.Clamp01(Mathf.InverseLerp(T[i], T[i + 1], th));
+            Vector3 a = Vector3.Lerp(SculptPoint(b, sk, T[i], Y[k]), SculptPoint(b, sk, T[i + 1], Y[k]), ti);
+            Vector3 c = Vector3.Lerp(SculptPoint(b, sk, T[i], Y[k + 1]), SculptPoint(b, sk, T[i + 1], Y[k + 1]), ti);
+            return Vector3.Lerp(a, c, ty);
         }
 
         // ------------------------------------------------------------------------------------------ limbs
@@ -1045,6 +1259,7 @@ namespace PrisonersOfOmar.Characters
 
         static Vector3 ScalpPoint(BodySpec b, Skeleton sk, float th, float yRel)
         {
+            if (b.Sculpt != null) return SculptScalpPoint(b, sk, th, yRel);
             var Y = CharacterAtlas.HeadRingY;
             int k = 0;
             while (k < Y.Length - 2 && yRel > Y[k + 1]) k++;
