@@ -534,6 +534,24 @@ namespace PrisonersOfOmar.Map
             Col(ctx, pos, yaw, new Vector3(0, 0.25f, 0.05f), new Vector3(0.62f, 0.5f, 0.55f), SurfaceType.Wood, "Tv");
         }
 
+        /// <summary>(iteration 3) VCR on top of a <see cref="CrtTv"/> (same origin and yaw as the TV). Returns the world pose of a
+        /// tape pushed half into its slot.</summary>
+        public static Pose Vcr(MapContext ctx, MeshBuilder mb, Vector3 tvPos, float yaw)
+        {
+            Begin(mb, tvPos, yaw);
+            Gray(mb, 0.75f);
+            var shell = Mat.Lit(Tex.Plastic, new Color(0.22f, 0.22f, 0.23f));
+            Box(mb, shell, new Vector3(0, 0.53f, -0.05f), new Vector3(0.4f, 0.08f, 0.26f));
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.55f, 0.55f, 0.57f)), new Vector3(0, 0.535f, -0.181f), new Vector3(0.38f, 0.06f, 0.004f));   // silver front panel
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.04f, 0.04f, 0.05f)), new Vector3(-0.06f, 0.54f, -0.184f), new Vector3(0.2f, 0.03f, 0.004f));   // tape flap
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.3f, 0.3f, 0.3f)), new Vector3(0.12f, 0.525f, -0.184f), new Vector3(0.09f, 0.018f, 0.004f));    // buttons
+            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.9f, 0.1f, 0.06f)), new Vector3(0.15f, 0.552f, -0.184f), new Vector3(0.012f, 0.008f, 0.004f)); // REC lamp
+            Gray(mb, 1f);
+            End(mb);
+            var r = MapMath.Yaw(yaw);
+            return new Pose(tvPos + r * new Vector3(-0.06f, 0.54f, -0.159f), r);
+        }
+
         /// <summary>Screen center (local to the TV origin) and its size.</summary>
         public static readonly Vector3 TvScreenLocal = new Vector3(-0.07f, 0.27f, -0.215f);
         public const float TvScreenW = 0.38f, TvScreenH = 0.3f;

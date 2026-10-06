@@ -708,6 +708,30 @@ def padlock():
     return c.done()
 
 
+def vhstape():
+    """vhstape.png 64x32 (iteration 3): label (0,0,48,16) with 'MAMA 10/31' in marker, black shell (0,16,48,16),
+    spine label (48,0,16,16), reel window (48,16,16,16)."""
+    c = Canvas(64, 32, 34)
+    r = c.rng
+    shell = plastic(16 * S, 48 * S, "#18181a", r, dirt=0.35)
+    c.put(0, 16, shell)
+    lab = plastic(16 * S, 48 * S, "#18181a", r, dirt=0.3)
+    paper_lab = paper(12 * S, 40 * S, "#e0dccb", r, dirt=0.5)
+    paper_lab = mix(paper_lab, rgb("#1a1a40"), text_mask(12 * S, 40 * S, "MAMA 10/31", 20 * S, 6 * S, int(7 * S), stroke=1, stretch_x=0.8) * 0.9)
+    lab[2 * S:14 * S, 4 * S:44 * S] = paper_lab
+    c.put(0, 0, lab)
+    sp = plastic(16 * S, 16 * S, "#18181a", r, dirt=0.3)
+    sp[5 * S:11 * S, 1 * S:15 * S] = mix(paper(6 * S, 14 * S, "#e0dccb", r, dirt=0.6), rgb("#802018"),
+                                         text_mask(6 * S, 14 * S, "PLAY", 7 * S, 3 * S, int(4 * S), stroke=1) * 0.8)
+    c.put(48, 0, sp)
+    win = fill(16 * S, 16 * S, rgb("#0c0c10"))
+    for cx in (4.5, 11.5):
+        win = mix(win, rgb("#3a3028"), soft_ellipse(16 * S, 16 * S, cx * S, 8 * S, 3.2 * S, 3.2 * S))
+        win = mix(win, rgb("#d8d4c8"), soft_ellipse(16 * S, 16 * S, cx * S, 8 * S, 1.1 * S, 1.1 * S))
+    c.put(48, 16, win)
+    return c.done()
+
+
 def grandma():
     return _grandma(False)
 
@@ -738,6 +762,7 @@ ITEMS = {
     "backpack": backpack,
     "smallkey": smallkey,
     "padlock": padlock,
+    "vhstape": vhstape,
     "grandma": grandma,
     "grandma_dead": grandma_dead,
     "cleaver": cleaver,

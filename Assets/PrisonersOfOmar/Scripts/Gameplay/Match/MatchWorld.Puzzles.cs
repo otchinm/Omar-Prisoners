@@ -14,6 +14,7 @@ namespace PrisonersOfOmar.Gameplay
             try { BuildSockets(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildCodeLocks(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildDrawerLocks(); } catch (Exception e) { Debug.LogException(e); }
+            try { BuildTapes(); } catch (Exception e) { Debug.LogException(e); }
         }
 
         void RegisterPuzzleHandlers(NetSession s)
@@ -36,6 +37,7 @@ namespace PrisonersOfOmar.Gameplay
 
         void TickPuzzles(float dt)
         {
+            TickTapes(dt);
         }
     }
 }

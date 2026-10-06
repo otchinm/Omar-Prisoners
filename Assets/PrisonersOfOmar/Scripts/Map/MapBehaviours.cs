@@ -41,6 +41,8 @@ namespace PrisonersOfOmar.Map
     /// <summary>CRT screen cycling static frames (tv_static_0..3). Goes black when its probe light is off (power outage).</summary>
     public sealed class TvScreen : MonoBehaviour
     {
+        /// <summary>(iteration 3) A tape is playing: a deep blue picture that rolls and tears into static now and then.</summary>
+        public bool Playback;
         public PsxLight PowerProbe;
         public Renderer Screen;
         public float FrameTime = 0.07f;
@@ -75,8 +77,18 @@ namespace PrisonersOfOmar.Map
             if (_t < FrameTime) return;
             _t = 0f;
             _frame = (_frame + 1 + (Time.frameCount % 3 == 0 ? 1 : 0)) % _frames.Length;
+            if (Playback)
+            {
+                if (_play == null) _play = PsxMaterials.GetColor(new Color(0.16f, 0.22f, 0.62f), PsxSurface.Unlit);
+                bool tear = Random.value < 0.12f;
+                Screen.sharedMaterial = tear ? _mat : _play;
+                if (!tear) return;
+            }
+            else if (Screen.sharedMaterial != _mat) Screen.sharedMaterial = _mat;
             _mat.mainTexture = _frames[_frame];
         }
+
+        Material _play;
     }
 
     /// <summary>Slowly turning windmill rotor (rotates around its local Z axis), with gusts.</summary>

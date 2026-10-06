@@ -181,6 +181,7 @@ namespace PrisonersOfOmar.Gameplay
             var ui = UI.UIManager.Instance;
             if (ui == null) return;
             if (!ui.AnyModal && GameInput.InventoryToggle) ui.Push(new UI.InventoryScreen(_w));
+            else if (!ui.AnyModal && GameInput.JournalToggle) ui.Push(new UI.JournalScreen(_w));
             else if (!ui.AnyModal && GameInput.PauseToggle) ui.Push(new UI.PauseScreen());
             GameInput.SetCursorLocked(!ui.AnyModal);
         }

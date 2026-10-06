@@ -31,6 +31,7 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.CageKey: return "House.CageRoom|Tunnel";
                 case ItemType.Crowbar: return "House.Bathroom|Tunnel";   // the bathroom is boarded up
                 case ItemType.SmallKey: return "Tunnel";
+                case ItemType.VhsTape: return "House.Living|Tunnel";   // never right next to the VCR
                 default: return null;
             }
         }
@@ -43,6 +44,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 case ItemType.CageKey: return "House.";
                 case ItemType.Screwdriver: return "House.";
+                case ItemType.VhsTape: return "House.";
                 default: return null;
             }
         }
@@ -72,6 +74,7 @@ namespace PrisonersOfOmar.Gameplay
             var result = new List<Placement>();
             var keyList = new List<ItemType> { ItemType.BoltCutters, ItemType.CarKeys, ItemType.GasCan, ItemType.Fuse, ItemType.CageKey, ItemType.Crowbar, ItemType.Screwdriver };
             if (needBattery) keyList.Add(ItemType.CarBattery);
+            if (map.Sockets.Exists(s => s.Name == "Vcr")) keyList.Add(ItemType.VhsTape);   // (iteration 3) the home video
             var common = new List<ItemType>();
             void AddN(ItemType t, int n) { n = Mathf.Max(1, Mathf.RoundToInt(n * supplyMul)); for (int i = 0; i < n; i++) common.Add(t); }
             AddN(ItemType.LighterFuel, 4);

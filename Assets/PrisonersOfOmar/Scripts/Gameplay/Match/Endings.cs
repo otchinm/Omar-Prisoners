@@ -207,6 +207,76 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        // ---------------------------------------------------------------- (iteration 3) hints for code locks, the tape
+
+        /// <summary>"House.ClockBedroom" -> "CLOCK BEDROOM".</summary>
+        public static string PlaceName(string area)
+        {
+            if (string.IsNullOrEmpty(area)) return "HOUSE";
+            int dot = area.LastIndexOf('.');
+            string s = dot >= 0 ? area.Substring(dot + 1) : area;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(s[i]) && !char.IsUpper(s[i - 1])) sb.Append(' ');
+                sb.Append(char.ToUpperInvariant(s[i]));
+            }
+            return sb.ToString();
+        }
+
+        static string Spaced(string code) => string.Join("-", System.Linq.Enumerable.Select(code, c => c.ToString()));
+
+        /// <summary>A note that gives away a code lock's code (always readable, never cryptic beyond a nudge).</summary>
+        public static string LockHint(CodeLockEntity lk, string place, DeterministicRandom rng, bool onWall)
+        {
+            string code = lk.Pretty();
+            switch (lk.Info.Kind)
+            {
+                case Map.CodeKind.Time:
+                    switch (rng.Range(0, 3))
+                    {
+                        case 0: return "THE CLOCK STOPPED AT " + code + " THE NIGHT SHE CAME HOME.\n\nHE NEVER LET ANYONE WIND IT AGAIN.";
+                        case 1: return code + "\n" + code + "\n" + code + "\n\nSET THE HANDS. THE WALL OPENS.";
+                        default: return "MAMA'S CLOCK. " + code + ". ALWAYS " + code + ".";
+                    }
+                case Map.CodeKind.Sequence:
+                    return onWall ? code : "THE BUTTONS IN THE " + place + ":\n\n" + code + "\n\nIN THAT ORDER. DON'T PRESS ANYTHING ELSE.";
+                default:
+                    string spaced = Spaced(lk.Code);
+                    switch (rng.Range(0, 4))
+                    {
+                        case 0: return "THE LOCKED DRAWER IN THE " + place + "\n\n" + spaced;
+                        case 1: return onWall ? spaced + "\n\n(" + place + ")" : "SHE KEEPS HER THINGS LOCKED IN THE " + place + ". THE LITTLE DIAL LOCK: " + spaced + ".";
+                        case 2: return "COMBINATION - " + place + " - " + spaced + "\n\nHE DOESN'T KNOW I SAW.";
+                        default: return spaced + "\n\nTHE PADLOCK IN THE " + place + ". BURN THIS.";
+                    }
+            }
+        }
+
+        /// <summary>The home video on the tape: what you see, one caption a shot. <paramref name="lk"/> (may be null) is the lock
+        /// whose code the tape gives away.</summary>
+        public static string[] TapeShots(CodeLockEntity lk, string place, int firstShelterDigit, DeterministicRandom rng)
+        {
+            var shots = new System.Collections.Generic.List<string>
+            {
+                "OCT 31 1987  11:48 PM\n\nA KITCHEN. SOMEONE HUMS. THE CAMERA SHAKES.",
+                "AN OLD WOMAN IN A WHEELCHAIR. A CAKE. SHE IS TRYING TO BLOW OUT THE CANDLES.",
+                "A HUGE MAN FILLS THE DOORWAY BEHIND HER. HE DOES NOT MOVE. HE HOLDS A CLEAVER.",
+            };
+            if (lk != null && lk.Info.Kind == Map.CodeKind.Time)
+                shots.Add("SHE POINTS AT THE BIG CLOCK. IT SAYS " + lk.Pretty() + ".\n\n'IT STOPPED WHEN YOUR FATHER LEFT. LEAVE IT LIKE THAT, MY BOY.'");
+            else if (lk != null)
+                shots.Add("SHE LAUGHS AND TAPS A LITTLE PADLOCK.\n\n'MY THINGS IN THE " + place + ". " + Spaced(lk.Code) + ". LIKE MY BIRTHDAY, YOU REMEMBER?'");
+            else
+                shots.Add("SHE WHISPERS TO THE CAMERA: 'THE BUNKER. IT STARTS WITH " + firstShelterDigit + "...'");
+            shots.Add("THE PICTURE JUMPS. STATIC.");
+            shots.Add(rng.Chance(0.5f)
+                ? "A CAGE IN A DARK ROOM. SOMEONE INSIDE RATTLES THE DOOR. THE CAMERA MOVES CLOSER. AND CLOSER."
+                : "THE YARD AT NIGHT. A FLASHLIGHT RUNS BETWEEN THE CORN. THE MAN WALKS AFTER IT. HE IS NOT IN A HURRY.");
+            shots.Add("THE MAN LOOKS INTO THE LENS. HE SMILES.\n\n■ STOP");
+            return shots.ToArray();
+        }
+
         public static readonly string[] Lore =
         {
             "DAY 41. HE CALLS THIS PLACE THE BASE OF THE SECOND CLASS. THE FIRST CLASS NEVER CAME BACK.",

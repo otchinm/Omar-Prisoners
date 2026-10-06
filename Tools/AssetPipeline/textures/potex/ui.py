@@ -686,6 +686,24 @@ def _smallkey(ctx):
     return img, clamp01(bow + shaft + bit + tag + string)
 
 
+@icon("vhstape")
+def _vhstape(ctx):
+    """(iteration 3) A black VHS cassette with a hand-written paper label and the two reels in the window."""
+    W = H = 256
+    body = rrect(W, H, 20, 62, 236, 194, 10)
+    img = solid(H, W, "#1c1c20") * tex_noise(ctx, H, W, 0.1)[..., None]
+    lab = rrect(W, H, 40, 76, 216, 120, 4)
+    img = mix(img, "#e0dccb", lab)
+    for x0 in (60, 88, 116, 148, 176):
+        img = mix(img, "#202050", rrect(W, H, x0, 90, x0 + 20, 106, 3) * 0.85)
+    win = rrect(W, H, 84, 134, 172, 178, 6)
+    img = mix(img, "#0a0a0e", win)
+    for cx in (106, 150):
+        img = mix(img, "#4a3a2e", ellipse_mask(W, H, cx, 156, 15, 15))
+        img = mix(img, "#d8d4c8", ellipse_mask(W, H, cx, 156, 5, 5))
+    return img, body
+
+
 def ragged(m, ctx, amt, salt=0, erode=0.22):
     """distressed edges: displacement + noisy threshold (keeps it hard-ish)"""
     H, W = m.shape

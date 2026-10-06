@@ -189,7 +189,6 @@ namespace PrisonersOfOmar.Gameplay
             try { BuildKitchen(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildVent(); } catch (Exception e) { Debug.LogException(e); }
             try { BuildDrawers(); } catch (Exception e) { Debug.LogException(e); }
-            BuildPuzzles();
 
             // pre-armed traps: a random subset of the candidate spots
             var wires = new List<TrapSpotInfo>();
@@ -203,6 +202,8 @@ namespace PrisonersOfOmar.Gameplay
 
             // shelter code + notes
             for (int i = 0; i < 4; i++) ShelterCode[i] = rng.Range(i == 0 ? 1 : 0, 10);
+            // (iteration 3) sockets, code locks (the shelter keypad needs its code), padlocked drawers, tapes
+            BuildPuzzles();
             var spots = new List<int>();
             for (int i = 0; i < Map.NoteSpots.Count; i++) spots.Add(i);
             rng.Shuffle(spots);
@@ -214,7 +215,11 @@ namespace PrisonersOfOmar.Gameplay
             spots = ordered;
             var lore = new List<string>(NoteTexts.Lore);
             rng.Shuffle(lore);
+            // (iteration 3) one hint note per code lock that has no other hint (the tape carries its own), never in the tunnel
+            var hints = new List<CodeLockEntity>();
+            foreach (var lk in CodeLocks) if (lk.Info.Name != "Shelter" && lk != TapeLock) hints.Add(lk);
             Notes = new NoteEntity[Map.NoteSpots.Count];
+            int hint = 0, loreIdx = 0;
             for (int k = 0; k < spots.Count; k++)
             {
                 int idx = spots[k];
@@ -225,10 +230,16 @@ namespace PrisonersOfOmar.Gameplay
                     title = info.OnWall ? "WRITTEN ON THE WALL" : "A TORN NOTE";
                     text = NoteTexts.CodeNote(k, ShelterCode[k], rng, info.OnWall);
                 }
+                else if (hint < hints.Count && info.Area != "Tunnel")
+                {
+                    var lk = hints[hint++];
+                    title = info.OnWall ? "SCRAWLED ON THE WALL" : "A FOLDED NOTE";
+                    text = NoteTexts.LockHint(lk, NoteTexts.PlaceName(lk.Info.Area), rng, info.OnWall);
+                }
                 else
                 {
                     title = info.OnWall ? "SCRATCHED INTO THE WALL" : "A NOTE";
-                    text = lore.Count > 0 ? lore[(k - 4) % lore.Count] : "...";
+                    text = lore.Count > 0 ? lore[loreIdx++ % lore.Count] : "...";
                 }
                 Notes[idx] = new NoteEntity(idx, info, title, text, _dynamicRoot);
             }
@@ -512,7 +523,11 @@ namespace PrisonersOfOmar.Gameplay
 
         // ================================================================== UI hooks
 
-        public void OpenNote(NoteEntity note) => UI.UIManager.Instance?.Push(new UI.NoteScreen(note.Title, note.Text));
+        public void OpenNote(NoteEntity note)
+        {
+            AddJournal("note:" + note.Index, note.Title, note.Text);
+            UI.UIManager.Instance?.Push(new UI.NoteScreen(note.Title, note.Text));
+        }
 
         // ================================================================== escape zones (local)
 

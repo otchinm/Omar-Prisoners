@@ -1,6 +1,7 @@
 using PrisonersOfOmar.Audio;
 using PrisonersOfOmar.Gameplay;
 using PrisonersOfOmar.Map;
+using PrisonersOfOmar.Rendering;
 using UnityEngine;
 
 namespace PrisonersOfOmar.UI
@@ -244,6 +245,126 @@ namespace PrisonersOfOmar.UI
             ui.Frame(r, new Color(0, 0, 0, 0.8f));
             ui.Text(label, r.center.x, r.y + Mathf.Floor((r.height - ui.LineHeight(1, ui.TinyFont)) * 0.5f), VhsUI.White, 1, Align.Center, ui.TinyFont);
             return input && ui.Click && hover;
+        }
+    }
+
+    /// <summary>(iteration 3) Watching the home video: black screen, PLAY OSD, one captioned shot after another with static
+    /// between them. ENTER skips to the next shot, ESC stops.</summary>
+    public sealed class TapeScreen : UIScreen
+    {
+        readonly string[] _shots;
+        int _shot = -1;
+        float _t, _shotT;
+        const float ShotSeconds = 5.5f, TearSeconds = 0.45f;
+
+        public TapeScreen(string[] shots) { _shots = shots ?? new string[0]; }
+        public override bool Opaque => true;
+        public override bool ShowCursor => false;
+
+        public override void OnOpen()
+        {
+            AudioManager.Play2D(Snd.TapePlay, 0.8f, 1f, AudioCategory.Ui);
+            VhsEffect.TriggerGlitch(0.6f, 0.4f);
+        }
+
+        public override void OnClose()
+        {
+            VhsEffect.StaticOverride = 0f;
+            AudioManager.Play2D(Snd.TapeStop, 0.7f, 1f, AudioCategory.Ui);
+        }
+
+        void Next()
+        {
+            _shot++;
+            _shotT = 0f;
+            if (_shot >= _shots.Length) { UIManager.Instance.Remove(this); return; }
+            AudioManager.Play2D(Snd.StaticBurst, 0.35f, Random.Range(0.9f, 1.1f), AudioCategory.Ui);
+            VhsEffect.TriggerGlitch(0.35f, 0.25f);
+        }
+
+        public override void Draw(VhsUI ui, bool input)
+        {
+            float dt = Time.unscaledDeltaTime;
+            _t += dt;
+            _shotT += dt;
+            ui.Rect(0, 0, ui.Width, ui.Height, new Color(0.02f, 0.03f, 0.08f, 1f));
+            if (_shot < 0) { if (_t > 0.8f) Next(); }
+            else if (_shotT > ShotSeconds) Next();
+            if (_shot >= _shots.Length) return;
+            bool tear = _shot < 0 || _shotT < TearSeconds;
+            VhsEffect.StaticOverride = tear ? 0.8f : 0.08f;
+            UIStyle.Osd(ui, "PLAY ▶", UIStyle.TapeCounter());
+            if (!tear)
+            {
+                string text = _shots[_shot];
+                int shown = Mathf.Clamp(Mathf.FloorToInt((_shotT - TearSeconds) * 40f), 0, text.Length);
+                int w = Mathf.Min(ui.Width - 40, 380);
+                var f = ui.Wrap(text, w, 1, ui.Font).Count * ui.LineHeight() > ui.Height * 0.6f ? ui.TinyFont : ui.Font;
+                ui.TextWrapped(text.Substring(0, shown), ui.Width * 0.5f, ui.Height * 0.32f, w, VhsUI.White, 1, Align.Center, f);
+            }
+            UIStyle.Footer(ui, "ENTER NEXT   ESC STOP");
+            if (!input) return;
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E) && _t > 0.5f) Next();
+            else if (Input.GetKeyDown(KeyCode.Escape)) UIManager.Instance.Remove(this);
+        }
+    }
+
+    /// <summary>(iteration 3) Everything this prisoner has read or watched tonight (notes, the tape), newest last.</summary>
+    public sealed class JournalScreen : UIScreen
+    {
+        readonly MatchWorld _w;
+        int _sel;
+        float _t;
+
+        public JournalScreen(MatchWorld w) { _w = w; _sel = Mathf.Max(0, w.Journal.Count - 1); }
+        public override bool ShowCursor => true;
+
+        public override void OnOpen() => AudioManager.Play2D(Snd.InventoryOpen, 0.6f, 0.95f, AudioCategory.Ui);
+        public override void OnClose() => AudioManager.Play2D(Snd.InventoryClose, 0.6f, 0.95f, AudioCategory.Ui);
+
+        public override void Draw(VhsUI ui, bool input)
+        {
+            _t += Time.unscaledDeltaTime;
+            UIStyle.Dim(ui, 0.86f);
+            UIStyle.Header(ui, "JOURNAL", 14);
+            var list = _w.Journal;
+            if (list.Count == 0)
+            {
+                ui.TextWrapped("NOTHING YET. NOTES, WRITING ON THE WALLS AND TAPES I FIND END UP HERE.", ui.Width * 0.5f, ui.Height * 0.4f, ui.Width - 60, VhsUI.Dim, 1, Align.Center);
+            }
+            else
+            {
+                _sel = Mathf.Clamp(_sel, 0, list.Count - 1);
+                float lx = 16, ly = 40, lw = Mathf.Min(150, ui.Width * 0.36f);
+                int rows = Mathf.Max(1, Mathf.FloorToInt((ui.Height - ly - 30) / (ui.LineHeight(1, ui.TinyFont) + 3)));
+                int first = Mathf.Clamp(_sel - rows / 2, 0, Mathf.Max(0, list.Count - rows));
+                for (int i = first; i < list.Count && i < first + rows; i++)
+                {
+                    var r = new Rect(lx, ly + (i - first) * (ui.LineHeight(1, ui.TinyFont) + 3), lw, ui.LineHeight(1, ui.TinyFont) + 2);
+                    bool hover = ui.Hover(r);
+                    if (i == _sel) ui.Rect(r, new Color(1, 1, 1, 0.12f));
+                    ui.Text(UIStyle.NightClock(_w.NightLength > 0f ? list[i].At / _w.NightLength : 0f) + " " + list[i].Title, r.x + 2, r.y + 1,
+                        i == _sel ? VhsUI.Yellow : VhsUI.White, 1, Align.Left, ui.TinyFont);
+                    if (input && ui.Click && hover) { _sel = i; AudioManager.Play2D(Snd.InventoryScroll, 0.5f, 1f, AudioCategory.Ui); }
+                }
+                var e = list[_sel];
+                float tx = lx + lw + 14, tw = ui.Width - tx - 16;
+                var paper = new Rect(tx - 6, ly - 4, tw + 12, ui.Height - ly - 26);
+                ui.Rect(paper, new Color(0.78f, 0.72f, 0.58f, 0.9f));
+                ui.Text(e.Title, tx, ly, new Color(0.35f, 0.05f, 0.05f), 1, Align.Left, null, false);
+                var nf = ui.Wrap(e.Text, (int)tw, 1, ui.Font).Count * ui.LineHeight() > paper.height - 30 ? ui.TinyFont : ui.Font;
+                float y = ly + ui.LineHeight() + 6;
+                foreach (var l in ui.Wrap(e.Text, (int)tw, 1, nf)) { ui.Text(l, tx, y, new Color(0.12f, 0.1f, 0.08f), 1, Align.Left, nf, false); y += nf.LineHeight; }
+            }
+            UIStyle.Footer(ui, "W/S SELECT   J / ESC CLOSE");
+            if (!input) return;
+            if (list.Count > 0)
+            {
+                if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) { _sel = Mathf.Max(0, _sel - 1); AudioManager.Play2D(Snd.InventoryScroll, 0.5f, 1f, AudioCategory.Ui); }
+                if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow)) { _sel = Mathf.Min(list.Count - 1, _sel + 1); AudioManager.Play2D(Snd.InventoryScroll, 0.5f, 1f, AudioCategory.Ui); }
+            }
+            if (_t > 0.2f && (Input.GetKeyDown(KeyCode.J) || Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab)))
+                UIManager.Instance.Remove(this);
         }
     }
 }

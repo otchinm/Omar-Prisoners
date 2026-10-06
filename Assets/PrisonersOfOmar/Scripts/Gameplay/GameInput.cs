@@ -79,6 +79,8 @@ namespace PrisonersOfOmar.Gameplay
 
         // UI-level keys (work even when gameplay is blocked)
         public static bool InventoryToggle => Input.GetKeyDown(KeyCode.Tab);
+        /// <summary>(iteration 3) The journal of everything read / watched this night.</summary>
+        public static bool JournalToggle => Input.GetKeyDown(KeyCode.J);
         public static bool PauseToggle => Input.GetKeyDown(KeyCode.Escape);
     }
 }

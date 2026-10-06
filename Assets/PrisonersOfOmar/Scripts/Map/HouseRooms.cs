@@ -247,6 +247,16 @@ namespace PrisonersOfOmar.Map
             Props.CrtTv(ctx, mb, V(10.6f, F + Props.TvStandTop, -4.5f), 90f);
             var tvPos = V(10.6f, F + Props.TvStandTop, -4.5f) + MapMath.Yaw(90f) * Props.TvScreenLocal;
             BuildTvScreen(ctx, "TvLivingRoom", tvPos, 90f, out _);
+            // (iteration 3) her VCR on top of the TV: an item socket for the home video tape
+            var tapeIn = Props.Vcr(ctx, mb, V(10.6f, F + Props.TvStandTop, -4.5f), 90f);
+            ctx.Data.Sockets.Add(new SocketInfo
+            {
+                Name = "Vcr", Area = A, Label = "THE VCR", Verb = "PUT", Prep = "IN",
+                EmptyText = "AN OLD VCR. THE TAPE SLOT IS EMPTY.",
+                Interact = ctx.Interact(null, V(10.6f, F + Props.TvStandTop, -4.5f) + MapMath.Yaw(90f) * new Vector3(0f, 0.53f, -0.15f), new Vector3(0.44f, 0.14f, 0.16f), MapMath.Yaw(90f), "VcrInteract"),
+                Accepts = new[] { ItemType.VhsTape }, Needed = 1, SlotPoses = new[] { tapeIn }, HoldTime = 0.6f,
+                InsertNoise = 2f, SolveNoise = 6f, InsertSound = "Audio/UI/tape_insert", SolveSound = "Audio/UI/tape_play",
+            });
             Props.Sofa(ctx, mb, V(5.6f, F, -4.5f), -90f);
             Arch.Blob(mb, V(5.6f, F, -4.5f), 1.2f, 2.4f);
             // her side table with pills and a glass, pushed against the wall

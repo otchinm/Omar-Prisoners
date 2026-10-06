@@ -44,6 +44,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Screwdriver: Screwdriver(mb); break;
                 case ItemType.Backpack: Backpack(mb); break;
                 case ItemType.SmallKey: SmallKey(mb); break;
+                case ItemType.VhsTape: VhsTape(mb); break;
                 default:
                     mb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.5f, 0.5f)));
                     mb.AddBox(Vector3.zero, new Vector3(0.06f, 0.06f, 0.06f), BoxUV.PerFace);
@@ -97,6 +98,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Screwdriver: return new Vector3(0f, 0.0145f, -0.04f);
                 case ItemType.Backpack: return new Vector3(0f, BackpackH * 0.5f, 0f);
                 case ItemType.SmallKey: return new Vector3(0.004f, 0.0015f, 0.009f);
+                case ItemType.VhsTape: return new Vector3(0f, 0.0125f, 0f);
                 default: return new Vector3(0, 0.03f, 0);
             }
         }
@@ -623,6 +625,17 @@ namespace PrisonersOfOmar.Characters
             // the string and the tag
             Bar(mb, new Vector3(0, 0, -0.009f), new Vector3(-0.006f, 0, -0.03f), 0.0012f, 0.0012f, tag);
             mb.AddBox(new Vector3(-0.008f, 0, -0.046f), new Vector3(0.022f, 0.001f, 0.034f), BoxUVRects.All(tag));
+        }
+
+        // vhstape.png 64x32: label (0,0,48,16) shell (0,16,48,16) spine label (48,0,16,16) window + reels (48,16,16,16)
+        /// <summary>(iteration 3) A VHS cassette lying flat, label up (pivot = its centre; the spine faces -Z).</summary>
+        static void VhsTape(MeshBuilder mb)
+        {
+            const float W = 64, H = 32;
+            mb.SetMaterial(Mat("vhstape"));
+            Rect label = R(0, 0, 48, 16, W, H), shell = R(0, 16, 48, 16, W, H), spine = R(48, 0, 16, 16, W, H), window = R(48, 16, 16, 16, W, H);
+            mb.AddBox(Vector3.zero, new Vector3(0.187f, 0.025f, 0.103f), new BoxUVRects { PosY = label, NegY = shell, NegZ = spine, PosZ = shell, PosX = shell, NegX = shell });
+            mb.AddBox(new Vector3(0f, 0.0128f, 0.012f), new Vector3(0.09f, 0.0006f, 0.03f), BoxUVRects.All(window));   // the reel window
         }
 
         // padlock.png 32x32: brass (0,0,16,16) shackle (16,0,16,16) keyhole face (0,16,16,16) dial face (16,16,16,16)

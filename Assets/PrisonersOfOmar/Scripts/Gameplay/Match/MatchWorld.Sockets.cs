@@ -53,6 +53,9 @@ namespace PrisonersOfOmar.Gameplay
         public int Count;
         public bool Solved;
         readonly List<GameObject> _shown = new List<GameObject>();
+        /// <summary>Feature hooks for a completed socket (the VCR: "WATCH THE TAPE"); null = <see cref="SocketInfo.DoneText"/>.</summary>
+        public System.Func<Interactor, InteractPrompt?> SolvedPrompt;
+        public System.Action<Interactor> SolvedInteract;
 
         public SocketEntity(int index, SocketInfo info)
         {
@@ -86,6 +89,8 @@ namespace PrisonersOfOmar.Gameplay
             if (who.IsOmar) return false;
             if (Solved)
             {
+                var sp = SolvedPrompt?.Invoke(who);
+                if (sp.HasValue) { p = sp.Value; return true; }
                 if (Info.DoneText == null) return false;
                 p = InteractPrompt.Info(Info.DoneText);
                 return true;
@@ -104,6 +109,7 @@ namespace PrisonersOfOmar.Gameplay
 
         public void Interact(Interactor who)
         {
+            if (Solved) { SolvedInteract?.Invoke(who); return; }
             int id = PickItem(who);
             if (id >= 0) MatchWorld.Instance?.SendUse(UseTarget.Socket, Index, id);
         }

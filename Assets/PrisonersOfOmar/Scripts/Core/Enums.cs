@@ -74,6 +74,7 @@ namespace PrisonersOfOmar
         Screwdriver,  // unscrews the vent cover in the cage room (crawl through the ceiling duct down into the kitchen)
         Backpack,     // (iteration 3) worn, not carried in a slot: 3 -> 5 inventory slots for the rest of the night
         SmallKey,     // (iteration 3) opens one locked drawer (stays in its lock)
+        VhsTape,      // (iteration 3) a home video: put it in the VCR under the living room TV and watch it (hints)
     }
 
     public enum DoorKind : byte
