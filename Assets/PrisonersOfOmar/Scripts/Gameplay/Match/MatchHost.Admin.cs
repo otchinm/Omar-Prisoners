@@ -61,7 +61,7 @@ namespace PrisonersOfOmar.Gameplay
                     break;
                 case AdminCmd.ClearInventory:
                     if (_inv.TryGetValue(sender, out var cs))
-                        for (int i = 0; i < 3; i++) if (cs[i] >= 0) DropItem(sender, cs[i], me + new Vector3(i * 0.3f - 0.3f, 0f, 0.5f), 0f, W.GetItem(cs[i])?.Charge ?? 1f);
+                        for (int i = 0; i < cs.Length; i++) if (cs[i] >= 0) DropItem(sender, cs[i], me + new Vector3(i * 0.3f - 0.6f, 0f, 0.5f), 0f, W.GetItem(cs[i])?.Charge ?? 1f);
                     break;
 
                 // ---------------------------------------------------------------- Omar
@@ -220,16 +220,16 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (type == ItemType.None || !IsPrisoner(player)) { Admin.HostLog(admin, "ONLY PRISONERS CARRY ITEMS"); return; }
             if (!_inv.TryGetValue(player, out var slots)) return;
-            int slot = -1;
-            for (int i = 0; i < 3; i++) if (slots[i] < 0) { slot = i; break; }
             int id = SpawnItem(type, PosOf(player) + Vector3.up * 0.05f, 0f, 1f);
+            if (ItemDefs.IsWorn(type))
+            {
+                if (!Wear(player, id)) Admin.HostLog(admin, "ALREADY WEARS ONE - DROPPED AT THEIR FEET");
+                return;
+            }
+            int slot = FreeSlot(player);
             if (slot < 0) { Admin.HostLog(admin, "POCKETS FULL - DROPPED AT THEIR FEET"); return; }
             slots[slot] = id;
-            var w = S.Begin(Msg.ItemPicked);
-            w.WriteShort((short)id);
-            w.WriteByte((byte)player);
-            w.WriteByte((byte)slot);
-            S.SendToAll(NetChannel.Reliable);
+            BroadcastPicked(id, player, slot);
         }
 
         /// <summary>A trap that doesn't cost Omar a charge (admin).</summary>

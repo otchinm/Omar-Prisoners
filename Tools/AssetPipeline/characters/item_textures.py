@@ -622,6 +622,56 @@ def screwdriver():
     return c.done()
 
 
+def backpack():
+    """backpack.png 64x64 (iteration 3, old army-surplus rucksack): canvas (0,0,32,32) flap (32,0,32,16) pocket (32,16,32,16)
+    strap (0,32,32,8) leather (0,40,32,8) side (0,48,32,16) buckle (32,32,16,16) bottom (32,48,32,16)."""
+    c = Canvas(64, 64, 31)
+    r = c.rng
+    olive, dark = rgb("#5a5a34"), rgb("#3c3d22")
+
+    def canvas(h, w, color=olive, stains=0.35):
+        t = fabric(h, w, color, r, folds=0.22, grain=0.1, weave=0.05, stains=stains, stain_color=rgb("#2e2a1a"))
+        return grime(t, r, 0.35, (0.16, 0.13, 0.08))
+
+    def stitches(img, h, w, inset):
+        m = np.zeros((h, w), np.float32)
+        y0, y1, x0, x1 = inset, h - inset - 1, inset, w - inset - 1
+        for x in range(x0, x1, 3 * S):
+            m[y0:y0 + S // 2 + 1, x:x + 2 * S] = 1
+            m[y1 - S // 2:y1 + 1, x:x + 2 * S] = 1
+        for y in range(y0, y1, 3 * S):
+            m[y:y + 2 * S, x0:x0 + S // 2 + 1] = 1
+            m[y:y + 2 * S, x1 - S // 2:x1 + 1] = 1
+        return mix(img, rgb("#8a8458"), m * 0.7)
+
+    body = canvas(32 * S, 32 * S)
+    body = stitches(body, 32 * S, 32 * S, S)
+    # a faded stencilled number, like surplus kit
+    body = mix(body, rgb("#2a2a18"), text_mask(32 * S, 32 * S, "US", 16 * S, 18 * S, int(7 * S), stroke=1) * 0.45)
+    c.put(0, 0, body)
+    flap = canvas(16 * S, 32 * S, dark, 0.25)
+    flap = stitches(flap, 16 * S, 32 * S, S)
+    c.put(32, 0, flap)
+    pocket = canvas(16 * S, 32 * S, rgb("#55552f"), 0.3)
+    u, v = uv_grid(16 * S, 32 * S)
+    pocket = mix(pocket, dark, ((v < 0.32)).astype(np.float32) * 0.8)          # the pocket's own little flap
+    pocket = shade(pocket, 1 - 0.25 * (np.abs(v - 0.32) < 0.03))
+    c.put(32, 16, stitches(pocket, 16 * S, 32 * S, S))
+    webbing = fill(8 * S, 32 * S, rgb("#3a3a24"))
+    yy = np.mgrid[0:8 * S, 0:32 * S][0]
+    webbing = shade(webbing, 0.85 + 0.3 * ((yy // S) % 2))
+    c.put(0, 32, grime(webbing, r, 0.3, (0.12, 0.1, 0.06)))
+    leather = plastic(8 * S, 32 * S, "#5a3a1e", r, dirt=0.5)
+    c.put(0, 40, leather)
+    side = canvas(16 * S, 32 * S, rgb("#525230"), 0.4)
+    c.put(0, 48, stitches(side, 16 * S, 32 * S, S))
+    c.put(32, 32, metal(16 * S, 16 * S, "#8a8678", r, scratches=0.3, rust=0.5))
+    c.put(48, 32, metal(16 * S, 16 * S, "#6a665a", r, scratches=0.3, rust=0.6))
+    bottom = canvas(16 * S, 32 * S, rgb("#3e3c26"), 0.6)
+    c.put(32, 48, grime(bottom, r, 0.6, (0.2, 0.16, 0.1)))
+    return c.done()
+
+
 def grandma():
     return _grandma(False)
 
@@ -649,6 +699,7 @@ ITEMS = {
     "pills": pills,
     "revolver": revolver,
     "screwdriver": screwdriver,
+    "backpack": backpack,
     "grandma": grandma,
     "grandma_dead": grandma_dead,
     "cleaver": cleaver,

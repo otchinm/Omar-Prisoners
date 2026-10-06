@@ -34,6 +34,7 @@ namespace PrisonersOfOmar.Gameplay
         int _lastTeleport = -1;
         ItemType _heldType = ItemType.None;
         GameObject _heldModel;
+        GameObject _packModel;   // (iteration 3) worn backpack on the back
         PsxLight _lighterLight, _flashLight, _flashFill;
         GameObject _flame;
         AudioSource _breath, _flameLoop;
@@ -307,6 +308,7 @@ namespace PrisonersOfOmar.Gameplay
             if (show == _selfShown) return;
             _selfShown = show;
             if (Rig != null) Rig.SetVisible(_visible && show && !_peekHidden);
+            UpdatePackVisible();
         }
 
         /// <summary>Our own body is drawn: a remote avatar, or the local one seen through the admin free camera.</summary>
@@ -321,6 +323,7 @@ namespace PrisonersOfOmar.Gameplay
             _peekHidden = hide;
             if (Rig != null) Rig.SetVisible(_visible && BodyDrawn && !hide);
             if (_heldModel != null) _heldModel.SetActive(_visible && !hide);
+            UpdatePackVisible();
         }
 
         /// <summary>Omar is taller than the door frames: probe the clearance above and just ahead of him and stoop.</summary>
@@ -484,7 +487,29 @@ namespace PrisonersOfOmar.Gameplay
             if (Rig != null) Rig.SetVisible(v && BodyDrawn && !_peekHidden);
             if (_blob != null) _blob.SetActive(v);
             if (_heldModel != null) _heldModel.SetActive(v);
+            UpdatePackVisible();
             if (_breath != null) AudioManager.SetVolume(_breath, v ? 0.75f : 0f);
+        }
+
+        /// <summary>(iteration 3) Shows / removes the backpack on this character's back (everyone sees who wears one).</summary>
+        public void SetBackpack(bool on)
+        {
+            if (on == (_packModel != null)) return;
+            if (!on) { Destroy(_packModel); _packModel = null; return; }
+            if (Rig == null || Rig.Chest == null) return;
+            try
+            {
+                _packModel = ItemMeshFactory.Build(ItemType.Backpack);
+                ItemMeshFactory.WearOnBack(_packModel, Rig);
+                GeoUtil.SetLayerRecursive(_packModel, Rig.gameObject.layer);
+                UpdatePackVisible();
+            }
+            catch (System.Exception e) { Debug.LogException(e); }
+        }
+
+        void UpdatePackVisible()
+        {
+            if (_packModel != null) _packModel.SetActive(_visible && BodyDrawn && !_peekHidden);
         }
 
         public bool Visible => _visible;

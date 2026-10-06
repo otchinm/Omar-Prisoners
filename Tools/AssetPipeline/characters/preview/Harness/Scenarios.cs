@@ -17,6 +17,7 @@ namespace PreviewHarness
                 case "anim": Anim(args, outDir); return true;
                 case "allanims": AllAnims(args, outDir); return true;
                 case "items": Items(outDir); return true;
+                case "packs": Packs(outDir); return true;
                 case "traps": Traps(outDir); return true;
                 case "doorway": Doorway(args, outDir); return true;
                 case "fparms": FpArms(args, outDir); return true;
@@ -173,6 +174,27 @@ namespace PreviewHarness
         {
             holder.transform.position += vel * dt;
             Runtime.Tick(dt);
+        }
+
+        /// <summary>packs: every prisoner wearing the (iteration 3) backpack, mid-walk (packs.json).</summary>
+        static void Packs(string outDir)
+        {
+            var root = new GameObject("Packs");
+            var skins = new List<CharacterSkin>();
+            foreach (var sk in Program.Skins) if (sk != CharacterSkin.Omar) skins.Add(sk);
+            for (int i = 0; i < skins.Count; i++)
+            {
+                var holder = new GameObject("Slot" + i);
+                holder.transform.SetParent(root.transform, false);
+                holder.transform.localPosition = new Vector3((i - (skins.Count - 1) * 0.5f) * 0.8f, 0, 0);
+                var rig = HumanoidFactory.Build(skins[i], holder.transform);
+                var pack = ItemMeshFactory.Build(ItemType.Backpack);
+                ItemMeshFactory.WearOnBack(pack, rig);
+                var an = rig.GetComponent<HumanoidAnimator>();
+                an.Velocity = new Vector3(0, 0, 1.6f);
+            }
+            for (int f = 0; f < 40; f++) Runtime.Tick(1f / 30f);
+            Dump.Scene(Path.Combine(outDir, "packs.json"), new[] { root });
         }
 
         static void Items(string outDir)

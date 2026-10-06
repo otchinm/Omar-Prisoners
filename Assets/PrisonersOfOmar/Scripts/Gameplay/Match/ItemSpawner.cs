@@ -52,7 +52,7 @@ namespace PrisonersOfOmar.Gameplay
             switch (t)
             {
                 case ItemType.BoltCutters: case ItemType.GasCan: case ItemType.CarBattery: case ItemType.Crowbar:
-                case ItemType.Bottle: case ItemType.LighterFuel: return false;
+                case ItemType.Bottle: case ItemType.LighterFuel: case ItemType.Backpack: return false;
                 default: return true;
             }
         }
@@ -73,6 +73,7 @@ namespace PrisonersOfOmar.Gameplay
             AddN(ItemType.Lockpick, 3);
             AddN(ItemType.Bottle, 5);
             AddN(ItemType.Pills, 2);
+            AddN(ItemType.Backpack, 1);   // (iteration 3) 5 slots instead of 3 for whoever finds it (2 on Easy)
 
             var spots = new List<ItemSpawnInfo>(map.ItemSpawns);
             rng.Shuffle(spots);

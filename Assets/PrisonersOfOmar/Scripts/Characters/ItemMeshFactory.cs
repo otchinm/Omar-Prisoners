@@ -42,6 +42,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Pills: Pills(mb); break;
                 case ItemType.Revolver: Revolver(mb, go.transform); break;
                 case ItemType.Screwdriver: Screwdriver(mb); break;
+                case ItemType.Backpack: Backpack(mb); break;
                 default:
                     mb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.5f, 0.5f)));
                     mb.AddBox(Vector3.zero, new Vector3(0.06f, 0.06f, 0.06f), BoxUV.PerFace);
@@ -93,6 +94,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Pills: return new Vector3(0, 0.0445f, 0);
                 case ItemType.Revolver: return new Vector3(0f, 0.0175f, -0.05f);
                 case ItemType.Screwdriver: return new Vector3(0f, 0.0145f, -0.04f);
+                case ItemType.Backpack: return new Vector3(0f, BackpackH * 0.5f, 0f);
                 default: return new Vector3(0, 0.03f, 0);
             }
         }
@@ -557,6 +559,72 @@ namespace PrisonersOfOmar.Characters
             Rect body = R(0, 0, 48, 32, W, H), capTop = R(48, 0, 16, 16, W, H), capSide = R(48, 16, 16, 16, W, H);
             Cyl(mb, new Vector3(0, -0.0445f, 0), new Vector3(0, 0.026f, 0), 0.0165f, 0.0165f, 8, body, capTop);
             Cyl(mb, new Vector3(0, 0.024f, 0), new Vector3(0, 0.0445f, 0), 0.0185f, 0.0185f, 8, capSide, null, capTop);
+        }
+
+        // backpack.png 64x64: canvas (0,0,32,32) flap (32,0,32,16) pocket (32,16,32,16) strap (0,32,32,8) leather (0,40,32,8)
+        //                   side (0,48,32,16) buckle (32,32,16,16) bottom (32,48,32,16)
+        const float BackpackW = 0.30f, BackpackH = 0.40f, BackpackD = 0.15f;
+
+        /// <summary>(iteration 3) Old canvas rucksack, pivot = centre of the bag, the shoulder straps on the +Z side
+        /// (against the wearer's back, see <see cref="WearOnBack"/>), flap and pocket on -Z.</summary>
+        static void Backpack(MeshBuilder mb)
+        {
+            const float W = 64, H = 64;
+            mb.SetMaterial(Mat("backpack"));
+            Rect canvas = R(0, 0, 32, 32, W, H), flap = R(32, 0, 32, 16, W, H), pocket = R(32, 16, 32, 16, W, H);
+            Rect strap = R(0, 32, 32, 8, W, H), leather = R(0, 40, 32, 8, W, H), side = R(0, 48, 32, 16, W, H);
+            Rect buckle = R(32, 32, 16, 16, W, H), bottom = R(32, 48, 32, 16, W, H);
+            const float w = BackpackW, h = BackpackH, d = BackpackD;
+            // the bag, a little fuller at the bottom
+            mb.AddBox(new Vector3(0f, 0.01f, 0f), new Vector3(w, h - 0.02f, d),
+                new BoxUVRects { PosZ = canvas, NegZ = canvas, PosX = side, NegX = side, PosY = canvas, NegY = bottom });
+            mb.AddBox(new Vector3(0f, -h * 0.5f + 0.03f, 0f), new Vector3(w + 0.012f, 0.06f, d + 0.012f),
+                new BoxUVRects { PosZ = bottom, NegZ = bottom, PosX = bottom, NegX = bottom, PosY = bottom, NegY = bottom });
+            // top flap folded over the front
+            mb.AddBox(new Vector3(0f, h * 0.5f + 0.005f, -0.004f), new Vector3(w + 0.01f, 0.025f, d + 0.012f), BoxUVRects.All(flap));
+            Box(mb, new Vector3(0f, h * 0.5f - 0.075f, -d * 0.5f - 0.008f), Quaternion.Euler(-4f, 0f, 0f), new Vector3(w * 0.82f, 0.16f, 0.012f), BoxUVRects.All(flap));
+            // big front pocket and two side pockets
+            mb.AddBox(new Vector3(0f, -0.085f, -d * 0.5f - 0.024f), new Vector3(w * 0.74f, 0.15f, 0.048f),
+                new BoxUVRects { PosZ = pocket, NegZ = pocket, PosX = side, NegX = side, PosY = flap, NegY = bottom });
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                mb.AddBox(new Vector3(sx * (w * 0.5f + 0.02f), -0.09f, -0.012f), new Vector3(0.04f, 0.15f, d * 0.6f),
+                    new BoxUVRects { PosZ = side, NegZ = side, PosX = pocket, NegX = pocket, PosY = flap, NegY = bottom });
+                // flap straps + buckles on the front
+                float x = sx * 0.075f;
+                Bar(mb, new Vector3(x, h * 0.5f - 0.02f, -d * 0.5f - 0.016f), new Vector3(x, 0.02f, -d * 0.5f - 0.05f), 0.026f, 0.005f, leather);
+                mb.AddBox(new Vector3(x, 0.025f, -d * 0.5f - 0.052f), new Vector3(0.03f, 0.022f, 0.008f), BoxUVRects.All(buckle));
+                // shoulder straps on the back side, the upper end loops forward over the shoulder
+                Bar(mb, new Vector3(sx * 0.085f, h * 0.5f - 0.03f, d * 0.5f + 0.006f), new Vector3(sx * 0.1f, -h * 0.5f + 0.05f, d * 0.5f + 0.006f), 0.048f, 0.01f, strap);
+                Bar(mb, new Vector3(sx * 0.085f, h * 0.5f - 0.03f, d * 0.5f + 0.006f), new Vector3(sx * 0.09f, h * 0.5f + 0.03f, d * 0.5f + 0.09f), 0.048f, 0.01f, strap);
+                mb.AddBox(new Vector3(sx * 0.1f, -h * 0.5f + 0.06f, d * 0.5f + 0.012f), new Vector3(0.04f, 0.03f, 0.008f), BoxUVRects.All(buckle));
+            }
+            // grab loop on top
+            Bar(mb, new Vector3(-0.03f, h * 0.5f + 0.017f, 0.02f), new Vector3(0f, h * 0.5f + 0.04f, 0.02f), 0.018f, 0.006f, strap);
+            Bar(mb, new Vector3(0f, h * 0.5f + 0.04f, 0.02f), new Vector3(0.03f, h * 0.5f + 0.017f, 0.02f), 0.018f, 0.006f, strap);
+        }
+
+        /// <summary>Hangs a <see cref="Build"/>(Backpack) model on a character's back: parented to the chest bone, its
+        /// top just under the shoulders, its straps against the back, scaled to the body.</summary>
+        public static void WearOnBack(GameObject pack, HumanoidRig rig)
+        {
+            if (pack == null || rig == null || rig.Chest == null) return;
+            var spec = rig.Spec;
+            float s = Mathf.Clamp(rig.Height / 1.75f, 0.7f, 1.3f);
+            float back = 0.13f * s, shoulder = rig.Height * 0.8f;
+            if (spec != null)
+            {
+                back = 0f;
+                for (int k = 3; k <= 7 && k < spec.Torso.Length; k++) back = Mathf.Max(back, spec.Torso[k].B);
+                shoulder = spec.ShoulderY;
+            }
+            Vector3 center = new Vector3(0f, shoulder - 0.03f * s - BackpackH * 0.5f * s, -(back + BackpackD * 0.5f * s + 0.012f));
+            Vector3 chest = rig.BindPositions != null ? rig.BindPositions[(int)BoneId.Chest] : rig.Chest.position - rig.transform.position;
+            pack.transform.SetParent(rig.Chest, false);
+            // bones have an identity rotation in the bind pose: root-space offsets are chest-space offsets
+            pack.transform.localPosition = center - chest;
+            pack.transform.localRotation = Quaternion.Euler(-4f, 0f, 0f);   // leans back a touch
+            pack.transform.localScale = Vector3.one * s;
         }
 
         // ============================================================================================ Omar's tools

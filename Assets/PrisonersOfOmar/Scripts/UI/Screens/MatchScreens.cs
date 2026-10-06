@@ -46,6 +46,8 @@ namespace PrisonersOfOmar.UI
             ui.Text("◀", ui.Width * 0.5f - 60, cy, VhsUI.White, 1, Align.Center);
             ui.Text("▶", ui.Width * 0.5f + 60, cy, VhsUI.White, 1, Align.Center);
 
+            int cap = inv.Capacity;
+            if (_slot >= cap) _slot = 0;
             var it = inv.At(_slot);
             ItemType type = it != null ? it.Type : ItemType.None;
             if (type != _modelType)
@@ -70,7 +72,7 @@ namespace PrisonersOfOmar.UI
 
             float textX = Mathf.Max(16, ui.Width * 0.5f - 200);
             float y = 62;
-            string title = it != null ? it.Def.Name + " " + (_slot + 1) + "/3" : "EMPTY SLOT " + (_slot + 1) + "/3";
+            string title = (it != null ? it.Def.Name + " " : "EMPTY SLOT ") + (_slot + 1) + "/" + cap;
             ui.Text(title, textX, y, VhsUI.White);
             y += ui.LineHeight() + 6;
             if (it != null)
@@ -78,7 +80,7 @@ namespace PrisonersOfOmar.UI
                 y += ui.TextWrapped(it.Def.Description, textX, y, 150, VhsUI.White, 1, Align.Left, ui.TinyFont);
                 if (it.Def.HasCharge) ui.Text((it.Type == ItemType.Lighter ? "FUEL " : "BATTERY ") + Mathf.RoundToInt(it.Charge * 100f) + "%", textX, y + 6, it.Charge < 0.2f ? VhsUI.Red : VhsUI.Yellow);
             }
-            else ui.TextWrapped("NOTHING HERE. I CAN CARRY THREE THINGS.", textX, y, 150, VhsUI.Dim, 1, Align.Left, ui.TinyFont);
+            else ui.TextWrapped(inv.HasBackpack ? "NOTHING HERE. WITH THE BACKPACK I CAN CARRY FIVE THINGS." : "NOTHING HERE. I CAN CARRY THREE THINGS.", textX, y, 150, VhsUI.Dim, 1, Align.Left, ui.TinyFont);
 
             var pr = new Rect(ui.Width * 0.5f - 20, 56, 128, 128);
             if (_model != null) ui.Image(_rt, pr, Color.white);
@@ -86,8 +88,8 @@ namespace PrisonersOfOmar.UI
             UIStyle.Footer(ui, "EQUIP: SPACE   |   DROP: G   |   EXIT: TAB");
 
             if (!input) return;
-            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) { _slot = (_slot + 2) % 3; AudioManager.Play2D(Snd.InventoryScroll, 0.6f, 1f, AudioCategory.Ui); }
-            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) { _slot = (_slot + 1) % 3; AudioManager.Play2D(Snd.InventoryScroll, 0.6f, 1f, AudioCategory.Ui); }
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) { _slot = (_slot + cap - 1) % cap; AudioManager.Play2D(Snd.InventoryScroll, 0.6f, 1f, AudioCategory.Ui); }
+            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) { _slot = (_slot + 1) % cap; AudioManager.Play2D(Snd.InventoryScroll, 0.6f, 1f, AudioCategory.Ui); }
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
             {
                 inv.Select(_slot);
@@ -231,7 +233,7 @@ namespace PrisonersOfOmar.UI
             var w = MatchWorld.Instance;
             string help = w != null && w.LocalIsOmar
                 ? "WASD MOVE  SHIFT RUN  LMB CLEAVER  RMB SCREAM  WALK INTO DOORS  E UNLOCK / SEARCH  T TRIPWIRE  G BEAR TRAP  Q SENSE"
-                : "WASD MOVE  SHIFT RUN  C CROUCH  E INTERACT  HOLD LMB DRAG DOORS  F / LMB USE ITEM  1-3 SELECT  G DROP  TAB INVENTORY";
+                : "WASD MOVE  SHIFT RUN  C CROUCH  E INTERACT  HOLD LMB DRAG DOORS  F / LMB USE ITEM  1-5 SELECT  G DROP  TAB INVENTORY";
             ui.TextWrapped(help, ui.Width * 0.5f, ui.Height * 0.72f, ui.Width - 50, VhsUI.Dim, 1, Align.Center, ui.TinyFont);
             if (!input) return;
             if (Input.GetKeyDown(KeyCode.Escape) && Time.frameCount > 1) { UIManager.Instance.Remove(this); return; }

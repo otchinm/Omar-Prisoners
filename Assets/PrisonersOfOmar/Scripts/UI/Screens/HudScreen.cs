@@ -115,7 +115,7 @@ namespace PrisonersOfOmar.UI
         {
             var inv = w.Inventory;
             float x = Mathf.Round(ui.Width * 0.035f), y = ui.Height - 58, s = 20;   // above the stamina bar
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < inv.Capacity; i++)
             {
                 var r = new Rect(x + i * (s + 4), y, s, s);
                 bool sel = i == inv.Selected;

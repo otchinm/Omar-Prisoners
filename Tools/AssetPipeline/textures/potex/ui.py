@@ -645,6 +645,29 @@ def _pills(ctx):
     return img, clamp01(bot + cap + p1 + p2)
 
 
+@icon("backpack")
+def _backpack(ctx):
+    """(iteration 3) Olive canvas rucksack seen from the front: top flap with two leather straps and buckles,
+    big front pocket, side pockets, a grab loop."""
+    W = H = 256
+    body = rrect(W, H, 58, 56, 198, 236, 26)
+    sides = clamp01(rrect(W, H, 36, 128, 70, 226, 12) + rrect(W, H, 186, 128, 220, 226, 12))
+    flap = rrect(W, H, 62, 44, 194, 124, 22)
+    pocket = rrect(W, H, 82, 150, 174, 226, 10)
+    loop = rrect(W, H, 108, 18, 148, 52, 14) * (1 - rrect(W, H, 118, 28, 138, 52, 8))
+    img = solid(H, W, "#5c5c34") * tex_noise(ctx, H, W, 0.14)[..., None]
+    img = mix(img, "#4a4a2a", sides)
+    img = mix(img, "#40411f", flap)
+    img = mix(img, "#56562f", pocket)
+    img = mix(img, "#2c2c18", rrect(W, H, 82, 150, 174, 166, 4) * 0.8)          # pocket flap seam
+    for x in (92, 150):
+        img = mix(img, "#5a3a1e", rrect(W, H, x, 92, x + 16, 162, 3))           # leather straps
+        img = mix(img, "#a8a490", rrect(W, H, x - 3, 140, x + 19, 154, 3))      # buckles
+    img = mix(img, "#30301c", loop)
+    a = clamp01(body + sides + flap + pocket + loop)
+    return img, a
+
+
 def ragged(m, ctx, amt, salt=0, erode=0.22):
     """distressed edges: displacement + noisy threshold (keeps it hard-ish)"""
     H, W = m.shape

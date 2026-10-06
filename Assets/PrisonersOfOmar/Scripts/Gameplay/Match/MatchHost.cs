@@ -19,6 +19,8 @@ namespace PrisonersOfOmar.Gameplay
         readonly NetSession S;
         readonly Dictionary<int, AvatarNetState> _latest = new Dictionary<int, AvatarNetState>();
         readonly Dictionary<int, int[]> _inv = new Dictionary<int, int[]>();
+        /// <summary>(iteration 3) Worn backpack item per player: 5 usable slots instead of 3.</summary>
+        readonly Dictionary<int, int> _pack = new Dictionary<int, int>();
         readonly Dictionary<int, int> _struggle = new Dictionary<int, int>();
         readonly Dictionary<int, int> _thrownBy = new Dictionary<int, int>();
         readonly Dictionary<int, float> _lastAttack = new Dictionary<int, float>();
@@ -39,9 +41,13 @@ namespace PrisonersOfOmar.Gameplay
             W = w;
             S = w.Session;
             _rng = new DeterministicRandom(w.Seed ^ System.Environment.TickCount, 99);
-            foreach (var p in S.Players) _inv[p.Id] = new[] { -1, -1, -1 };
+            foreach (var p in S.Players) _inv[p.Id] = new[] { -1, -1, -1, -1, -1 };
             foreach (var it in W.Items)
-                if (it.Holder >= 0 && _inv.TryGetValue(it.Holder, out var slots) && it.Slot >= 0 && it.Slot < 3) slots[it.Slot] = it.Id;
+            {
+                if (it.Holder < 0 || !_inv.TryGetValue(it.Holder, out var slots)) continue;
+                if (it.Slot == LocalInventory.WornSlot) _pack[it.Holder] = it.Id;
+                else if (it.Slot >= 0 && it.Slot < slots.Length) slots[it.Slot] = it.Id;
+            }
         }
 
         public void RegisterAI(OmarAI ai) { if (!_ais.Contains(ai)) _ais.Add(ai); }
@@ -122,14 +128,26 @@ namespace PrisonersOfOmar.Gameplay
             if (itemId < 0 || !_inv.TryGetValue(player, out var slots)) return false;
             var it = W.GetItem(itemId);
             if (it == null || it.Consumed || it.Type != type) return false;
-            for (int i = 0; i < 3; i++) if (slots[i] == itemId) return true;
+            for (int i = 0; i < slots.Length; i++) if (slots[i] == itemId) return true;
             return false;
+        }
+
+        /// <summary>Usable inventory slots of a player (3, or 5 with a backpack on).</summary>
+        int Capacity(int player) => _pack.ContainsKey(player) ? LocalInventory.MaxSlots : LocalInventory.BaseSlots;
+
+        /// <summary>First free usable slot, -1 when the pockets are full.</summary>
+        int FreeSlot(int player)
+        {
+            if (!_inv.TryGetValue(player, out var slots)) return -1;
+            int cap = Capacity(player);
+            for (int i = 0; i < cap; i++) if (slots[i] < 0) return i;
+            return -1;
         }
 
         int FindHeld(int player, ItemType type)
         {
             if (!_inv.TryGetValue(player, out var slots)) return -1;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < slots.Length; i++)
             {
                 var it = W.GetItem(slots[i]);
                 if (it != null && !it.Consumed && it.Type == type) return it.Id;
@@ -139,8 +157,9 @@ namespace PrisonersOfOmar.Gameplay
 
         void RemoveFromInv(int player, int itemId)
         {
+            if (_pack.TryGetValue(player, out var pack) && pack == itemId) _pack.Remove(player);
             if (!_inv.TryGetValue(player, out var slots)) return;
-            for (int i = 0; i < 3; i++) if (slots[i] == itemId) slots[i] = -1;
+            for (int i = 0; i < slots.Length; i++) if (slots[i] == itemId) slots[i] = -1;
         }
 
         void Consume(int player, int itemId, byte how = 0)
@@ -346,7 +365,8 @@ namespace PrisonersOfOmar.Gameplay
             {
                 Vector3 pos = PosOf(id);
                 if (_inv.TryGetValue(id, out var slots))
-                    for (int i = 0; i < 3; i++) if (slots[i] >= 0) DropItem(id, slots[i], pos + new Vector3(i * 0.3f - 0.3f, 0, 0), 0, W.GetItem(slots[i])?.Charge ?? 1f);
+                    for (int i = 0; i < slots.Length; i++) if (slots[i] >= 0) DropItem(id, slots[i], pos + new Vector3(i * 0.3f - 0.6f, 0, 0), 0, W.GetItem(slots[i])?.Charge ?? 1f);
+                if (_pack.TryGetValue(id, out var pack)) DropItem(id, pack, pos + new Vector3(0f, 0f, 0.4f), 0, 1f);
                 var st = Edit(id);
                 if (st.HidingSpot >= 0) BroadcastHide(st.HidingSpot, -1, false);
                 if (st.Cage >= 0) BroadcastCage(st.Cage, W.Cages[st.Cage].Open, -1);
@@ -420,15 +440,29 @@ namespace PrisonersOfOmar.Gameplay
             if (!IsPrisoner(sender) || st == null || st.Life != LifeState.Free || st.Hidden || st.InCar || st.Trapped) return;
             if (!Near(sender, it.World.transform.position, 3.5f)) return;
             if (!_inv.TryGetValue(sender, out var slots)) return;
-            int slot = -1;
-            for (int i = 0; i < 3; i++) if (slots[i] < 0) { slot = i; break; }
+            if (ItemDefs.IsWorn(it.Type)) { Wear(sender, itemId); return; }
+            int slot = FreeSlot(sender);
             if (slot < 0) return;
             slots[slot] = itemId;
+            BroadcastPicked(itemId, sender, slot);
+        }
+
+        void BroadcastPicked(int itemId, int player, int slot)
+        {
             var w = S.Begin(Msg.ItemPicked);
             w.WriteShort((short)itemId);
-            w.WriteByte((byte)sender);
+            w.WriteByte((byte)player);
             w.WriteByte((byte)slot);
             S.SendToAll(NetChannel.Reliable);
+        }
+
+        /// <summary>(iteration 3) Put on a backpack: it goes on the body (<see cref="LocalInventory.WornSlot"/>), one per player.</summary>
+        bool Wear(int player, int itemId)
+        {
+            if (_pack.ContainsKey(player)) return false;
+            _pack[player] = itemId;
+            BroadcastPicked(itemId, player, LocalInventory.WornSlot);
+            return true;
         }
 
         public void OnDropReq(int sender, NetReader r)
@@ -935,7 +969,7 @@ namespace PrisonersOfOmar.Gameplay
             // Omar takes everything but the lighter
             if (_inv.TryGetValue(target, out var slots))
             {
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < slots.Length; i++)
                 {
                     var it = W.GetItem(slots[i]);
                     if (it == null || it.Type == ItemType.Lighter) continue;

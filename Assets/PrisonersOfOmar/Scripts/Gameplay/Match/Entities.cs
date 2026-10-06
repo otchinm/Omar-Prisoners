@@ -77,6 +77,13 @@ namespace PrisonersOfOmar.Gameplay
         {
             prompt = default;
             if (who.IsOmar || Entity.Consumed || Entity.Holder >= 0) return false;
+            if (ItemDefs.IsWorn(Entity.Type))
+            {
+                // worn on the back, takes no slot; one each
+                if (who.Inventory != null && who.Inventory.HasBackpack) { prompt = InteractPrompt.Info(Entity.Def.Name + " - I ALREADY WEAR ONE"); return true; }
+                prompt = InteractPrompt.Press("PUT ON " + Entity.Def.Name);
+                return true;
+            }
             if (who.Inventory != null && who.Inventory.Full) { prompt = InteractPrompt.Info(Entity.Def.Name + " - INVENTORY FULL (G TO DROP)"); return true; }
             prompt = InteractPrompt.Press("TAKE " + Entity.Def.Name);
             return true;

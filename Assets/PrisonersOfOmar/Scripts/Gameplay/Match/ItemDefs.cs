@@ -43,7 +43,11 @@ namespace PrisonersOfOmar.Gameplay
             Add(ItemType.Pills, "PAINKILLERS", HoldPose.OneHandSmall, "Prescription painkillers. For a while I won't feel my wounds and I can run longer.");
             Add(ItemType.Screwdriver, "SCREWDRIVER", HoldPose.OneHandSmall, "A flathead screwdriver with a cracked amber handle. The vent cover in the cage room is held by four rusty screws...", key: true);
             Add(ItemType.Revolver, "REVOLVER", HoldPose.Pistol, "An old revolver with two rounds left. It won't stop him for long... but the old woman is a different story.", charge: true, key: true, dropNoise: 6f);
+            Add(ItemType.Backpack, "BACKPACK", HoldPose.OneHandSmall, "An old canvas rucksack. With it on my back I can carry five things instead of three.", dropNoise: 3f);
         }
+
+        /// <summary>Worn items go on the body instead of into a slot (see <see cref="LocalInventory.WornSlot"/>).</summary>
+        public static bool IsWorn(ItemType t) => t == ItemType.Backpack;
 
         static void Add(ItemType t, string name, HoldPose hold, string desc, bool charge = false, bool key = false, float dropNoise = 4f)
         {

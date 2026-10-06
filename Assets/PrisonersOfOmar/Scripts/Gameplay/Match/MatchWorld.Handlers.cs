@@ -176,12 +176,14 @@ namespace PrisonersOfOmar.Gameplay
             Vector3 pos = it.World != null ? it.World.transform.position : Vector3.zero;
             if (it.World != null) { Destroy(it.World.gameObject); it.World = null; }
             it.Holder = player; it.Slot = slot;
+            bool worn = slot == LocalInventory.WornSlot;
+            if (worn) AvatarOf(player)?.SetBackpack(true);
             if (player == LocalId)
             {
-                Inventory.Set(slot, itemId);
-                Inventory.Select(slot);
+                if (worn) Inventory.SetBackpack(itemId);
+                else { Inventory.Set(slot, itemId); Inventory.Select(slot); }
                 AudioManager.Play2D(Snd.ItemPickup, 0.8f);
-                AddMessage("TOOK " + it.Def.Name, 2.5f);
+                AddMessage(worn ? "PUT ON THE " + it.Def.Name + " - ROOM FOR 5 THINGS NOW" : "TOOK " + it.Def.Name, worn ? 3.5f : 2.5f);
                 VhsEffect.TriggerGlitch(0.15f, 0.12f);
             }
             else AudioManager.Play3D(Snd.ItemPickup, pos, 0.5f, 1f, 1f, 8f);
@@ -196,6 +198,7 @@ namespace PrisonersOfOmar.Gameplay
             var it = GetItem(itemId);
             if (it == null) return;
             if (it.Holder == LocalId) Inventory.Remove(itemId);
+            if (it.Holder >= 0 && it.Slot == LocalInventory.WornSlot) AvatarOf(it.Holder)?.SetBackpack(false);
             it.Holder = -1; it.Slot = -1; it.Charge = charge; it.Consumed = false;
             if (it.World != null) Destroy(it.World.gameObject);
             WorldItem.Create(it, pos, yaw, _dynamicRoot);
@@ -213,6 +216,7 @@ namespace PrisonersOfOmar.Gameplay
             if (it == null) return;
             bool wasLocal = it.Holder == LocalId;
             if (wasLocal) Inventory.Remove(itemId);
+            if (it.Holder >= 0 && it.Slot == LocalInventory.WornSlot) AvatarOf(it.Holder)?.SetBackpack(false);
             it.Consumed = true; it.Holder = -1;
             if (it.World != null) { Destroy(it.World.gameObject); it.World = null; }
             if (how == 2 && by != LocalId) ThrownBottle.Spawn(from, vel, -1, _dynamicRoot);

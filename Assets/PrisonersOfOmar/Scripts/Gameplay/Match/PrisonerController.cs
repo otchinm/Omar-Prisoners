@@ -414,8 +414,8 @@ namespace PrisonersOfOmar.Gameplay
             int slot = GameInput.SlotPressed;
             if (slot >= 0) SelectSlot(slot);
             float scroll = GameInput.Scroll;
-            if (scroll > 0.1f) SelectSlot((inv.Selected + 2) % 3);
-            else if (scroll < -0.1f) SelectSlot((inv.Selected + 1) % 3);
+            if (scroll > 0.1f) SelectSlot((inv.Selected + inv.Capacity - 1) % inv.Capacity);
+            else if (scroll < -0.1f) SelectSlot((inv.Selected + 1) % inv.Capacity);
 
             var held = inv.Held;
             ItemType ht = held != null ? held.Type : ItemType.None;
@@ -570,7 +570,7 @@ namespace PrisonersOfOmar.Gameplay
         void SelectSlot(int slot)
         {
             var inv = _w.Inventory;
-            if (slot == inv.Selected) return;
+            if (slot == inv.Selected || slot >= inv.Capacity) return;
             inv.Select(slot);
             _useHoldItem = ItemType.None;
             AudioManager.Play2D(Snd.ItemEquip, 0.4f);
