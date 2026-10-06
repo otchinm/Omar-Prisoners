@@ -148,23 +148,23 @@ namespace PrisonersOfOmar.Characters
         /// (BodyMeshGenerator.SculptedNose / SculptedEars).</summary>
         static readonly HeadSculpt LeanSculpt = new HeadSculpt
         {
-            Y = new[] { -0.50f, -0.22f, -0.08f, 0.00f, 0.07f, 0.13f, 0.19f, 0.27f, 0.36f, 0.45f, 0.54f, 0.64f, 0.77f, 0.89f, 1.00f },
+            Y = new[] { -0.50f, -0.22f, -0.08f, 0.00f, 0.07f, 0.13f, 0.19f, 0.27f, 0.36f, 0.45f, 0.54f, 0.64f, 0.755f, 0.855f, 0.925f },
             Rings = new[]
             {
-                new Ring(0.226f, 0.212f, 0.232f, -0.06f),  // neck base
-                new Ring(0.188f, 0.180f, 0.196f, -0.05f),  // neck: long and slim
-                new Ring(0.186f, 0.198f, 0.204f, -0.045f), // throat, under the jaw
-                new Ring(0.200f, 0.326f, 0.214f, -0.035f), // jaw line at the chin (the jaw rises to the ears: FaceRelief)
-                new Ring(0.218f, 0.354f, 0.242f, -0.025f), // chin
-                new Ring(0.238f, 0.342f, 0.270f, -0.015f), // under the lower lip
-                new Ring(0.252f, 0.366f, 0.294f, -0.01f),  // mouth
-                new Ring(0.258f, 0.378f, 0.330f, 0.00f),   // upper lip, base of the nose
-                new Ring(0.272f, 0.376f, 0.370f, 0.00f),   // cheekbones
+                new Ring(0.244f, 0.218f, 0.240f, -0.06f),  // neck base
+                new Ring(0.207f, 0.190f, 0.208f, -0.05f),  // neck: long, not thin
+                new Ring(0.202f, 0.202f, 0.212f, -0.045f), // throat, under the jaw
+                new Ring(0.188f, 0.326f, 0.214f, -0.035f), // jaw line at the chin (the jaw rises to the ears: FaceRelief)
+                new Ring(0.199f, 0.354f, 0.240f, -0.025f), // chin
+                new Ring(0.211f, 0.342f, 0.266f, -0.015f), // under the lower lip
+                new Ring(0.228f, 0.366f, 0.292f, -0.01f),  // mouth: the face narrows to a V
+                new Ring(0.251f, 0.378f, 0.329f, 0.00f),   // upper lip, base of the nose
+                new Ring(0.270f, 0.376f, 0.368f, 0.00f),   // cheekbones
                 new Ring(0.280f, 0.364f, 0.402f, 0.00f),   // eyes (set in)
                 new Ring(0.286f, 0.382f, 0.424f, 0.00f),   // brow
                 new Ring(0.285f, 0.364f, 0.424f, 0.00f),   // forehead
                 new Ring(0.264f, 0.320f, 0.400f, -0.005f), // top of the forehead
-                new Ring(0.198f, 0.238f, 0.316f, -0.01f),  // skull
+                new Ring(0.212f, 0.250f, 0.328f, -0.01f),  // skull (a real cranium: the eyes sit near mid-head)
                 new Ring(0.0f, 0.0f, 0.0f, -0.03f),        // crown (pole)
             },
             Square = new[] { 2f, 2f, 2f, 2.6f, 2.6f, 2.5f, 2.5f, 2.4f, 2.4f, 2.3f, 2.3f, 2.3f, 2.2f, 2.2f, 2f },   // flat front of the face
@@ -425,7 +425,7 @@ namespace PrisonersOfOmar.Characters
                 new Ring(0.202f, 0.120f, 0.102f),            // chest
                 new Ring(0.226f, 0.114f, 0.110f),            // upper chest, lats
                 new Ring(0.240f, 0.082f, 0.086f),            // shoulders: broad
-                new Ring(0.066f, 0.058f, 0.062f, -0.01f));   // neck: strong
+                new Ring(0.056f, 0.056f, 0.062f, -0.01f));   // neck: meets the head's neck without a shelf
             TorsoSquare = 2.25f;
             ArmR = Arr(s, 0.026f, 0.039f, 0.047f, 0.041f, 0.051f, 0.057f, 0.060f);   // lean, muscular forearms and biceps
             // straight-leg trousers: a wide hem at the shoe instead of a tapering ankle, loose over the knee

@@ -435,8 +435,8 @@ namespace PrisonersOfOmar.Characters
                     // a thick mop of curls: a heavy fringe down to the eyes, the temples and the tops of the ears covered,
                     // down to the nape;
                     // fuller towards the top (the curl clumps of CurlyHair() sit on this)
-                    hl = Curve(ath, 0, 0.53f, 20, 0.53f, 35, 0.52f, 50, 0.50f, 65, 0.45f, 75, 0.42f, 88, 0.42f, 98, 0.44f, 110, 0.30f, 135, 0.13f, 180, 0.08f);
-                    d = 0.026f * (0.75f + 1.05f * Mathf.Clamp01((yRel - 0.5f) / 0.45f));
+                    hl = Curve(ath, 0, 0.52f, 14, 0.515f, 30, 0.505f, 45, 0.49f, 60, 0.45f, 75, 0.42f, 88, 0.42f, 98, 0.44f, 110, 0.30f, 135, 0.13f, 180, 0.08f);
+                    d = 0.016f * (0.9f + 0.75f * Mathf.Clamp01((yRel - 0.5f) / 0.35f));
                     break;
                 default: return 0f;
             }
@@ -497,27 +497,31 @@ namespace PrisonersOfOmar.Characters
         {
             float a = Mathf.Abs(th);
             float r = 0f;
-            r -= 0.020f * Gauss(a, 24.5f, 11f) * Gauss(y, 0.45f, 0.05f); // eye sockets
+            r -= 0.020f * Gauss(a, 23f, 11f) * Gauss(y, 0.45f, 0.05f);   // eye sockets
             r += 0.007f * Gauss(a, 24f, 20f) * Gauss(y, 0.54f, 0.035f);  // brow ridge
             r += 0.012f * Gauss(a, 58f, 13f) * Gauss(y, 0.37f, 0.055f);  // cheekbones
             r -= 0.012f * Gauss(a, 48f, 14f) * Gauss(y, 0.24f, 0.05f);   // lean cheeks under them
             r += 0.012f * Gauss(a, 0f, 22f) * Gauss(y, 0.18f, 0.03f);    // full lips
-            r += 0.014f * Gauss(a, 0f, 20f) * Gauss(y, 0.06f, 0.035f);   // chin
+            r += 0.018f * Gauss(a, 0f, 15f) * Gauss(y, 0.06f, 0.035f);   // chin: comes to a point
             r += 0.006f * Gauss(a, 0f, 10f) * Gauss(y, 0.27f, 0.025f);   // under the nose
             // V-shaped jaw: the jaw line runs from the chin up to the ears; below it the surface steps in to the
             // underside of the jaw and the neck (the beard line of the texture follows JawLineY)
+            // (the step fades out down the neck and under the ears, so the neck keeps its ring shape)
             float below = Mathf.Clamp01((JawLineY(a) - y) / 0.07f);
-            r -= 0.046f * below * below * (3f - 2f * below) * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(14f, 44f, a))
+            float neck = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.12f, 0.30f, JawLineY(a) - y));
+            r -= 0.046f * below * below * (3f - 2f * below) * neck * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(14f, 44f, a))
+                 * (1f - 0.5f * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(72f, 95f, a)))
                  * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(100f, 130f, a)));
             return r;
         }
 
-        /// <summary>Height (head units) of the sculpted head's jaw line at |theta|: at the chin in front, rising to just
-        /// under the ears at the sides. MUST match jaw_line_y() in Tools/AssetPipeline/characters/char_textures.py.</summary>
+        /// <summary>Height (head units) of the sculpted head's jaw line at |theta|: a V meeting at a point under the chin,
+        /// along the jaw to its angle at about mouth height, then steeply up the back of the jaw to just under the ear.
+        /// MUST match jaw_line_y() in Tools/AssetPipeline/characters/char_textures.py.</summary>
         internal static float JawLineY(float absTheta)
         {
-            float t = Mathf.Clamp01((absTheta - 20f) / 76f);
-            return -0.01f + 0.30f * t * t * (3f - 2f * t);
+            float t = Mathf.Clamp01((absTheta - 8f) / 70f), u = Mathf.Clamp01((absTheta - 76f) / 18f);
+            return -0.012f + 0.19f * t * t * (3f - 2f * t) + 0.12f * u * u * (3f - 2f * u);
         }
 
         /// <summary>Point of the sculpted head surface at theta / yRel (root space): profile ring + face relief, and the
@@ -680,20 +684,20 @@ namespace PrisonersOfOmar.Characters
             float hh = b.HeadH, axisZ = HeadAxisZ(b);
             // vertices: x, yRel, lift off the face (head units)
             Vector3 N = FacePoint(b, sk, 0f, 0.505f, 0.004f);      // nasion, between the eyes
-            Vector3 D = FacePoint(b, sk, 0f, 0.405f, 0.040f);      // middle of the bridge
-            Vector3 T = FacePoint(b, sk, 0f, 0.316f, 0.080f);      // tip
-            Vector3 Cl = FacePoint(b, sk, 0f, 0.286f, 0.054f);     // under the tip
+            Vector3 D = FacePoint(b, sk, 0f, 0.405f, 0.042f);      // middle of the bridge
+            Vector3 T = FacePoint(b, sk, 0f, 0.316f, 0.084f);      // tip
+            Vector3 Cl = FacePoint(b, sk, 0f, 0.286f, 0.058f);     // under the tip
             Vector3 Sn = FacePoint(b, sk, 0f, 0.266f, 0.004f);     // where the nose meets the lip
             var side = new Vector3[2, 6];
             for (int sIdx = 0; sIdx < 2; sIdx++)
             {
                 float sx = sIdx == 0 ? 1f : -1f;
-                side[sIdx, 0] = FacePoint(b, sk, sx * 0.026f, 0.490f, -0.004f);   // E: side root by the inner eye corner
-                side[sIdx, 1] = FacePoint(b, sk, sx * 0.042f, 0.380f, -0.004f);   // M: side base on the cheek
-                side[sIdx, 2] = FacePoint(b, sk, sx * 0.030f, 0.326f, 0.058f);    // Ts: side of the (rounded, broad) tip
-                side[sIdx, 3] = FacePoint(b, sk, sx * 0.064f, 0.296f, 0.016f);    // A: nostril wing (wide)
-                side[sIdx, 4] = FacePoint(b, sk, sx * 0.042f, 0.272f, 0.004f);    // Ab: bottom of the wing
-                side[sIdx, 5] = FacePoint(b, sk, sx * 0.017f, 0.402f, 0.030f);    // Bs: side of the bridge
+                side[sIdx, 0] = FacePoint(b, sk, sx * 0.031f, 0.490f, -0.004f);   // E: side root by the inner eye corner
+                side[sIdx, 1] = FacePoint(b, sk, sx * 0.048f, 0.380f, -0.004f);   // M: side base on the cheek
+                side[sIdx, 2] = FacePoint(b, sk, sx * 0.036f, 0.326f, 0.062f);    // Ts: side of the (rounded, broad) tip
+                side[sIdx, 3] = FacePoint(b, sk, sx * 0.070f, 0.296f, 0.016f);    // A: nostril wing (wide)
+                side[sIdx, 4] = FacePoint(b, sk, sx * 0.048f, 0.272f, 0.004f);    // Ab: bottom of the wing
+                side[sIdx, 5] = FacePoint(b, sk, sx * 0.022f, 0.402f, 0.032f);    // Bs: side of the bridge (straight, broad)
             }
             Vector3 inside = FacePoint(b, sk, 0f, 0.37f, 0.012f);  // a point inside the nose: faces point away from it
             mb.BeginPart();
@@ -1184,39 +1188,46 @@ namespace PrisonersOfOmar.Characters
         /// </summary>
         static readonly float[] CurlClumps =
         {
-            // heavy fringe hanging down to the eyes (covering the brows), loose curls touching the upper lids
-            2f, 0.590f, 0.026f, 0.14f, 42f, 1.30f,     21f, 0.600f, 0.024f, 0.12f, 38f, 1.26f,    -18f, 0.595f, 0.025f, 0.14f, 40f, 1.28f,
-            38f, 0.606f, 0.023f, 0.10f, 34f, 1.24f,    -36f, 0.602f, 0.024f, 0.10f, 36f, 1.24f,
-            -9f, 0.556f, 0.015f, 0.50f, 48f, 1.38f,    13f, 0.562f, 0.014f, 0.50f, 46f, 1.36f,    -28f, 0.556f, 0.014f, 0.46f, 46f, 1.36f,
-            31f, 0.564f, 0.013f, 0.44f, 44f, 1.34f,
-            // over the fringe, then the tall front of the mop rising in uneven tiers
-            10f, 0.665f, 0.030f, 0.12f, 25f, 1.15f,    -14f, 0.668f, 0.030f, 0.12f, 25f, 1.15f,   36f, 0.655f, 0.029f, 0.10f, 28f, 1.15f,
-            -38f, 0.660f, 0.029f, 0.10f, 28f, 1.15f,
-            4f, 0.800f, 0.033f, 0.15f, 14f, 1.10f,     30f, 0.815f, 0.032f, 0.10f, 14f, 1.10f,    -26f, 0.808f, 0.033f, 0.12f, 14f, 1.10f,
-            55f, 0.780f, 0.030f, 0.08f, 18f, 1.10f,    -56f, 0.786f, 0.030f, 0.08f, 18f, 1.10f,
-            16f, 0.900f, 0.035f, 0.20f, 6f, 1.00f,     -14f, 0.905f, 0.035f, 0.20f, 6f, 1.00f,    46f, 0.890f, 0.033f, 0.12f, 8f, 1.00f,
-            -48f, 0.886f, 0.033f, 0.12f, 8f, 1.00f,
-            // top: a rounded dome of curls
-            0f, 0.985f, 0.036f, 0.00f, 0f, 1.00f,      60f, 0.955f, 0.034f, 0.10f, 4f, 1.00f,     -58f, 0.958f, 0.034f, 0.10f, 4f, 1.00f,
-            120f, 0.950f, 0.035f, 0.12f, 5f, 1.00f,    -118f, 0.955f, 0.035f, 0.12f, 5f, 1.00f,   178f, 0.945f, 0.035f, 0.12f, 5f, 1.00f,
-            // full sides and back
-            80f, 0.790f, 0.034f, 0.12f, 18f, 1.10f,    108f, 0.805f, 0.035f, 0.10f, 18f, 1.10f,   140f, 0.795f, 0.035f, 0.08f, 15f, 1.12f,
-            -172f, 0.785f, 0.035f, 0.06f, 15f, 1.12f,  -144f, 0.810f, 0.035f, 0.08f, 15f, 1.12f,  -110f, 0.795f, 0.035f, 0.10f, 18f, 1.10f,
-            -82f, 0.798f, 0.034f, 0.12f, 18f, 1.10f,
-            // temples and the tops of the ears covered, curls hanging to the cheekbones at the sides
-            58f, 0.540f, 0.026f, 0.14f, 32f, 1.30f,    72f, 0.490f, 0.025f, 0.14f, 32f, 1.35f,    87f, 0.480f, 0.024f, 0.12f, 30f, 1.35f,
-            -60f, 0.545f, 0.026f, 0.14f, 32f, 1.30f,   -73f, 0.492f, 0.025f, 0.14f, 32f, 1.35f,   -88f, 0.482f, 0.024f, 0.12f, 30f, 1.35f,
-            74f, 0.630f, 0.027f, 0.15f, 20f, 1.15f,    -75f, 0.634f, 0.027f, 0.15f, 20f, 1.15f,
-            // back of the head, behind the ears, nape
-            120f, 0.560f, 0.031f, 0.06f, 15f, 1.18f,   148f, 0.585f, 0.032f, 0.06f, 15f, 1.18f,   176f, 0.555f, 0.032f, 0.06f, 15f, 1.18f,
-            -152f, 0.575f, 0.032f, 0.06f, 15f, 1.18f,  -124f, 0.552f, 0.031f, 0.06f, 15f, 1.18f,
-            104f, 0.420f, 0.021f, 0.05f, 20f, 1.25f,   -105f, 0.425f, 0.021f, 0.05f, 20f, 1.25f,
-            152f, 0.300f, 0.024f, 0.05f, 20f, 1.20f,   -178f, 0.290f, 0.024f, 0.05f, 20f, 1.20f,  -150f, 0.310f, 0.024f, 0.05f, 20f, 1.20f,
+            // fringe: curly locks hanging flat down the forehead (low droop, long stretch = a curtain, not a brim) to the
+            // upper lids, longest over his right eye, a short gap over the bridge of the nose
+            -37f, 0.586f, 0.017f, 0.00f, 15f, 1.75f,   -22f, 0.584f, 0.017f, 0.00f, 15f, 1.85f,   -8f, 0.604f, 0.016f, 0.00f, 15f, 1.50f,
+            7f, 0.598f, 0.016f, 0.00f, 15f, 1.65f,     21f, 0.574f, 0.018f, 0.00f, 15f, 1.95f,    36f, 0.580f, 0.017f, 0.00f, 15f, 1.85f,
+            // upper tier of the fringe, over the lock roots
+            -31f, 0.632f, 0.021f, -0.05f, 22f, 1.35f,  -11f, 0.640f, 0.021f, -0.05f, 22f, 1.35f,  12f, 0.638f, 0.021f, -0.05f, 22f, 1.35f,
+            33f, 0.630f, 0.021f, -0.05f, 22f, 1.35f,
+            // temples: locks hanging in front of the ears to the cheekbones
+            54f, 0.560f, 0.018f, 0.12f, 10f, 2.20f,    67f, 0.525f, 0.017f, 0.15f, 8f, 2.40f,     -55f, 0.565f, 0.018f, 0.12f, 10f, 2.15f,
+            -68f, 0.532f, 0.017f, 0.15f, 8f, 2.30f,
+            80f, 0.540f, 0.015f, 0.05f, 10f, 2.05f,    -81f, 0.545f, 0.015f, 0.05f, 10f, 2.00f,
+            // over the tops of the ears (the lower half of the ear shows), longer behind them
+            97f, 0.562f, 0.017f, 0.22f, 15f, 1.60f,    -98f, 0.565f, 0.017f, 0.22f, 15f, 1.60f,
+            118f, 0.550f, 0.021f, 0.05f, 18f, 1.55f,   -119f, 0.555f, 0.021f, 0.05f, 18f, 1.55f,
+            // the mass of the mop: overlapping, half-sunk clumps (bumps on the curly shell, not separate balls)
+            8f, 0.715f, 0.024f, -0.15f, 18f, 1.12f,    -9f, 0.712f, 0.024f, -0.15f, 18f, 1.12f,   35f, 0.705f, 0.024f, -0.15f, 18f, 1.12f,
+            -36f, 0.708f, 0.024f, -0.15f, 18f, 1.12f,  64f, 0.700f, 0.024f, -0.15f, 18f, 1.12f,   -65f, 0.702f, 0.024f, -0.15f, 18f, 1.12f,
+            95f, 0.705f, 0.024f, -0.15f, 18f, 1.12f,   -96f, 0.708f, 0.024f, -0.15f, 18f, 1.12f,  125f, 0.712f, 0.024f, -0.15f, 18f, 1.12f,
+            -126f, 0.710f, 0.024f, -0.15f, 18f, 1.12f, 155f, 0.715f, 0.024f, -0.15f, 18f, 1.12f,  -156f, 0.712f, 0.024f, -0.15f, 18f, 1.12f,
+            180f, 0.718f, 0.024f, -0.15f, 18f, 1.12f,
+            20f, 0.805f, 0.025f, -0.18f, 12f, 1.08f,   -21f, 0.802f, 0.025f, -0.18f, 12f, 1.08f,  55f, 0.798f, 0.025f, -0.18f, 12f, 1.08f,
+            -56f, 0.800f, 0.025f, -0.18f, 12f, 1.08f,  90f, 0.800f, 0.025f, -0.18f, 12f, 1.08f,   -91f, 0.802f, 0.025f, -0.18f, 12f, 1.08f,
+            125f, 0.805f, 0.025f, -0.18f, 12f, 1.08f,  -126f, 0.803f, 0.025f, -0.18f, 12f, 1.08f, 160f, 0.806f, 0.025f, -0.18f, 12f, 1.08f,
+            -161f, 0.804f, 0.025f, -0.18f, 12f, 1.08f,
+            0f, 0.878f, 0.025f, -0.20f, 6f, 1.00f,     60f, 0.875f, 0.025f, -0.20f, 6f, 1.00f,    -60f, 0.876f, 0.025f, -0.20f, 6f, 1.00f,
+            120f, 0.874f, 0.025f, -0.20f, 6f, 1.00f,   -120f, 0.877f, 0.025f, -0.20f, 6f, 1.00f,  180f, 0.875f, 0.025f, -0.20f, 6f, 1.00f,
+            0f, 0.925f, 0.028f, -0.25f, 0f, 1.00f,     45f, 0.905f, 0.022f, -0.10f, 4f, 1.00f,    -45f, 0.906f, 0.022f, -0.10f, 4f, 1.00f,
+            135f, 0.904f, 0.022f, -0.10f, 4f, 1.00f,   -135f, 0.905f, 0.022f, -0.10f, 4f, 1.00f,
+            // back of the head down to the nape
+            140f, 0.600f, 0.024f, -0.10f, 18f, 1.20f,  -141f, 0.602f, 0.024f, -0.10f, 18f, 1.20f, 178f, 0.598f, 0.024f, -0.10f, 18f, 1.20f,
+            128f, 0.450f, 0.022f, -0.05f, 20f, 1.35f,  -129f, 0.452f, 0.022f, -0.05f, 20f, 1.35f, 155f, 0.455f, 0.022f, -0.05f, 20f, 1.35f,
+            -156f, 0.452f, 0.022f, -0.05f, 20f, 1.35f, 180f, 0.450f, 0.022f, -0.05f, 20f, 1.35f,
+            150f, 0.320f, 0.019f, -0.05f, 20f, 1.40f,  -151f, 0.322f, 0.019f, -0.05f, 20f, 1.40f, 170f, 0.315f, 0.019f, -0.05f, 20f, 1.40f,
+            -171f, 0.318f, 0.019f, -0.05f, 20f, 1.40f,
         };
 
         /// <summary>
-        /// (secret, Prisoner8) A mop of tight curls: low-poly curl clumps (6-sided domes whose open base is buried in the
-        /// thickened scalp) over the top, sides and back, and a fringe of curls hanging over the forehead to the brows.
+        /// (secret, Prisoner8) A mop of loose curls: low-poly curl clumps (6-sided domes whose open base is buried in the
+        /// thickened scalp) over the top, sides and back, curly locks hanging down the forehead to the eyelids and
+        /// over the temples and the tops of the ears.
         /// Opaque; each clump shows one of the 2 x 2 curl tiles of the Hair region, projected along its axis.
         /// </summary>
         static void CurlyHair(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
