@@ -58,10 +58,10 @@ HAIRLINES = {
     # boy's short cut with a fringe over the forehead
     "kid": [(0, 0.70), (25, 0.70), (45, 0.67), (60, 0.62), (72, 0.55), (80, 0.44), (86, 0.58), (102, 0.58),
             (110, 0.28), (140, 0.10), (180, 0.06)],
-    # (secret, prisoner8) mop of curls: fringe low on the forehead, over the tops of the ears, down to the nape.
-    # MUST match the HairStyle.Curly curve in BodyMeshGenerator.HairThickness()
-    "curly": [(0, 0.63), (25, 0.63), (40, 0.64), (55, 0.62), (68, 0.60), (78, 0.56), (96, 0.56), (108, 0.36),
-              (135, 0.16), (180, 0.10)],
+    # (secret, prisoner8) mop of curls: a heavy fringe down to the eyes, the temples and the tops of the ears
+    # covered, down to the nape. MUST match the HairStyle.Curly curve in BodyMeshGenerator.HairThickness()
+    "curly": [(0, 0.53), (20, 0.53), (35, 0.52), (50, 0.50), (65, 0.45), (75, 0.42), (88, 0.42), (98, 0.44),
+              (110, 0.30), (135, 0.13), (180, 0.08)],
 }
 
 
@@ -231,14 +231,15 @@ def paint_face(spec, rng, th, y, X, Y):
         img = mix(img, rgb(spec["stubble_color"]), m * spec["mustache"])
     if spec.get("jaw_beard"):
         img = paint_jaw_beard(img, spec, rng, th, X, Y)
-    # mouth
+    # mouth (mouth_w: width scale, lip_full: fuller lower lip)
     lip = rgb(spec["lips"])
-    upper = ell(X, Y, 0, 42.2, 21, 3.6, 1.2) * (1 - 0.6 * ell(X, Y, 0, 45.5, 3, 1.6, 0.8))
-    lower = ell(X, Y, 0, 35.8, 18, 4.3, 1.2)
+    mw, lf = spec.get("mouth_w", 1.0), spec.get("lip_full", 1.0)
+    upper = ell(X, Y, 0, 42.2, 21 * mw, 3.6, 1.2) * (1 - 0.6 * ell(X, Y, 0, 45.5, 3, 1.6, 0.8))
+    lower = ell(X, Y, 0, 35.8 - 0.6 * (lf - 1), 18 * mw, 4.3 * lf, 1.2)
     img = mix(img, lip * 0.88, upper * spec.get("lip_alpha", 0.75))
     img = mix(img, lip, lower * spec.get("lip_alpha", 0.75))
-    img = mix(img, lip * 1.25 + 0.05, ell(X, Y, 0, 37.2, 9, 1.6, 1) * 0.35)
-    img = mix(img, rgb("#2a1410"), ell(X, Y, 0, 39.4, 21, 1.0, 0.7) * 0.85)
+    img = mix(img, lip * 1.25 + 0.05, ell(X, Y, 0, 37.2 - 0.8 * (lf - 1), 9 * mw, 1.6 * lf, 1) * 0.35)
+    img = mix(img, rgb("#2a1410"), ell(X, Y, 0, 39.4, 21 * mw, 1.0, 0.7) * 0.85)
     if spec.get("open_mouth"):
         img = mix(img, rgb("#140808"), ell(X, Y, 0, 38.5, 13, 6, 1.5))
     # eyes
@@ -1522,30 +1523,44 @@ def seg_dist(X, Y, x0, y0, x1, y1):
     return np.hypot(X - (x0 + t * dx), Y - (y0 + t * dy))
 
 
+def jaw_line_y(ath):
+    """Height (head units) of the sculpted head's jaw line at |theta|: at the chin in front, rising to just under the
+    ears. MUST match BodyMeshGenerator.JawLineY()."""
+    t = np.clip((ath - 20.0) / 76.0, 0, 1)
+    return -0.01 + 0.30 * t * t * (3 - 2 * t)
+
+
 def paint_jaw_beard(img, spec, rng, th, X, Y):
-    """Thin beard along the jaw line into the sideburns, a goatee on the chin joined to a light moustache by thin
-    lines past the mouth corners (soft edges, hairs breaking the outlines)."""
+    """A crisp thin beard line along the V of the jaw from the sideburns to the chin, ending in a pointed chin beard;
+    sparse stubble on the lower cheeks above the line, a sparse thin moustache, a small soul patch."""
     h, w = th.shape
     ath = np.abs(th)
     col = rgb(spec["stubble_color"])
     speck = smoothstep(0.25, 0.85, rng.rand(h, w).astype(np.float32))
-    ragged = (fbm(h, w, 18, rng, octaves=2) - 0.5) * 6.0
-    # jaw strip: along the jaw line (the sculpted head's jaw edge is the y 0 ring all round), into the sideburns
-    yj = -2 + 8 * smoothstep(40, 82, ath)
-    strip = np.clip(1 - np.abs(Y - yj - 1.0 + ragged * 0.4) / 4.2, 0, 1) * smoothstep(14, 30, ath) * (1 - smoothstep(84, 93, ath))
-    side = smoothstep(77, 83, ath) * (1 - smoothstep(88, 94, ath)) * smoothstep(yj, yj + 8, Y) * (1 - smoothstep(108, 122, Y + ragged))
-    # goatee: chin beard under the lower lip, a little soul patch, thin lines round the mouth to the moustache
-    chin = ell(X, Y, 0, 12, 17, 16, 5) * smoothstep(33, 28, Y)
-    patch = ell(X, Y, 0, 30.5, 4.5, 3.5, 1.5)
-    links = np.zeros_like(X)
-    for sx in (-1, 1):
-        d = seg_dist(X, Y, 19.5 * sx, 46.0, 15.5 * sx, 22.0)
-        links = np.maximum(links, np.clip(1 - d / 2.6, 0, 1))
-    beard = np.maximum.reduce([strip * 0.62, side * 0.55, chin, patch * 0.9, links * 0.75])
-    beard = np.clip(beard + (speck - 0.5) * 0.18 * (beard > 0.05), 0, 1)
+    ragged = (fbm(h, w, 18, rng, octaves=2) - 0.5) * 4.0
+    yj = jaw_line_y(ath) * 230.0                       # mm, like Y
+    # the line: a little above the edge (on the face side), thicker towards the chin
+    # (sits a little above the jaw edge, on the face side, so it reads from the front as the V of the jaw)
+    thick = 6.0 + 3.0 * (1 - smoothstep(20, 60, ath))
+    line = np.clip(1 - np.abs(Y - yj - 5.0 + ragged * 0.5) / thick, 0, 1) * (1 - smoothstep(88, 96, ath))
+    line = smoothstep(0.0, 0.45, line) * (0.85 + 0.15 * speck)
+    side = smoothstep(80, 85, ath) * (1 - smoothstep(91, 96, ath)) * smoothstep(yj - 4, yj + 4, Y) * (1 - smoothstep(92, 104, Y + ragged))
+    # pointed chin beard: from under the lower lip down to a point below the chin
+    cy = np.clip((Y + 5.0) / 25.0, 0, 1)                  # 0 at the point (Y -5), 1 at Y 20
+    chin = np.clip(1 - np.abs(X) / (3.0 + 24.0 * np.sqrt(cy)), 0, 1) * smoothstep(-8, -2, Y) * smoothstep(22, 15, Y)
+    chin = smoothstep(0.0, 0.3, chin) * (0.9 + 0.1 * speck)
+    chin = np.maximum(chin, ell(X, Y, 0, 20, 10, 6, 3) * (speck > 0.45) * 0.6)   # sparse hair up to the soul patch
+    patch = ell(X, Y, 0, 25.0, 5.5, 3.6, 1.6)
+    stub = smoothstep(yj + 26, yj + 2, Y) * smoothstep(yj - 2, yj + 3, Y) * smoothstep(22, 40, ath) * (1 - smoothstep(86, 94, ath))
+    stub = stub * (speck > 0.55)
+    beard = np.maximum.reduce([line, side * 0.75, chin, patch * 0.8, stub * 0.55])
+    beard = np.clip(beard + (speck - 0.5) * 0.15 * (beard > 0.05), 0, 1)
     img = mix(img, col, beard * spec["jaw_beard"])
-    mst = np.clip(1 - np.abs(Y - 48.2) / 2.2, 0, 1) * (1 - smoothstep(17, 21, np.abs(X))) * (1 - 0.45 * ell(X, Y, 0, 48.5, 3.0, 3.0, 1.0))
-    img = mix(img, col, np.clip(mst + (speck - 0.5) * 0.3 * (mst > 0.05), 0, 1) * spec.get("mustache_light", 0.5))
+    img = mix(img, col * 0.6, smoothstep(0.7, 1.0, beard) * 0.5)   # the dense parts near black
+    # moustache: thin and sparse, a gap under the nose
+    mst = np.clip(1 - np.abs(Y - 47.4) / 2.8, 0, 1) * (1 - smoothstep(25, 30, np.abs(X))) * (1 - 0.55 * ell(X, Y, 0, 48.0, 3.4, 3.0, 1.0))
+    mst = mst * (0.55 + 0.45 * (speck > 0.4))
+    img = mix(img, col, np.clip(mst, 0, 1) * spec.get("mustache_light", 0.5))
     return img
 
 
@@ -1687,11 +1702,12 @@ CHARACTERS = {
     # (secret, lobby code HTN) tall young man, a mop of dark curls, jaw-line beard + goatee, navy heather tee,
     # black trousers, chunky white sneakers
     "prisoner8": dict(
-        seed=1808, skin="#c69a76", redness=0.18, mottle=0.06, eyes="#22120a", brows="#140e0a", brow_thick=4.4,
-        brow_arch=0.25, brow_y=117.5, eye_style="almond", eye_rx=14.0, eye_up=4.5, eye_lo=3.4, iris_r=6.0,
-        sclera="#cdc4b6", lean_face=True, lips="#9a5850", lip_alpha=0.78, hair_style="curly", hair="#33231a",
-        hair_hi="#7a5638", jaw_beard=0.72, mustache_light=0.62, stubble=0.10, stubble_color="#1e1610", torso=torso_p8,
-        arm=arm_p8, leg=leg_p8, shoe=chunky_white, nails="#c8a088", extra="ear", misc="hair"),
+        seed=1808, skin="#d0a487", redness=0.24, mottle=0.06, eyes="#22120a", brows="#140e0a", brow_thick=4.4,
+        brow_arch=0.25, brow_y=117.0, brow_x0=13.0, brow_len=37.0, eye_style="almond", eye_x=35.5, eye_rx=14.5,
+        eye_up=4.0, eye_lo=3.2, iris_r=5.8, sclera="#cdc4b6", lean_face=True, lips="#b46a62", lip_alpha=0.85,
+        mouth_w=1.42, lip_full=1.25, hair_style="curly", hair="#2c1e16", hair_hi="#6e4e34", jaw_beard=0.95,
+        mustache_light=0.72, stubble=0.06, stubble_color="#160e09", torso=torso_p8, arm=arm_p8, leg=leg_p8,
+        shoe=chunky_white, nails="#c8a088", extra="ear", misc="hair"),
     "omar": dict(
         seed=505, head="mask", skin="#4a403c", hand_skin="#7a6252", nails="#3e3028", hand_blood=0.34, hand_grime=0.42,
         hand_scabs=True,
