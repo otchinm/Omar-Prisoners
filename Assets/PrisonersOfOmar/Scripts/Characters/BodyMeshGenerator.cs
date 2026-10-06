@@ -491,7 +491,7 @@ namespace PrisonersOfOmar.Characters
         static float Gauss(float x, float c, float w) { float d = (x - c) / w; return Mathf.Exp(-d * d); }
 
         /// <summary>Face relief of the sculpted head (head units, out from the head axis): eye sockets under a straight
-        /// brow, high cheekbones over lean cheeks, lips, a firm chin, the ears.</summary>
+        /// brow, high cheekbones over lean cheeks, lips, a firm chin.</summary>
         static float FaceRelief(float th, float y)
         {
             float a = Mathf.Abs(th);
@@ -500,11 +500,9 @@ namespace PrisonersOfOmar.Characters
             r += 0.007f * Gauss(a, 22f, 20f) * Gauss(y, 0.54f, 0.035f);  // brow ridge
             r += 0.014f * Gauss(a, 56f, 13f) * Gauss(y, 0.37f, 0.055f);  // cheekbones
             r -= 0.018f * Gauss(a, 46f, 14f) * Gauss(y, 0.22f, 0.055f);  // lean cheeks under them
-            r += 0.012f * Gauss(a, 0f, 13f) * Gauss(y, 0.185f, 0.03f);   // lips
-            r -= 0.005f * Gauss(a, 22f, 7f) * Gauss(y, 0.18f, 0.03f);    // mouth corners
-            r += 0.018f * Gauss(a, 0f, 15f) * Gauss(y, 0.10f, 0.04f);    // chin
+            r += 0.010f * Gauss(a, 0f, 17f) * Gauss(y, 0.185f, 0.03f);   // lips
+            r += 0.016f * Gauss(a, 0f, 22f) * Gauss(y, 0.07f, 0.035f);   // chin
             r += 0.006f * Gauss(a, 0f, 10f) * Gauss(y, 0.27f, 0.025f);   // under the nose
-            r += 0.046f * Gauss(a, 90f, 8f) * Gauss(y, 0.41f, 0.09f);    // ears
             return r;
         }
 
@@ -590,6 +588,52 @@ namespace PrisonersOfOmar.Characters
                 }
             mb.EndSmoothPart();
             SculptedNose(b, sk, mb);
+            SculptedEars(b, sk, mb);
+        }
+
+        /// <summary>
+        /// The sculpted head's ears: a thin two-sided plate each (10 triangles), standing off the side of the head behind
+        /// the jaw and tilted back, from the brow line down to the lobe. Textured with the ear painted into the Extra
+        /// region (u from the root to the rim, v from the lobe to the top); front and back sides are smoothed apart.
+        /// </summary>
+        static void SculptedEars(BodySpec b, Skeleton sk, SkinMeshBuilder mb)
+        {
+            var w = SkinWeight.One(BoneId.Head);
+            var reg = CharacterAtlas.Extra;
+            float hh = b.HeadH;
+            for (int side = 0; side < 2; side++)
+            {
+                float sx = side == 0 ? 1f : -1f;
+                // root on the head (just inside it), rim out to the side and back
+                Vector3 Root(float yRel) => SculptPoint(b, sk, sx * 95f, yRel, false) - new Vector3(sx * 0.004f * hh, 0f, 0f);
+                Vector3 outDir = new Vector3(sx, 0f, -0.12f).normalized;
+                Vector3 R0 = Root(0.545f), R1 = Root(0.430f), R2 = Root(0.315f);
+                Vector3 E0 = Root(0.560f) + (outDir * 0.036f + Vector3.back * 0.040f) * hh;
+                Vector3 E1 = Root(0.485f) + (outDir * 0.044f + Vector3.back * 0.070f) * hh;
+                Vector3 E2 = Root(0.390f) + (outDir * 0.042f + Vector3.back * 0.062f) * hh;
+                Vector3 E3 = Root(0.300f) + (outDir * 0.026f + Vector3.back * 0.026f) * hh;
+                Vector3[] p = { R0, R1, R2, E0, E1, E2, E3 };
+                Vector2[] uv = { new Vector2(0.16f, 0.88f), new Vector2(0.14f, 0.52f), new Vector2(0.18f, 0.16f), new Vector2(0.62f, 0.95f),
+                                 new Vector2(0.88f, 0.74f), new Vector2(0.86f, 0.42f), new Vector2(0.50f, 0.06f) };
+                int[] tris = { 0, 3, 4,  0, 4, 1,  1, 4, 5,  1, 5, 2,  2, 5, 6 };
+                // the front of the ear (concha) faces out and forward, the back faces the head and the back
+                Vector3 front = new Vector3(sx, 0f, 0.55f).normalized;
+                for (int face = 0; face < 2; face++)
+                {
+                    Vector3 want = face == 0 ? front : -front;
+                    mb.BeginPart();
+                    int first = mb.V.Count;
+                    for (int i = 0; i < p.Length; i++) mb.Add(p[i], reg.UV(uv[i].x, uv[i].y), w);
+                    for (int t = 0; t < tris.Length; t += 3)
+                    {
+                        int a = first + tris[t], c = first + tris[t + 1], d = first + tris[t + 2];
+                        // clockwise towards the viewer: Cross(c - a, d - a) must point the way this side faces
+                        if (Vector3.Dot(Vector3.Cross(mb.V[c] - mb.V[a], mb.V[d] - mb.V[a]), want) < 0f) { int tmp = c; c = d; d = tmp; }
+                        mb.Tri(SkinMeshBuilder.Opaque, a, c, d);
+                    }
+                    mb.EndSmoothPart();
+                }
+            }
         }
 
         /// <summary>Point of the face surface (no hair) at lateral offset x (head units) and height yRel, pushed out by
@@ -611,7 +655,7 @@ namespace PrisonersOfOmar.Characters
         }
 
         /// <summary>
-        /// The sculpted head's nose: a small separate part (20 triangles) - a straight narrow bridge from between the
+        /// The sculpted head's nose: a small separate part (24 triangles) - a straight narrow bridge from between the
         /// eyes to a defined tip, nostril wings, the underside - instead of pulling the whole middle of the face forward.
         /// Textured with the face (projected round the head axis), smooth shaded on its own.
         /// </summary>

@@ -184,7 +184,7 @@ def paint_face(spec, rng, th, y, X, Y):
     # side / back darkening, neck darker, jaw shadow on the neck
     lum *= 1 - 0.16 * smoothstep(45, 120, ath)
     lum *= np.where(Y < 0, 0.9, 1.0)
-    lum *= 1 - 0.38 * smoothstep(-35, -2, Y) * (1 - smoothstep(-1, 4, Y)) * (1 - smoothstep(40, 80, ath))
+    lum *= 1 - (0.18 if spec.get("lean_face") else 0.38) * smoothstep(-35, -2, Y) * (1 - smoothstep(-1, 4, Y)) * (1 - smoothstep(40, 80, ath))
     # eye sockets
     lum *= 1 - 0.20 * sym_ell(X, Y, 31, 106, 21, 12, 7)
     # nose
@@ -276,6 +276,8 @@ def paint_face(spec, rng, th, y, X, Y):
     if spec.get("dead_eyes"):
         img = mix(img, rgb("#1a1412"), sym_ell(X, Y, 32, 104, 13, 6, 2) * 0.85)
         img = mix(img, rgb("#4a4440"), sym_ell(X, Y, 32, 103, 6, 2, 1) * 0.5)
+    if spec.get("extra") == "ear":
+        return img   # the sculpted head's ears are their own parts (painted into the Extra region)
     # ears
     ear = np.clip(1 - np.abs(ath - 94) / 10, 0, 1) * np.clip(1 - np.abs(Y - 100) / 30, 0, 1)
     img = mix(img, tone * np.array([0.92, 0.78, 0.72]), smoothstep(0.0, 0.3, ear) * 0.6)
@@ -884,6 +886,8 @@ def paint_extra(spec, rng):
         return img, alpha
     if kind == "surface":
         return spec["surface"](h, w, rng), np.ones((h, w), np.float32)
+    if kind == "ear":
+        return paint_ear(spec, rng, h, w), np.ones((h, w), np.float32)
     # long hair panel: strands running down, wavy for p2, straight for p3
     wav = spec.get("wavy", 0.0)
     img = hair_strands(h, w, rgb(spec["hair"]), rng, highlight=rgb(spec["hair_hi"]) if spec.get("hair_hi") else None,
@@ -1494,27 +1498,54 @@ def paint_almond_eye(img, spec, rng, X, Y, sx):
     return mix(img, rgb(spec["brows"]), brow * 0.92)
 
 
+def paint_ear(spec, rng, h, w):
+    """(secret, prisoner8) The sculpted head's ear, as the ear plates map it (BodyMeshGenerator.SculptedEars): u from
+    the root on the head (0) to the rim (1), v from the lobe (0) to the top (1). Rim lit, folds and the bowl in shadow."""
+    u, v = uv_grid(h, w)
+    X, Y = u * 40.0, v * 64.0     # ~mm across / up the ear
+    tone = rgb(spec["skin"])
+    img = skin(h, w, tone * np.array([0.86, 0.78, 0.74]), rng, mottle=0.06, pores=0.03, redness=0.2)
+    lum = np.ones((h, w), np.float32)
+    lum *= 1 - 0.18 * smoothstep(0.35, 0.0, u)                                       # where it meets the head
+    lum *= 1 + 0.10 * np.clip(1 - np.abs(np.hypot((X - 18) / 1.15, Y - 34) - 21) / 3.5, 0, 1)   # helix rim
+    lum *= 1 - 0.26 * ell(X, Y, 15, 33, 8.5, 12, 4)                                  # the bowl (concha)
+    lum *= 1 - 0.30 * ell(X, Y, 9, 34, 3.2, 4.5, 2)                                  # ear canal
+    lum *= 1 - 0.14 * np.clip(1 - np.abs(np.hypot((X - 18) / 1.15, Y - 36) - 15) / 2.0, 0, 1) * (Y > 30)  # antihelix fold
+    lum *= 1 + 0.06 * ell(X, Y, 18, 8, 9, 7, 4)                                      # soft lobe
+    return shade(img, lum)
+
+
+def seg_dist(X, Y, x0, y0, x1, y1):
+    """Distance (mm) from every texel to the segment (x0, y0) - (x1, y1)."""
+    dx, dy = x1 - x0, y1 - y0
+    t = np.clip(((X - x0) * dx + (Y - y0) * dy) / max(dx * dx + dy * dy, 1e-6), 0, 1)
+    return np.hypot(X - (x0 + t * dx), Y - (y0 + t * dy))
+
+
 def paint_jaw_beard(img, spec, rng, th, X, Y):
-    """Thin beard along the jaw line joined to the sideburns and to a goatee round the mouth, light moustache.
-    The jaw edge of the head mesh is the chin ring (y 0), so the beard runs round the head there."""
+    """Thin beard along the jaw line into the sideburns, a goatee on the chin joined to a light moustache by thin
+    lines past the mouth corners (soft edges, hairs breaking the outlines)."""
     h, w = th.shape
     ath = np.abs(th)
     col = rgb(spec["stubble_color"])
     speck = smoothstep(0.25, 0.85, rng.rand(h, w).astype(np.float32))
-    ragged = (fbm(h, w, 18, rng, octaves=2) - 0.5) * 7.0
-    # jaw strip: along the jaw from the chin, rising towards the ears (the jaw angle) into the sideburns
-    yj = -3 + 30 * smoothstep(30, 86, ath)
-    lo = yj - 6
-    hi = yj + 12 + 3 * (1 - smoothstep(25, 60, ath)) + ragged
-    strip = smoothstep(lo - 3, lo + 4, Y) * (1 - smoothstep(hi - 4, hi + 4, Y)) * (1 - smoothstep(84, 94, ath))
-    side = smoothstep(76, 84, ath) * (1 - smoothstep(88, 95, ath)) * smoothstep(yj, yj + 8, Y) * (1 - smoothstep(110, 124, Y + ragged))
-    # goatee: chin beard up to the lower lip, joined to the moustache by the mouth corners
-    goatee = ell(X, Y, 0, 14, 19, 18, 4) * (1 - ell(X, Y, 0, 38.0, 22, 5.5, 1.5))
-    corners = sym_ell(X, Y, 21.5, 35, 3.6, 10, 2.0)
-    beard = np.maximum.reduce([strip * 0.85, side * 0.8, goatee * 1.1, corners * 0.8])
-    img = mix(img, col, np.clip(beard, 0, 1) * spec["jaw_beard"] * (0.65 + 0.35 * speck))
-    mst = ell(X, Y, 0, 48.0, 20, 3.0, 1.4) * (1 - 0.45 * ell(X, Y, 0, 50.5, 3.2, 2.2, 1.0))
-    img = mix(img, col, mst * spec.get("mustache_light", 0.5) * (0.55 + 0.45 * speck))
+    ragged = (fbm(h, w, 18, rng, octaves=2) - 0.5) * 6.0
+    # jaw strip: along the jaw line (the sculpted head's jaw edge is the y 0 ring all round), into the sideburns
+    yj = -2 + 8 * smoothstep(40, 82, ath)
+    strip = np.clip(1 - np.abs(Y - yj - 1.0 + ragged * 0.4) / 4.2, 0, 1) * smoothstep(14, 30, ath) * (1 - smoothstep(84, 93, ath))
+    side = smoothstep(77, 83, ath) * (1 - smoothstep(88, 94, ath)) * smoothstep(yj, yj + 8, Y) * (1 - smoothstep(108, 122, Y + ragged))
+    # goatee: chin beard under the lower lip, a little soul patch, thin lines round the mouth to the moustache
+    chin = ell(X, Y, 0, 12, 17, 16, 5) * smoothstep(33, 28, Y)
+    patch = ell(X, Y, 0, 30.5, 4.5, 3.5, 1.5)
+    links = np.zeros_like(X)
+    for sx in (-1, 1):
+        d = seg_dist(X, Y, 19.5 * sx, 46.0, 15.5 * sx, 22.0)
+        links = np.maximum(links, np.clip(1 - d / 2.6, 0, 1))
+    beard = np.maximum.reduce([strip * 0.62, side * 0.55, chin, patch * 0.9, links * 0.75])
+    beard = np.clip(beard + (speck - 0.5) * 0.18 * (beard > 0.05), 0, 1)
+    img = mix(img, col, beard * spec["jaw_beard"])
+    mst = np.clip(1 - np.abs(Y - 48.2) / 2.2, 0, 1) * (1 - smoothstep(17, 21, np.abs(X))) * (1 - 0.45 * ell(X, Y, 0, 48.5, 3.0, 3.0, 1.0))
+    img = mix(img, col, np.clip(mst + (speck - 0.5) * 0.3 * (mst > 0.05), 0, 1) * spec.get("mustache_light", 0.5))
     return img
 
 
@@ -1657,10 +1688,10 @@ CHARACTERS = {
     # black trousers, chunky white sneakers
     "prisoner8": dict(
         seed=1808, skin="#c69a76", redness=0.18, mottle=0.06, eyes="#22120a", brows="#140e0a", brow_thick=4.4,
-        brow_arch=0.25, brow_y=120.0, eye_style="almond", eye_rx=14.0, eye_up=4.8, eye_lo=3.4, iris_r=6.0,
-        sclera="#cdc4b6", lean_face=True, lips="#a0645a", lip_alpha=0.6, hair_style="curly", hair="#33231a",
-        hair_hi="#7a5638", jaw_beard=0.72, mustache_light=0.45, stubble=0.10, stubble_color="#1e1610", torso=torso_p8,
-        arm=arm_p8, leg=leg_p8, shoe=chunky_white, nails="#c8a088", extra="hair", misc="hair"),
+        brow_arch=0.25, brow_y=117.5, eye_style="almond", eye_rx=14.0, eye_up=4.5, eye_lo=3.4, iris_r=6.0,
+        sclera="#cdc4b6", lean_face=True, lips="#9a5850", lip_alpha=0.78, hair_style="curly", hair="#33231a",
+        hair_hi="#7a5638", jaw_beard=0.72, mustache_light=0.62, stubble=0.10, stubble_color="#1e1610", torso=torso_p8,
+        arm=arm_p8, leg=leg_p8, shoe=chunky_white, nails="#c8a088", extra="ear", misc="hair"),
     "omar": dict(
         seed=505, head="mask", skin="#4a403c", hand_skin="#7a6252", nails="#3e3028", hand_blood=0.34, hand_grime=0.42,
         hand_scabs=True,

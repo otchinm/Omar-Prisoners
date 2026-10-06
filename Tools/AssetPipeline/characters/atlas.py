@@ -22,7 +22,7 @@ HAND = (64, 208, 32, 32)    # back of hand / palm: u across, v = 1 at the wrist,
 SWATCH = (96, 208, 32, 48)  # 16x16 flat color cells, see SWATCH_CELLS
 FOOT = (0, 224, 64, 32)     # left half: shoe side profile (u heel->toe, v sole->top); right half: top (u across, v toe->ankle)
 HAIR = (128, 112, 64, 64)   # cutout: hair strands (v along the strand, root at v = 1)
-EXTRA = (192, 112, 64, 144) # cutout: long hair panel (prisoners 2/3) or Omar's apron, top at v = 1
+EXTRA = (192, 112, 64, 144) # cutout: long hair panel (prisoners 2/3) or Omar's apron, top at v = 1; prisoner8: the ear
 MISC = (128, 176, 64, 80)   # cutout: top 64x24 = glasses front; below (64x56) = Omar's sack skirt / bangs / tufts
 
 SWATCH_CELLS = {  # (col, row) of 16x16 cells inside SWATCH

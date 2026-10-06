@@ -9,8 +9,9 @@ namespace PrisonersOfOmar.Characters
     /// <summary>
     /// (secret, Prisoner8) A finer, sculpted head instead of the classic 12-sided one: profile rings at any heights,
     /// front-weighted vertex angles (dense round the face, sparse at the back under the hair), face relief (sockets,
-    /// cheekbones, lips, chin, ears) and a separate low-poly nose (BodyMeshGenerator.SculptedHead). Same texture
-    /// mapping as the classic head (u from theta, v from the height), so the painted face lines up.
+    /// cheekbones, lips, chin) and a separate low-poly nose and ears (BodyMeshGenerator.SculptedHead). Same texture
+    /// mapping as the classic head (u from theta, v from the height), so the painted face lines up; the ears use
+    /// the Extra region of the atlas (painted by char_textures.py, "extra": "ear").
     /// </summary>
     internal sealed class HeadSculpt
     {
@@ -142,19 +143,21 @@ namespace PrisonersOfOmar.Characters
             new Ring(0.0f, 0.0f, 0.0f, -0.03f),       // crown (pole)
         };
 
-        /// <summary>Prisoner8's sculpted head: lean oval face, narrow defined jaw and chin, high cheekbones, eyes set
-        /// in under a straight brow; the nose is its own part (BodyMeshGenerator.SculptedNose).</summary>
+        /// <summary>Prisoner8's sculpted head: lean oval face, a narrow defined jaw over a clean jaw line, a firm chin,
+        /// high cheekbones, eyes set in under a straight brow; nose and ears are their own parts
+        /// (BodyMeshGenerator.SculptedNose / SculptedEars).</summary>
         static readonly HeadSculpt LeanSculpt = new HeadSculpt
         {
-            Y = new[] { -0.50f, -0.22f, -0.06f, 0.03f, 0.11f, 0.19f, 0.27f, 0.36f, 0.45f, 0.54f, 0.64f, 0.77f, 0.89f, 1.00f },
+            Y = new[] { -0.50f, -0.22f, -0.08f, 0.00f, 0.07f, 0.13f, 0.19f, 0.27f, 0.36f, 0.45f, 0.54f, 0.64f, 0.77f, 0.89f, 1.00f },
             Rings = new[]
             {
                 new Ring(0.236f, 0.218f, 0.240f, -0.06f),  // neck base
                 new Ring(0.196f, 0.186f, 0.202f, -0.05f),  // neck
-                new Ring(0.196f, 0.250f, 0.214f, -0.045f), // under the jaw
-                new Ring(0.210f, 0.318f, 0.228f, -0.035f), // jaw line, bottom of the chin
-                new Ring(0.228f, 0.352f, 0.262f, -0.02f),  // chin, jaw
-                new Ring(0.246f, 0.370f, 0.302f, -0.01f),  // mouth
+                new Ring(0.192f, 0.204f, 0.210f, -0.045f), // throat, under the jaw (the jaw line casts its shadow here)
+                new Ring(0.205f, 0.330f, 0.222f, -0.035f), // jaw line, bottom of the chin
+                new Ring(0.224f, 0.360f, 0.252f, -0.025f), // chin
+                new Ring(0.236f, 0.346f, 0.280f, -0.015f), // under the lower lip
+                new Ring(0.246f, 0.368f, 0.302f, -0.01f),  // mouth
                 new Ring(0.262f, 0.380f, 0.338f, 0.00f),   // upper lip, base of the nose
                 new Ring(0.282f, 0.378f, 0.378f, 0.00f),   // cheekbones
                 new Ring(0.296f, 0.366f, 0.410f, 0.00f),   // eyes (set in)
@@ -164,7 +167,7 @@ namespace PrisonersOfOmar.Characters
                 new Ring(0.214f, 0.240f, 0.326f, -0.01f),  // skull
                 new Ring(0.0f, 0.0f, 0.0f, -0.03f),        // crown (pole)
             },
-            Square = new[] { 2f, 2f, 2f, 2.5f, 2.4f, 2.1f, 2.1f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2f },
+            Square = new[] { 2f, 2f, 2f, 2.5f, 2.4f, 2.2f, 2.1f, 2.1f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2.2f, 2f },
             Theta = new[] { 180f, 150f, 118f, 90f, 68f, 48f, 30f, 14f, 0f, -14f, -30f, -48f, -68f, -90f, -118f, -150f, -180f },
         };
 

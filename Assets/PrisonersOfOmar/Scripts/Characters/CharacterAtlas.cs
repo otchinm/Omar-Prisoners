@@ -38,9 +38,9 @@ namespace PrisonersOfOmar.Characters
         public static readonly AtlasRect Hand = new AtlasRect(64, 208, 32, 32);
         public static readonly AtlasRect Swatch = new AtlasRect(96, 208, 32, 48);
         public static readonly AtlasRect Foot = new AtlasRect(0, 224, 64, 32);
-        /// <summary>Cutout: hair strands (root at v = 1, ragged tips at the bottom).</summary>
+        /// <summary>Cutout: hair strands (root at v = 1, ragged tips at the bottom); the curly mop's curl tiles (opaque).</summary>
         public static readonly AtlasRect Hair = new AtlasRect(128, 112, 64, 64);
-        /// <summary>Cutout: long hair panel (prisoners 2 / 3), Omar's apron, corpse rags.</summary>
+        /// <summary>Cutout: long hair panel (prisoners 2 / 3), Omar's apron, corpse rags; the sculpted head's ears (opaque).</summary>
         public static readonly AtlasRect Extra = new AtlasRect(192, 112, 64, 144);
         /// <summary>Cutout: glasses front (top 64x24).</summary>
         public static readonly AtlasRect Glasses = new AtlasRect(128, 176, 64, 24);
