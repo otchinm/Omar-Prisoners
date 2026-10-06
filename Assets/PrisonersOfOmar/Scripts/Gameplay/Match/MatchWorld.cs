@@ -252,7 +252,6 @@ namespace PrisonersOfOmar.Gameplay
                 ObjectiveTargets.Add(new ObjectiveTarget(ObjectiveKind.Radio, Map.Radio.RadioSet));
             }
             if (Map.FuelDepot != null) ObjectiveTargets.Add(new ObjectiveTarget(ObjectiveKind.Barrels, Map.FuelDepot.Barrels));
-            if (Map.Shelter != null) ObjectiveTargets.Add(new ObjectiveTarget(ObjectiveKind.Keypad, Map.Shelter.Keypad));
             foreach (var l in Map.RadioRoomLights) if (l != null) l.On = false;
         }
 
@@ -503,13 +502,6 @@ namespace PrisonersOfOmar.Gameplay
             Session.SendToHost(NetChannel.Reliable);
         }
 
-        public void SendKeypad(string code)
-        {
-            var w = Session.Begin(Msg.KeypadReq);
-            w.WriteString(code);
-            Session.SendToHost(NetChannel.Reliable);
-        }
-
         public void SendEscape(EscapeRoute route)
         {
             var w = Session.Begin(Msg.EscapeReq);
@@ -520,7 +512,6 @@ namespace PrisonersOfOmar.Gameplay
         // ================================================================== UI hooks
 
         public void OpenNote(NoteEntity note) => UI.UIManager.Instance?.Push(new UI.NoteScreen(note.Title, note.Text));
-        public void OpenKeypad() => UI.UIManager.Instance?.Push(new UI.KeypadScreen(this));
 
         // ================================================================== escape zones (local)
 

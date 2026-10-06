@@ -12,16 +12,23 @@ namespace PrisonersOfOmar.Gameplay
         void BuildPuzzles()
         {
             try { BuildSockets(); } catch (Exception e) { Debug.LogException(e); }
+            try { BuildCodeLocks(); } catch (Exception e) { Debug.LogException(e); }
         }
 
         void RegisterPuzzleHandlers(NetSession s)
         {
             s.On(Msg.SocketState, OnSocketState);
+            s.On(Msg.CodeReq, (id, r) => Host?.OnCodeReq(id, r));
+            s.On(Msg.CodeResult, OnCodeResult);
+            s.On(Msg.CodeLockState, OnCodeLockState);
         }
 
         void UnregisterPuzzleHandlers(NetSession s)
         {
             s.Off(Msg.SocketState);
+            s.Off(Msg.CodeReq);
+            s.Off(Msg.CodeResult);
+            s.Off(Msg.CodeLockState);
         }
 
         void TickPuzzles(float dt)

@@ -834,9 +834,10 @@ namespace PrisonersOfOmar.Gameplay
         public void Interact(Interactor who) => MatchWorld.Instance?.OpenNote(this);
     }
 
-    public enum ObjectiveKind { Gate, CarFuel, CarHood, CarDriver, CarPassenger, FuseBox, Radio, Barrels, Keypad }
+    public enum ObjectiveKind { Gate, CarFuel, CarHood, CarDriver, CarPassenger, FuseBox, Radio, Barrels }
 
-    /// <summary>Objective interaction points (padlock, car parts, fuse box, radio, drums, keypad).</summary>
+    /// <summary>Objective interaction points (padlock, car parts, fuse box, radio, drums). The shelter keypad is a code lock
+    /// (MatchWorld.Locks.cs).</summary>
     public sealed class ObjectiveTarget : IInteractable
     {
         public readonly ObjectiveKind Kind;
@@ -908,10 +909,6 @@ namespace PrisonersOfOmar.Gameplay
                     }
                     p = who.Has(ItemType.LighterFuel) ? InteractPrompt.Hold("POUR LIGHTER FUEL ON THE DRUMS", 3f, ItemType.LighterFuel, 3f) : InteractPrompt.Info("FUEL DRUMS. 'FLAMMABLE'");
                     return true;
-                case ObjectiveKind.Keypad:
-                    if (o.ShelterOpen) { p = InteractPrompt.Info("THE SHELTER DOOR IS OPEN"); return true; }
-                    p = InteractPrompt.Press("USE THE KEYPAD");
-                    return true;
             }
             return false;
         }
@@ -940,7 +937,6 @@ namespace PrisonersOfOmar.Gameplay
                     if (o.BarrelsPoured) w.SendUse(UseTarget.Ignite, 0, who.ItemId(ItemType.Lighter));
                     else w.SendUse(UseTarget.Barrels, 0, who.ItemId(ItemType.LighterFuel));
                     break;
-                case ObjectiveKind.Keypad: w.OpenKeypad(); break;
             }
         }
     }

@@ -14,10 +14,10 @@ namespace PrisonersOfOmar.Gameplay
             Msg.Snapshot, Msg.AvatarStateReq, Msg.Action, Msg.ActionReq, Msg.PlayerStatus, Msg.ItemPicked, Msg.ItemDropped,
             Msg.ItemConsumed, Msg.ItemCharge, Msg.BottleShatter, Msg.CageState, Msg.TrapState,
             Msg.TrapSpawned, Msg.AttackFx, Msg.ChaseState, Msg.Scream, Msg.OmarStun, Msg.Noise, Msg.ObjectiveState,
-            Msg.Escaped, Msg.KeypadResult, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges, Msg.OmarRush,
+            Msg.Escaped, Msg.WorldEvent, Msg.MatchEnd, Msg.Message, Msg.CarDrive, Msg.TrapCharges, Msg.OmarRush,
             // requests (host)
             Msg.NoiseReq, Msg.PickupReq, Msg.DropReq, Msg.UseReq, Msg.ThrowReq, Msg.BottleImpact, Msg.StruggleReq,
-            Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.KeypadReq, Msg.EscapeReq,
+            Msg.TrapTriggerReq, Msg.TrapPlaceReq, Msg.AttackReq, Msg.DetectReq, Msg.ScreamReq, Msg.SearchReq, Msg.EscapeReq,
             Msg.ChargeReq,
         };
 
@@ -42,7 +42,6 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.Noise, OnNoise);
             s.On(Msg.ObjectiveState, OnObjectiveState);
             s.On(Msg.Escaped, OnEscaped);
-            s.On(Msg.KeypadResult, OnKeypadResult);
             s.On(Msg.WorldEvent, OnWorldEvent);
             s.On(Msg.MatchEnd, OnMatchEnd);
             s.On(Msg.Message, OnMessage);
@@ -67,7 +66,6 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.ScreamReq, (id, r) => Host?.OnScreamReq(id, r));
             s.On(Msg.SearchReq, (id, r) => Host?.OnSearchReq(id, r));
             s.On(Msg.ChargeReq, (id, r) => Host?.OnChargeReq(id, r));
-            s.On(Msg.KeypadReq, (id, r) => Host?.OnKeypadReq(id, r));
             s.On(Msg.EscapeReq, (id, r) => Host?.OnEscapeReq(id, r));
             RegisterPlayerHandlers(s);
             RegisterWorldHandlers(s);
@@ -416,6 +414,8 @@ namespace PrisonersOfOmar.Gameplay
             }
             if (!prev.ShelterOpen && o.ShelterOpen && Map.Shelter != null)
             {
+                var keypad = FindCodeLock("Shelter");   // also opened by the admin, not only by its code
+                if (keypad != null) keypad.Open = true;
                 Vector3 p = Map.Shelter.DoorPivot != null ? Map.Shelter.DoorPivot.position : Vector3.zero;
                 AudioManager.Play3D(Snd.ShelterDoorOpen, p, 1f, 1f, 3f, 30f);
                 if (Map.Shelter.DoorCollider != null) Map.Shelter.DoorCollider.enabled = false;
@@ -540,13 +540,6 @@ namespace PrisonersOfOmar.Gameplay
                 VhsEffect.TriggerGlitch(0.5f, 0.6f);
             }
             else AddMessage(name + " ESCAPED", 4f);
-        }
-
-        void OnKeypadResult(int sender, NetReader r)
-        {
-            bool ok = r.ReadBool();
-            var kp = UI.UIManager.Instance != null ? UI.UIManager.Instance.Find<UI.KeypadScreen>() : null;
-            kp?.Result(ok);
         }
 
         void OnMessage(int sender, NetReader r)

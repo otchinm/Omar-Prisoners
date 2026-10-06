@@ -80,6 +80,9 @@ namespace PrisonersOfOmar.Map
         // ---- iteration 3 (plan: Docs/ITERATION3_PLAN.md) --------------------------------------
         /// <summary>Item sockets: world objects that take items (VCR, scales, clock...). Index = network id.</summary>
         public readonly List<SocketInfo> Sockets = new List<SocketInfo>();
+        /// <summary>Code locks built into the level (clock hands, button panels...). The shelter keypad and the code locks on
+        /// drawers are added by the gameplay layer; see MatchWorld.CodeLocks for the network ids.</summary>
+        public readonly List<CodeLockInfo> CodeLocks = new List<CodeLockInfo>();
 
         /// <summary>First registered area whose bounds contain <paramref name="p"/> (or "Exterior").</summary>
         public string AreaAt(Vector3 p)
@@ -273,8 +276,8 @@ namespace PrisonersOfOmar.Map
         public Pose VentView;
     }
 
-    /// <summary>What completing an item socket does by itself (feature code can add more, keyed on <see cref="SocketInfo.Name"/>).</summary>
-    public enum SocketResult : byte
+    /// <summary>What completing an item socket / opening a code lock does by itself (feature code can add more, keyed on its Name).</summary>
+    public enum PuzzleResult : byte
     {
         None = 0,
         /// <summary>Unlocks door <see cref="SocketInfo.ResultDoor"/>.</summary>
@@ -311,7 +314,40 @@ namespace PrisonersOfOmar.Map
         public float InsertNoise = 3f, SolveNoise = 8f;
         /// <summary>Resources paths of the sounds (null = defaults).</summary>
         public string InsertSound, SolveSound;
-        public SocketResult Result;
+        public PuzzleResult Result;
+        public int ResultDoor = -1;
+        public ItemType ResultItem;
+        public Pose ResultPose;
+    }
+
+    /// <summary>How a code lock is entered.</summary>
+    public enum CodeKind : byte
+    {
+        /// <summary>A keypad / dial: <see cref="CodeLockInfo.Length"/> digits.</summary>
+        Digits = 0,
+        /// <summary>Clock hands: hour 1-12 and minutes in steps of 5 (code "HHMM").</summary>
+        Time,
+        /// <summary>A row of <see cref="CodeLockInfo.Symbols"/> buttons pressed in the right order (<see cref="CodeLockInfo.Length"/> presses).</summary>
+        Sequence,
+    }
+
+    /// <summary>(iteration 3) A lock opened by entering a code (the code itself comes from the match seed, hints in notes).</summary>
+    public sealed class CodeLockInfo
+    {
+        /// <summary>Unique name (gameplay hooks results and hint notes on it).</summary>
+        public string Name;
+        public string Area;
+        public CodeKind Kind;
+        public int Length = 4;
+        public int Symbols = 4;
+        /// <summary>Title of the input screen: "THE CLOCK", "PANEL".</summary>
+        public string Label;
+        /// <summary>Prompt while locked ("SET THE CLOCK"), and once open (null = no prompt).</summary>
+        public string UseText, OpenText;
+        /// <summary>Trigger collider (Layers.Interactable).</summary>
+        public Collider Interact;
+        public float WrongNoise = 4f, OpenNoise = 10f;
+        public PuzzleResult Result;
         public int ResultDoor = -1;
         public ItemType ResultItem;
         public Pose ResultPose;

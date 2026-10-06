@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PrisonersOfOmar.Gameplay
 {
     // (iteration 3) Item sockets, host side: a prisoner puts an accepted item in (it is consumed and shown in the socket);
-    // the Needed-th item completes it, which runs its SocketResult and any feature hook keyed on its name.
+    // the Needed-th item completes it, which runs its PuzzleResult and any feature hook keyed on its name.
     public sealed partial class MatchHost
     {
         void UseSocket(int p, int id, int itemId)
@@ -48,20 +48,26 @@ namespace PrisonersOfOmar.Gameplay
         void SocketSolved(int id, int player)
         {
             var info = W.Sockets[id].Info;
-            switch (info.Result)
+            ApplyPuzzleResult(info.Result, info.ResultDoor, info.ResultItem, info.ResultPose);
+            OnSocketSolvedFeature(info.Name, id, player);
+        }
+
+        /// <summary>The generic part of a solved puzzle (socket complete / code lock opened).</summary>
+        void ApplyPuzzleResult(PuzzleResult result, int door, ItemType item, Pose pose)
+        {
+            switch (result)
             {
-                case SocketResult.UnlockDoor:
-                    if (info.ResultDoor >= 0 && info.ResultDoor < W.Doors.Length)
+                case PuzzleResult.UnlockDoor:
+                    if (door >= 0 && door < W.Doors.Length)
                     {
-                        var d = W.Doors[info.ResultDoor];
+                        var d = W.Doors[door];
                         if (d.Locked) BroadcastDoor(d, false, d.Boarded, d.Angle, 0f);
                     }
                     break;
-                case SocketResult.DropItem:
-                    if (info.ResultItem != ItemType.None) SpawnItem(info.ResultItem, info.ResultPose.position, info.ResultPose.rotation.eulerAngles.y, 1f);
+                case PuzzleResult.DropItem:
+                    if (item != ItemType.None) SpawnItem(item, pose.position, pose.rotation.eulerAngles.y, 1f);
                     break;
             }
-            OnSocketSolvedFeature(info.Name, id, player);
         }
 
         /// <summary>Feature results keyed on the socket name (iteration 3 puzzles add their cases here).</summary>

@@ -1063,28 +1063,7 @@ namespace PrisonersOfOmar.Gameplay
             DoSearch(sender, spot);
         }
 
-        // ================================================================== keypad / escapes
-
-        readonly Dictionary<int, float> _keypadAt = new Dictionary<int, float>();
-
-        public void OnKeypadReq(int sender, NetReader r)
-        {
-            string code = r.ReadString();
-            var sh = W.Map.Shelter;
-            if (sh == null || sh.Keypad == null || !IsPrisoner(sender)) return;
-            var kst = W.StatusOf(sender);
-            if (kst == null || kst.Life != LifeState.Free || kst.Hidden) return;
-            if (!Near(sender, sh.Keypad.bounds.center, 4f)) return;
-            // one try a second: the 4 digits can't be machine-gunned
-            if (_keypadAt.TryGetValue(sender, out var lastTry) && W.Time - lastTry < 1f) return;
-            _keypadAt[sender] = W.Time;
-            bool ok = code == string.Concat(W.ShelterCode[0], W.ShelterCode[1], W.ShelterCode[2], W.ShelterCode[3]);
-            var w = S.Begin(Msg.KeypadResult);
-            w.WriteBool(ok);
-            S.SendTo(sender, NetChannel.Reliable);
-            if (ok && !W.Objectives.ShelterOpen) { var o = EditObj(); o.ShelterOpen = true; CommitObj(o); DeliverNoise(sh.Keypad.bounds.center, 18f); }
-            else if (!ok) DeliverNoise(sh.Keypad.bounds.center, 5f);
-        }
+        // ================================================================== escapes
 
         public void OnEscapeReq(int sender, NetReader r)
         {

@@ -64,8 +64,8 @@ namespace PrisonersOfOmar.Gameplay
         ObjectiveState = 80, // host -> all: full objective struct
         Escaped = 81,
         EscapeReq = 82,
-        KeypadReq = 83,
-        KeypadResult = 84,
+        KeypadReq = 83,      // (unused since iteration 3: the shelter keypad is a code lock, CodeReq / CodeResult)
+        KeypadResult = 84,   // (unused)
         WorldEvent = 85,
         MatchEnd = 86,
         Message = 87,        // host -> all: HUD message
@@ -106,6 +106,9 @@ namespace PrisonersOfOmar.Gameplay
 
         // ================== iteration 3 (Docs/ITERATION3_PLAN.md): 160..199 ==================
         SocketState = 160,   // host -> all: an item socket took an item / completed (socket, count, solved, item type, player)
+        CodeReq = 161,       // client -> host: try a code on a code lock (lock, code)
+        CodeResult = 162,    // host -> that client: right / wrong (lock, ok)
+        CodeLockState = 163, // host -> all: a code lock opened (lock, open, player)
     }
 
     public static class MsgRules
@@ -123,7 +126,7 @@ namespace PrisonersOfOmar.Gameplay
                 case Msg.PickupReq: case Msg.DropReq: case Msg.UseReq: case Msg.ThrowReq: case Msg.BottleImpact:
                 case Msg.DoorReq: case Msg.HideReq: case Msg.StruggleReq: case Msg.TrapTriggerReq: case Msg.TrapPlaceReq:
                 case Msg.AttackReq: case Msg.DetectReq: case Msg.ScreamReq: case Msg.SearchReq: case Msg.SenseReq:
-                case Msg.EscapeReq: case Msg.KeypadReq:
+                case Msg.EscapeReq: case Msg.CodeReq:
                 case Msg.DoorGrabReq: case Msg.DoorDragReq: case Msg.ChargeReq: case Msg.DrawerReq:
                 case Msg.ShootReq: case Msg.ChopReq: case Msg.OmarHitReq:
                 case Msg.AdminAuthReq: case Msg.AdminCmdReq:
