@@ -43,6 +43,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Revolver: Revolver(mb, go.transform); break;
                 case ItemType.Screwdriver: Screwdriver(mb); break;
                 case ItemType.Backpack: Backpack(mb); break;
+                case ItemType.SmallKey: SmallKey(mb); break;
                 default:
                     mb.SetMaterial(PsxMaterials.GetColor(new Color(0.5f, 0.5f, 0.5f)));
                     mb.AddBox(Vector3.zero, new Vector3(0.06f, 0.06f, 0.06f), BoxUV.PerFace);
@@ -95,6 +96,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Revolver: return new Vector3(0f, 0.0175f, -0.05f);
                 case ItemType.Screwdriver: return new Vector3(0f, 0.0145f, -0.04f);
                 case ItemType.Backpack: return new Vector3(0f, BackpackH * 0.5f, 0f);
+                case ItemType.SmallKey: return new Vector3(0.004f, 0.0015f, 0.009f);
                 default: return new Vector3(0, 0.03f, 0);
             }
         }
@@ -602,6 +604,49 @@ namespace PrisonersOfOmar.Characters
             // grab loop on top
             Bar(mb, new Vector3(-0.03f, h * 0.5f + 0.017f, 0.02f), new Vector3(0f, h * 0.5f + 0.04f, 0.02f), 0.018f, 0.006f, strap);
             Bar(mb, new Vector3(0f, h * 0.5f + 0.04f, 0.02f), new Vector3(0.03f, h * 0.5f + 0.017f, 0.02f), 0.018f, 0.006f, strap);
+        }
+
+        // smallkey.png 32x32: brass (0,0,16,32) tag (16,0,16,32)
+        /// <summary>(iteration 3) A small brass cabinet key on a string with a cardboard tag, lying flat (pivot = the bow).</summary>
+        static void SmallKey(MeshBuilder mb)
+        {
+            mb.SetMaterial(Mat("smallkey"));
+            Rect brass = R(0, 0, 16, 32, 32, 32), tag = R(16, 0, 16, 32, 32, 32);
+            const int N = 7;
+            for (int i = 0; i < N; i++)
+            {
+                float a0 = (float)i / N * Mathf.PI * 2f, a1 = (float)(i + 1) / N * Mathf.PI * 2f;
+                Bar(mb, new Vector3(Mathf.Cos(a0) * 0.009f, 0, Mathf.Sin(a0) * 0.009f), new Vector3(Mathf.Cos(a1) * 0.009f, 0, Mathf.Sin(a1) * 0.009f), 0.004f, 0.003f, brass);
+            }
+            Bar(mb, new Vector3(0, 0, 0.009f), new Vector3(0, 0, 0.046f), 0.0035f, 0.0025f, brass);
+            mb.AddBox(new Vector3(0.0045f, 0, 0.04f), new Vector3(0.006f, 0.0025f, 0.009f), BoxUVRects.All(brass));
+            // the string and the tag
+            Bar(mb, new Vector3(0, 0, -0.009f), new Vector3(-0.006f, 0, -0.03f), 0.0012f, 0.0012f, tag);
+            mb.AddBox(new Vector3(-0.008f, 0, -0.046f), new Vector3(0.022f, 0.001f, 0.034f), BoxUVRects.All(tag));
+        }
+
+        // padlock.png 32x32: brass (0,0,16,16) shackle (16,0,16,16) keyhole face (0,16,16,16) dial face (16,16,16,16)
+        /// <summary>(iteration 3) The padlock on a locked drawer, hanging from its hasp (pivot = the hasp on the drawer front,
+        /// the lock face towards +Z). <paramref name="dial"/> = a combination padlock.</summary>
+        public static GameObject BuildPadlock(bool dial)
+        {
+            var go = new GameObject(dial ? "CombinationLock" : "Padlock");
+            go.layer = Layers.World;
+            var mb = new MeshBuilder();
+            mb.SetMaterial(Mat("padlock"));
+            Rect brass = R(0, 0, 16, 16, 32, 32), steel = R(16, 0, 16, 16, 32, 32), hole = R(0, 16, 16, 16, 32, 32), face = R(16, 16, 16, 16, 32, 32);
+            // the hasp plate screwed to the drawer, its staple sticking out
+            mb.AddBox(new Vector3(0f, 0.004f, 0.002f), new Vector3(0.02f, 0.034f, 0.004f), BoxUVRects.All(steel));
+            Bar(mb, new Vector3(-0.007f, 0.012f, 0.004f), new Vector3(-0.007f, 0.012f, 0.014f), 0.003f, 0.003f, steel);
+            Bar(mb, new Vector3(0.007f, 0.012f, 0.004f), new Vector3(0.007f, 0.012f, 0.014f), 0.003f, 0.003f, steel);
+            // shackle through the staple, the body hanging under it
+            Bar(mb, new Vector3(-0.008f, -0.006f, 0.014f), new Vector3(-0.008f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
+            Bar(mb, new Vector3(0.008f, -0.006f, 0.014f), new Vector3(0.008f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
+            Bar(mb, new Vector3(-0.0095f, 0.016f, 0.014f), new Vector3(0.0095f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
+            mb.AddBox(new Vector3(0f, -0.019f, 0.014f), new Vector3(0.03f, 0.028f, 0.014f),
+                new BoxUVRects { PosZ = dial ? face : hole, NegZ = brass, PosX = brass, NegX = brass, PosY = brass, NegY = brass });
+            mb.Build("Mesh", go.transform, Layers.World);
+            return go;
         }
 
         /// <summary>Hangs a <see cref="Build"/>(Backpack) model on a character's back: parented to the chest bone, its

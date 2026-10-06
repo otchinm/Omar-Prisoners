@@ -30,6 +30,7 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.Fuse: return "Basement.Generator|House.RadioRoom|Tunnel";
                 case ItemType.CageKey: return "House.CageRoom|Tunnel";
                 case ItemType.Crowbar: return "House.Bathroom|Tunnel";   // the bathroom is boarded up
+                case ItemType.SmallKey: return "Tunnel";
                 default: return null;
             }
         }
@@ -57,7 +58,15 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f)
+        /// <summary>Supplies a key padlock guards (small, a reward for finding the key / spending a lockpick).</summary>
+        static readonly ItemType[] KeyDrawerLoot = { ItemType.Pills, ItemType.Batteries, ItemType.Bandages, ItemType.Lockpick, ItemType.Pills };
+
+        /// <param name="keyLockedSpots">(iteration 3) item points of drawers with a key padlock: each gets a supply and one small
+        /// key is placed elsewhere for each of them.</param>
+        /// <param name="codeLockedSpots">item points of drawers with a combination padlock: each gets one of the key items that
+        /// fit a drawer (the code is in the notes, a crowbar pries it open).</param>
+        public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f,
+            IList<Vector3> keyLockedSpots = null, IList<Vector3> codeLockedSpots = null)
         {
             var rng = DeterministicRandom.For(seed, "items");
             var result = new List<Placement>();
@@ -77,13 +86,44 @@ namespace PrisonersOfOmar.Gameplay
 
             var spots = new List<ItemSpawnInfo>(map.ItemSpawns);
             rng.Shuffle(spots);
+            var used = new HashSet<ItemSpawnInfo>();
+            // (iteration 3) padlocked drawers: reserve their spots and fill them first. Each key padlock guards a supply and
+            // gets its small key somewhere else; the first combination padlock guards the car keys or the fuse, the others
+            // one of the small keys (code -> key -> drawer chains). The cage key and the screwdriver stay free: they are
+            // the way out of the cage room.
+            int smallKeys = 0;
+            if (keyLockedSpots != null)
+                foreach (var p in keyLockedSpots)
+                {
+                    var s = SpotAt(spots, p);
+                    if (s == null) continue;
+                    used.Add(s);
+                    result.Add(new Placement { Type = KeyDrawerLoot[rng.Range(0, KeyDrawerLoot.Length)], Position = s.Position, Yaw = s.Yaw + rng.Range(-30f, 30f), Charge = 1f });
+                    smallKeys++;
+                }
+            if (codeLockedSpots != null)
+                for (int k = 0; k < codeLockedSpots.Count; k++)
+                {
+                    var s = SpotAt(spots, codeLockedSpots[k]);
+                    if (s == null) continue;
+                    used.Add(s);
+                    ItemType t = ItemType.None;
+                    if (k > 0 && smallKeys > 0) { t = ItemType.SmallKey; smallKeys--; }
+                    else
+                    {
+                        var fits = keyList.FindAll(x => (x == ItemType.CarKeys || x == ItemType.Fuse) && (Forbidden(x) == null || s.Area == null || !MatchesAny(s.Area, Forbidden(x))));
+                        if (fits.Count > 0) { t = fits[rng.Range(0, fits.Count)]; keyList.Remove(t); }
+                        else t = KeyDrawerLoot[rng.Range(0, KeyDrawerLoot.Length)];
+                    }
+                    result.Add(new Placement { Type = t, Position = s.Position, Yaw = s.Yaw, Charge = 1f });
+                }
+            for (int k = 0; k < smallKeys; k++) common.Insert(0, ItemType.SmallKey);   // first, so they always find a spot
             // (iteration 2) exactly one revolver (2 rounds) at one of the dedicated spots
             if (map.GunSpots.Count > 0)
             {
                 var g = map.GunSpots[rng.Range(0, map.GunSpots.Count)];
                 result.Add(new Placement { Type = ItemType.Revolver, Position = g.Position, Yaw = g.Yaw, Charge = 1f });
             }
-            var used = new HashSet<ItemSpawnInfo>();
             var usedAreasForKeys = new HashSet<string>();
 
             // key items: prefer Key/Any tier, distinct areas, respect forbidden areas
@@ -122,6 +162,7 @@ namespace PrisonersOfOmar.Gameplay
                         if (used.Contains(s)) continue;
                         if (s.Small && !FitsDrawer(t)) continue;
                         if (pass == 0 && s.Tier == ItemSpawnTier.Key) continue;
+                        if (t == ItemType.SmallKey && s.Area != null && MatchesAny(s.Area, Forbidden(t))) continue;
                         pick = s; break;
                     }
                 if (pick == null) continue; // (a big item finds no free spot that is not a drawer)
@@ -130,6 +171,12 @@ namespace PrisonersOfOmar.Gameplay
                 result.Add(new Placement { Type = t, Position = pick.Position, Yaw = pick.Yaw + rng.Range(-30f, 30f), Charge = charge });
             }
             return result;
+        }
+
+        static ItemSpawnInfo SpotAt(List<ItemSpawnInfo> spots, Vector3 p)
+        {
+            foreach (var s in spots) if (s.Small && (s.Position - p).sqrMagnitude < 0.0004f) return s;
+            return null;
         }
 
         static bool MatchesAny(string area, string patterns)

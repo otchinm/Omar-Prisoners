@@ -109,6 +109,7 @@ namespace PrisonersOfOmar.Gameplay
         CodeReq = 161,       // client -> host: try a code on a code lock (lock, code)
         CodeResult = 162,    // host -> that client: right / wrong (lock, ok)
         CodeLockState = 163, // host -> all: a code lock opened (lock, open, player)
+        DrawerLock = 164,    // host -> all: a locked drawer was unlocked (drawer, how: 0 key, 1 lockpick, 2 code, 3 pried, 4 admin)
     }
 
     public static class MsgRules

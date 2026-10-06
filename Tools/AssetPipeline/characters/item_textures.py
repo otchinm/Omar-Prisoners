@@ -672,6 +672,42 @@ def backpack():
     return c.done()
 
 
+def smallkey():
+    """smallkey.png 32x32 (iteration 3): brass (0,0,16,32), cardboard tag with a scribbled number (16,0,16,32)."""
+    c = Canvas(32, 32, 32)
+    r = c.rng
+    c.put(0, 0, metal(32 * S, 16 * S, "#a88a3c", r, brushed=False, scratches=0.4, rust=0.15))
+    tag = paper(32 * S, 16 * S, "#c8b48a", r, dirt=0.5)
+    tag = mix(tag, rgb("#2a2018"), text_mask(32 * S, 16 * S, "7", 8 * S, 16 * S, int(12 * S), stroke=1) * 0.8)
+    tag = mix(tag, rgb("#6a5a40"), soft_ellipse(32 * S, 16 * S, 8 * S, 4 * S, 2 * S, 2 * S) * 0.9)   # the string hole
+    c.put(16, 0, tag)
+    return c.done()
+
+
+def padlock():
+    """padlock.png 32x32 (iteration 3, on locked drawers): brass body (0,0,16,16), steel shackle (16,0,16,16),
+    keyhole face (0,16,16,16), combination dial face (16,16,16,16)."""
+    c = Canvas(32, 32, 33)
+    r = c.rng
+    body = metal(16 * S, 16 * S, "#9a7a30", r, brushed=False, scratches=0.4, rust=0.25)
+    c.put(0, 0, body)
+    c.put(16, 0, metal(16 * S, 16 * S, "#8a8c90", r, scratches=0.3, rust=0.3))
+    face = metal(16 * S, 16 * S, "#9a7a30", r, brushed=False, scratches=0.3, rust=0.2)
+    face = mix(face, rgb("#141008"), soft_ellipse(16 * S, 16 * S, 8 * S, 6 * S, 1.6 * S, 1.6 * S))
+    face = mix(face, rgb("#141008"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.4 * S, 6 * S, 8.6 * S, 11 * S], fill=255)))
+    c.put(0, 16, face)
+    dial = metal(16 * S, 16 * S, "#2a2a2c", r, brushed=False, scratches=0.2)
+    dial = mix(dial, rgb("#d8d4c8"), soft_ellipse(16 * S, 16 * S, 8 * S, 8 * S, 6 * S, 6 * S) * 0.15)
+    for k in range(10):
+        import math
+        a = k / 10 * 2 * math.pi
+        x, y = 8 * S + math.sin(a) * 5.6 * S, 8 * S - math.cos(a) * 5.6 * S
+        dial = mix(dial, rgb("#e0dccc"), soft_ellipse(16 * S, 16 * S, x, y, 0.5 * S, 0.5 * S))
+    dial = mix(dial, rgb("#c02018"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.5 * S, 0.5 * S, 8.5 * S, 3 * S], fill=255)))
+    c.put(16, 16, dial)
+    return c.done()
+
+
 def grandma():
     return _grandma(False)
 
@@ -700,6 +736,8 @@ ITEMS = {
     "revolver": revolver,
     "screwdriver": screwdriver,
     "backpack": backpack,
+    "smallkey": smallkey,
+    "padlock": padlock,
     "grandma": grandma,
     "grandma_dead": grandma_dead,
     "cleaver": cleaver,

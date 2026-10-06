@@ -668,6 +668,24 @@ def _backpack(ctx):
     return img, a
 
 
+@icon("smallkey")
+def _smallkey(ctx):
+    """(iteration 3) Small brass cabinet key on a string with a cardboard tag."""
+    W = H = 256
+    bow = clamp01(ellipse_mask(W, H, 150, 92, 34, 34) - ellipse_mask(W, H, 150, 92, 15, 15))
+    shaft = poly(W, H, [(164, 116), (178, 106), (232, 196), (218, 206)])
+    bit = poly(W, H, [(206, 178), (222, 166), (240, 192), (228, 200), (220, 192), (214, 202)])
+    tag = poly(W, H, [(20, 40), (90, 22), (112, 96), (42, 116)])
+    im, d = canvas(W, H)
+    d.line([(100, 60), (126, 78)], fill=255, width=5)
+    string = to_mask(im)
+    img = solid(H, W, "#b8963c") * tex_noise(ctx, H, W, 0.12)[..., None]
+    img = mix(img, "#c8b48a", tag)
+    img = mix(img, "#2a2018", ellipse_mask(W, H, 66, 70, 9, 16) * (1 - ellipse_mask(W, H, 66, 70, 4, 10)) * tag)
+    img = mix(img, "#d8d0b8", string)
+    return img, clamp01(bow + shaft + bit + tag + string)
+
+
 def ragged(m, ctx, amt, salt=0, erode=0.22):
     """distressed edges: displacement + noisy threshold (keeps it hard-ish)"""
     H, W = m.shape

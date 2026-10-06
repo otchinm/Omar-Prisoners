@@ -44,6 +44,7 @@ namespace PrisonersOfOmar.Gameplay
             Add(ItemType.Screwdriver, "SCREWDRIVER", HoldPose.OneHandSmall, "A flathead screwdriver with a cracked amber handle. The vent cover in the cage room is held by four rusty screws...", key: true);
             Add(ItemType.Revolver, "REVOLVER", HoldPose.Pistol, "An old revolver with two rounds left. It won't stop him for long... but the old woman is a different story.", charge: true, key: true, dropNoise: 6f);
             Add(ItemType.Backpack, "BACKPACK", HoldPose.OneHandSmall, "An old canvas rucksack. With it on my back I can carry five things instead of three.", dropNoise: 3f);
+            Add(ItemType.SmallKey, "SMALL KEY", HoldPose.OneHandSmall, "A little brass key on a string. The tag only has a number on it. Some drawer in this house is locked with a padlock like this.");
         }
 
         /// <summary>Worn items go on the body instead of into a slot (see <see cref="LocalInventory.WornSlot"/>).</summary>

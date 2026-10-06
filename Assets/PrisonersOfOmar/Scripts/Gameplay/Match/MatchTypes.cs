@@ -134,6 +134,7 @@ namespace PrisonersOfOmar.Gameplay
         VentCover,     // take one screw out of the cage room vent cover (screwdriver)
         VentHatch,     // push the kitchen ceiling grate out from inside the duct
         Socket,        // (iteration 3) id = item socket index: put the item in
+        DrawerLock,    // (iteration 3) id = drawer index: unlock it (small key / lockpick) or pry it open (crowbar)
     }
 
     public enum WorldEventKind : byte

@@ -63,6 +63,11 @@ static class Program
         if (args.Contains("--open-drawers"))   // preview: every drawer pulled out
             foreach (var dr in data.Drawers) if (dr.Drawer != null) dr.Drawer.position += dr.OpenOffset;
         Console.WriteLine("drawers: " + data.Drawers.Count + ", drawer item spots: " + data.ItemSpawns.Count(s => s.Small));
+        // iteration 3: padlock candidates (house drawers deep enough to hold an item), sockets, code locks
+        var lockable = data.Drawers.Where(d => data.AreaAt(d.ItemPoint).StartsWith("House.") && data.ItemSpawns.Any(s => s.Small && (s.Position - d.ItemPoint).sqrMagnitude < 0.0004f)).ToList();
+        Console.WriteLine("iteration 3: lockable drawers " + lockable.Count + " (" + string.Join(", ", lockable.GroupBy(d => data.AreaAt(d.ItemPoint)).Select(g => g.Key + " " + g.Count())) + ")"
+            + ", sockets " + data.Sockets.Count + " (" + string.Join(", ", data.Sockets.Select(k => k.Name + "@" + k.Area)) + ")"
+            + ", code locks " + data.CodeLocks.Count + " (" + string.Join(", ", data.CodeLocks.Select(k => k.Name + ":" + k.Kind + "@" + k.Area)) + ")");
         var world = UnityEngine.Object.AllGameObjects.ToList();
         var colliders = Physics.AllColliders.ToList();
 

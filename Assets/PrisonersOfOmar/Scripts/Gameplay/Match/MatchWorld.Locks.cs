@@ -32,10 +32,11 @@ namespace PrisonersOfOmar.Gameplay
             foreach (var info in Map.CodeLocks) AddCodeLock(info, CodeLockEntity.RandomCode(info.Kind, info.Length, info.Symbols, rng));
         }
 
-        /// <summary>Registers a code lock (same order on every peer). Returns it.</summary>
-        public CodeLockEntity AddCodeLock(CodeLockInfo info, string code)
+        /// <summary>Registers a code lock (same order on every peer). <paramref name="embedded"/> = another entity (a locked
+        /// drawer) owns the collider, prompt and input. Returns it.</summary>
+        public CodeLockEntity AddCodeLock(CodeLockInfo info, string code, bool embedded = false)
         {
-            var lk = new CodeLockEntity(CodeLocks.Count, info, code);
+            var lk = new CodeLockEntity(CodeLocks.Count, info, code, embedded);
             CodeLocks.Add(lk);
             return lk;
         }
@@ -87,13 +88,13 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>The right code: digits ("0417"), time ("0745" = 7:45) or button indices ("2031").</summary>
         public readonly string Code;
         public bool Open;
-        /// <summary>When set, the prompt and the input come from another entity (a locked drawer), not the lock's own collider.</summary>
-        public bool Embedded;
+        /// <summary>The prompt and the input come from another entity (a locked drawer), not the lock's own collider.</summary>
+        public readonly bool Embedded;
 
-        public CodeLockEntity(int index, CodeLockInfo info, string code)
+        public CodeLockEntity(int index, CodeLockInfo info, string code, bool embedded = false)
         {
-            Index = index; Info = info; Code = code;
-            if (info.Interact != null) InteractableRef.Attach(info.Interact, this);
+            Index = index; Info = info; Code = code; Embedded = embedded;
+            if (info.Interact != null && !embedded) InteractableRef.Attach(info.Interact, this);
         }
 
         public Vector3 InteractPoint => Info.Interact != null ? Info.Interact.bounds.center : Vector3.zero;

@@ -555,6 +555,7 @@ namespace PrisonersOfOmar.Gameplay
                 case UseTarget.VentCover: UseVentCover(sender, itemId); break;
                 case UseTarget.VentHatch: UseVentHatch(sender); break;
                 case UseTarget.Socket: UseSocket(sender, tid, itemId); break;
+                case UseTarget.DrawerLock: UseDrawerLock(sender, tid, itemId); break;
             }
         }
 

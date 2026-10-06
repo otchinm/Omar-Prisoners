@@ -257,7 +257,8 @@ namespace PrisonersOfOmar.Gameplay
 
         void SpawnItems()
         {
-            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead, Tuning.SupplyMul);
+            LockedDrawerSpots(out var keySpots, out var codeSpots);
+            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead, Tuning.SupplyMul, keySpots, codeSpots);
             foreach (var p in placements)
             {
                 var e = new ItemEntity { Id = Items.Count, Type = p.Type, Charge = p.Charge };
