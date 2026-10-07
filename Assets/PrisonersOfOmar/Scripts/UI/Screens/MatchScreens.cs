@@ -140,11 +140,18 @@ namespace PrisonersOfOmar.UI
             var lines = ui.Wrap(_text, (int)pw - 30, 1, nf);
             float y = r.y + 30;
             foreach (var l in lines) { ui.Text(l, r.center.x, y, new Color(0.12f, 0.1f, 0.08f), 1, Align.Center, nf, false); y += nf.LineHeight; }
-            UIStyle.Footer(ui, "E / ESC  CLOSE");
+            UIStyle.Footer(ui, "E / ESC  CLOSE     J  JOURNAL");
+            if (input && _t > 0.25f && Input.GetKeyDown(KeyCode.J) && MatchWorld.Instance != null)
+            {
+                UIManager.Instance.Remove(this);
+                UIManager.Instance.Push(new JournalScreen(MatchWorld.Instance));
+                return;
+            }
             if (input && _t > 0.25f && (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) || ui.Click))
             {
                 AudioManager.Play2D(Snd.InventoryClose, 0.6f, 0.9f, AudioCategory.Ui);
                 UIManager.Instance.Remove(this);
+                MatchWorld.Instance?.ShowJournalHint();
             }
         }
     }

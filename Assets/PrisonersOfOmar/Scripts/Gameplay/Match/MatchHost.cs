@@ -439,6 +439,7 @@ namespace PrisonersOfOmar.Gameplay
             if (it == null || it.Consumed || it.Holder >= 0 || it.World == null) return;
             if (!IsPrisoner(sender) || st == null || st.Life != LifeState.Free || st.Hidden || st.InCar || st.Trapped) return;
             if (!Near(sender, it.World.transform.position, 3.5f)) return;
+            if (W.InShutDrawer(it.World.transform.position)) return;   // (iteration 3) not through a shut / padlocked drawer
             if (!_inv.TryGetValue(sender, out var slots)) return;
             if (ItemDefs.IsWorn(it.Type)) { Wear(sender, itemId); return; }
             int slot = FreeSlot(sender);

@@ -53,6 +53,9 @@ namespace PrisonersOfOmar.Gameplay
             _nextMutter = Time.time + Random.Range(6f, 15f);
         }
 
+        /// <summary>(iteration 3) Her TV sound goes quiet while the VCR plays the tape (its own sound replaces it).</summary>
+        public void MuteTv(bool mute) => AudioManager.SetVolume(_tv, mute ? 0f : 0.6f);
+
         public void Destroy()
         {
             AudioManager.Stop(_tv, 0.3f);

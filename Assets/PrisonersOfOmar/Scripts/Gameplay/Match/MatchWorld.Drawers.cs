@@ -44,6 +44,10 @@ namespace PrisonersOfOmar.Gameplay
                 if (picked.Count >= keyLocks + codeLocks) break;
                 bool near = false;
                 foreach (int j in picked) if (Vector3.Distance(Drawers[i].Info.ItemPoint, Drawers[j].Info.ItemPoint) < 1.5f) near = true;
+                // two combination padlocks never share a room (the notes / the tape name the room)
+                if (picked.Count >= keyLocks)
+                    for (int k = keyLocks; k < picked.Count; k++)
+                        if (Map.AreaAt(Drawers[picked[k]].Info.ItemPoint) == Map.AreaAt(Drawers[i].Info.ItemPoint)) near = true;
                 if (near) continue;
                 picked.Add(i);
             }
@@ -71,11 +75,27 @@ namespace PrisonersOfOmar.Gameplay
         {
             keySpots = new List<Vector3>();
             codeSpots = new List<Vector3>();
+            foreach (var d in Drawers) if (d.Lock == DrawerLockKind.Key) keySpots.Add(d.Info.ItemPoint);
+            // combination drawers in code lock order: the spawner puts the car keys / fuse behind the first one (its code is
+            // in a note) and small keys behind the others (the last one's code is only on the tape)
+            foreach (var lk in CodeLocks)
+            {
+                var d = DrawerWithCodeLock(lk.Index);
+                if (d != null && d.Lock == DrawerLockKind.Code) codeSpots.Add(d.Info.ItemPoint);
+            }
+        }
+
+        /// <summary>Is this point inside a drawer that is shut (its items can't be reached)?</summary>
+        public bool InShutDrawer(Vector3 p)
+        {
             foreach (var d in Drawers)
             {
-                if (d.Lock == DrawerLockKind.Key) keySpots.Add(d.Info.ItemPoint);
-                else if (d.Lock == DrawerLockKind.Code) codeSpots.Add(d.Info.ItemPoint);
+                if (d.Info.Drawer == null || d.Open) continue;
+                var b = d.Info.InsideLocal;
+                b.Expand(0.02f);
+                if (b.Contains(d.Info.Drawer.InverseTransformPoint(p))) return true;
             }
+            return false;
         }
 
         public DrawerEntity DrawerWithCodeLock(int codeLock)
@@ -176,7 +196,7 @@ namespace PrisonersOfOmar.Gameplay
             if (who.Held == ItemType.Crowbar) { p = InteractPrompt.Hold("PRY THE DRAWER OPEN", 2.5f, ItemType.Crowbar, 14f); return true; }
             if (Lock == DrawerLockKind.Code)
             {
-                p = InteractPrompt.Press("A COMBINATION PADLOCK - TRY A CODE");
+                p = InteractPrompt.Press(who.Has(ItemType.Crowbar) ? "COMBINATION PADLOCK - TRY A CODE (OR HOLD THE CROWBAR)" : "A COMBINATION PADLOCK - TRY A CODE");
                 return true;
             }
             if (who.Has(ItemType.SmallKey)) { p = InteractPrompt.Hold("UNLOCK IT WITH THE SMALL KEY", 0.8f, ItemType.SmallKey); return true; }
@@ -201,6 +221,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             if (!Locked) return;
             Locked = false;
+            if (CodeLock != null) CodeLock.Open = true;   // a pried / admin-opened drawer takes no more codes
             if (_padlock != null) Object.Destroy(_padlock);
             _padlock = null;
             string snd = how == 1 ? Snd.Lockpick : how == 3 ? Snd.WoodBreak : Snd.KeyUnlock;

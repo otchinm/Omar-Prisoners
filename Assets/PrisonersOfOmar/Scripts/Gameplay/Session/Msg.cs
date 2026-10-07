@@ -107,7 +107,7 @@ namespace PrisonersOfOmar.Gameplay
         // ================== iteration 3 (Docs/ITERATION3_PLAN.md): 160..199 ==================
         SocketState = 160,   // host -> all: an item socket took an item / completed (socket, count, solved, item type, player)
         CodeReq = 161,       // client -> host: try a code on a code lock (lock, code)
-        CodeResult = 162,    // host -> that client: right / wrong (lock, ok)
+        CodeResult = 162,    // host -> that client: the answer (lock, status: 0 wrong, 1 right, 2 already open, 3 too fast, 4 refused)
         CodeLockState = 163, // host -> all: a code lock opened (lock, open, player)
         DrawerLock = 164,    // host -> all: a locked drawer was unlocked (drawer, how: 0 key, 1 lockpick, 2 code, 3 pried, 4 admin)
     }

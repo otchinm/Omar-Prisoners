@@ -14,24 +14,36 @@ namespace PrisonersOfOmar.Gameplay
         {
             int id = r.ReadShort();
             string code = r.ReadString();
-            if (id < 0 || id >= W.CodeLocks.Count || !W.Running || !IsPrisoner(sender)) return;
+            if (id < 0 || id >= W.CodeLocks.Count || !IsPrisoner(sender)) return;
             var lk = W.CodeLocks[id];
             var st = W.StatusOf(sender);
-            if (lk.Open || st == null || st.Life != LifeState.Free || st.Hidden || st.Trapped || st.InCar) return;
-            if (!Near(sender, lk.InteractPoint, 4f)) return;
-            if (_codeTryAt.TryGetValue(sender, out var last) && W.Time - last < 1f) return;
-            _codeTryAt[sender] = W.Time;
+            // always answer, so the screen never hangs: 0 wrong, 1 right, 2 already open, 3 too fast, 4 refused
+            if (lk.Open) { CodeAnswer(sender, id, 2); return; }
+            if (!W.Running || st == null || st.Life != LifeState.Free || st.Hidden || st.Trapped || st.InCar || !Near(sender, lk.InteractPoint, 4.5f))
+            {
+                CodeAnswer(sender, id, 4);
+                return;
+            }
+            // one try a second, on the real clock (the admin can pause the match clock)
+            float now = Time.unscaledTime;
+            if (_codeTryAt.TryGetValue(sender, out var last) && now - last < 1f) { CodeAnswer(sender, id, 3); return; }
+            _codeTryAt[sender] = now;
             bool ok = code == lk.Code;
-            var w = S.Begin(Msg.CodeResult);
-            w.WriteShort((short)id);
-            w.WriteBool(ok);
-            S.SendTo(sender, NetChannel.Reliable);
+            CodeAnswer(sender, id, (byte)(ok ? 1 : 0));
             if (!ok) { DeliverNoise(lk.InteractPoint, lk.Info.WrongNoise); return; }
             OpenCodeLockHost(id, sender);
         }
 
-        /// <summary>Opens a code lock for everybody and runs its result (also admin).</summary>
-        void OpenCodeLockHost(int id, int player)
+        void CodeAnswer(int to, int id, byte status)
+        {
+            var w = S.Begin(Msg.CodeResult);
+            w.WriteShort((short)id);
+            w.WriteByte(status);
+            S.SendTo(to, NetChannel.Reliable);
+        }
+
+        /// <summary>Opens a code lock for everybody and runs its result. <paramref name="silent"/> = admin (no noise).</summary>
+        void OpenCodeLockHost(int id, int player, bool silent = false)
         {
             if (id < 0 || id >= W.CodeLocks.Count || W.CodeLocks[id].Open) return;
             var lk = W.CodeLocks[id];
@@ -40,7 +52,7 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteBool(true);
             w.WriteByte((byte)Mathf.Clamp(player, 0, 255));
             S.SendToAll(NetChannel.Reliable);
-            DeliverNoise(lk.InteractPoint, lk.Info.OpenNoise);
+            if (!silent) DeliverNoise(lk.InteractPoint, lk.Info.OpenNoise);
             ApplyPuzzleResult(lk.Info.Result, lk.Info.ResultDoor, lk.Info.ResultItem, lk.Info.ResultPose);
             OnCodeLockOpenedFeature(lk.Info.Name, id, player);
         }

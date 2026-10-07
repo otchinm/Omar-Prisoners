@@ -22,6 +22,19 @@ namespace PrisonersOfOmar.Gameplay
             for (int i = 0; i < Sockets.Length; i++) Sockets[i] = new SocketEntity(i, Map.Sockets[i]);
         }
 
+        /// <summary>Plays a 3D one-shot after <paramref name="delay"/> seconds.</summary>
+        public void PlayLater(string clip, Vector3 pos, float delay, float volume, float maxDistance)
+        {
+            if (delay <= 0f) { AudioManager.Play3D(clip, pos, volume, 1f, 2f, maxDistance); return; }
+            StartCoroutine(PlayLaterCo(clip, pos, delay, volume, maxDistance));
+        }
+
+        System.Collections.IEnumerator PlayLaterCo(string clip, Vector3 pos, float delay, float volume, float maxDistance)
+        {
+            yield return new WaitForSeconds(delay);
+            AudioManager.Play3D(clip, pos, volume, 1f, 2f, maxDistance);
+        }
+
         /// <summary>Index of the socket with that <see cref="SocketInfo.Name"/>, -1 if the map has none.</summary>
         public int SocketIndex(string name)
         {
@@ -136,7 +149,8 @@ namespace PrisonersOfOmar.Gameplay
             Count = count;
             Solved = solved;
             if (added) AudioManager.Play3D(Info.InsertSound ?? Snd.ItemDrop, InteractPoint, 0.8f, Random.Range(0.92f, 1.06f), 1.5f, 14f);
-            if (fresh) AudioManager.Play3D(Info.SolveSound ?? Snd.KeyUnlock, InteractPoint, 0.9f, 1f, 2f, 20f);
+            // the completion sound follows the insert instead of drowning it
+            if (fresh) MatchWorld.Instance?.PlayLater(Info.SolveSound ?? Snd.KeyUnlock, InteractPoint, added ? 0.45f : 0f, 0.9f, 20f);
         }
     }
 }

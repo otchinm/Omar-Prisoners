@@ -60,9 +60,9 @@ namespace PrisonersOfOmar.Gameplay
         void OnCodeResult(int sender, NetReader r)
         {
             int id = r.ReadShort();
-            bool ok = r.ReadBool();
+            byte status = r.ReadByte();
             var screen = UI.UIManager.Instance != null ? UI.UIManager.Instance.Find<UI.CodeLockScreen>() : null;
-            if (screen != null && screen.Lock.Index == id) screen.Result(ok);
+            if (screen != null && screen.Lock.Index == id) screen.Result(status);
         }
 
         void OnCodeLockState(int sender, NetReader r)
@@ -75,7 +75,8 @@ namespace PrisonersOfOmar.Gameplay
             bool fresh = open && !lk.Open;
             lk.Open = open;
             if (!fresh) return;
-            AudioManager.Play3D(Snd.KeypadOk, lk.InteractPoint, 0.8f, 1f, 2f, 16f);
+            // the one who typed it heard it on their screen; a padlock on furniture is heard through its drawer (key click)
+            if (player != LocalId && !lk.Embedded) AudioManager.Play3D(Snd.KeypadOk, lk.InteractPoint, 0.8f, 1f, 2f, 16f);
             CodeLockOpened?.Invoke(lk);
         }
     }
@@ -90,6 +91,8 @@ namespace PrisonersOfOmar.Gameplay
         public bool Open;
         /// <summary>The prompt and the input come from another entity (a locked drawer), not the lock's own collider.</summary>
         public readonly bool Embedded;
+        /// <summary>Clock locks: where the hands were left (local, so the next try starts there). 0 = untouched.</summary>
+        public int DraftHour, DraftMinute;
 
         public CodeLockEntity(int index, CodeLockInfo info, string code, bool embedded = false)
         {
@@ -122,8 +125,13 @@ namespace PrisonersOfOmar.Gameplay
             switch (kind)
             {
                 case CodeKind.Time:
-                    sb.Append(rng.Range(1, 13).ToString("00")).Append((rng.Range(0, 12) * 5).ToString("00"));
-                    break;
+                    {
+                        // never 12:00 (where the hands start)
+                        int h, m;
+                        do { h = rng.Range(1, 13); m = rng.Range(0, 12) * 5; } while (h == 12 && m == 0);
+                        sb.Append(h.ToString("00")).Append(m.ToString("00"));
+                        break;
+                    }
                 case CodeKind.Sequence:
                     for (int i = 0; i < length; i++) sb.Append(rng.Range(0, Mathf.Clamp(symbols, 2, 9)));
                     break;

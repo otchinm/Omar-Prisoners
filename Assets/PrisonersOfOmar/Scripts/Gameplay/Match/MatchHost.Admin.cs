@@ -167,7 +167,8 @@ namespace PrisonersOfOmar.Gameplay
                     Admin.HostLog(sender, W.Sockets.Length + " SOCKET(S) DONE");
                     break;
                 case AdminCmd.OpenCodeLocks:
-                    for (int i = 0; i < W.CodeLocks.Count; i++) OpenCodeLockHost(i, sender);
+                    // every puzzle lock, silently; the shelter (an exit) has its own command
+                    for (int i = 0; i < W.CodeLocks.Count; i++) if (W.CodeLocks[i].Info.Name != "Shelter") OpenCodeLockHost(i, sender, true);
                     break;
                 case AdminCmd.UnlockDrawers:
                     foreach (var d in W.Drawers) if (d.Locked) UnlockDrawer(d, 4, 0f);

@@ -647,6 +647,9 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.Bandages:
                     _w.AddMessage("THE BLEEDING STOPPED", 3f);
                     break;
+                case ItemType.SmallKey:
+                    _w.AddMessage("THE KEY STAYS IN THE PADLOCK", 3f);
+                    break;
                 case ItemType.LighterFuel:
                     if (how == 0) _w.AddMessage("LIGHTER REFILLED", 2f);
                     break;

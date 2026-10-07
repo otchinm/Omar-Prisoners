@@ -805,6 +805,8 @@ namespace PrisonersOfOmar.Gameplay
         public readonly NoteSpotInfo Info;
         public string Title;
         public string Text;
+        /// <summary>(iteration 3) Which shelter code digit this note gives (-1 = none) / which code lock it gives away (-1 = none).</summary>
+        public int CodeDigit = -1, HintLock = -1;
 
         public NoteEntity(int index, NoteSpotInfo info, string title, string text, Transform parent)
         {

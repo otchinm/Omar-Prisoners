@@ -57,6 +57,14 @@ namespace PrisonersOfOmar.Gameplay
             w.WriteByte(how);
             S.SendToAll(NetChannel.Reliable);
             if (noise > 0f) DeliverNoise(d.InteractPoint, noise);
+            // it slides out by itself: the lock is off and the reward shows (not for the admin's mass unlock)
+            if (how != 4 && !d.Open)
+            {
+                var o = S.Begin(Msg.DrawerState);
+                o.WriteShort((short)d.Index);
+                o.WriteBool(true);
+                S.SendToAll(NetChannel.Reliable);
+            }
         }
 
         partial void DrawerCodeOpened(int codeLock)

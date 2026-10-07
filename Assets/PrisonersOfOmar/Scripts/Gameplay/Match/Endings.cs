@@ -209,12 +209,27 @@ namespace PrisonersOfOmar.Gameplay
 
         // ---------------------------------------------------------------- (iteration 3) hints for code locks, the tape
 
-        /// <summary>"House.ClockBedroom" -> "CLOCK BEDROOM".</summary>
+        /// <summary>Note spots a prisoner can't reach before escaping (behind the shelter door, past the chained main gate):
+        /// never a code digit or a hint there.</summary>
+        public static bool LateArea(string area) => area == "Tunnel" || area == "OutsideGate";
+
+        static readonly Dictionary<string, string> Places = new Dictionary<string, string>
+        {
+            { "Living", "LIVING ROOM" }, { "Dining", "DINING ROOM" }, { "Hall", "DOWNSTAIRS HALL" }, { "UpperHall", "UPSTAIRS HALL" },
+            { "ClockBedroom", "BEDROOM WITH THE BIG CLOCK" }, { "CageRoom", "ROOM WITH THE CAGES" }, { "Storage", "STORAGE ROOM" },
+            { "Closet", "SUPPLY CLOSET" }, { "RadioRoom", "RADIO ROOM" }, { "Study", "STUDY" }, { "Kitchen", "KITCHEN" },
+            { "Bathroom", "BATHROOM" }, { "Stairs", "STAIRS" }, { "Generator", "GENERATOR ROOM" }, { "Furnace", "FURNACE ROOM" },
+            { "Antechamber", "BASEMENT" }, { "Corridor", "BASEMENT CORRIDOR" }, { "Exhibit", "BASEMENT" }, { "ParkingLot", "PARKING LOT" },
+            { "FuelDepot", "FUEL DEPOT" }, { "WaterTower", "WATER TOWER" }, { "OutsideGate", "ROAD" },
+        };
+
+        /// <summary>"House.ClockBedroom" -> "BEDROOM WITH THE BIG CLOCK" (what a person would call the place).</summary>
         public static string PlaceName(string area)
         {
             if (string.IsNullOrEmpty(area)) return "HOUSE";
             int dot = area.LastIndexOf('.');
             string s = dot >= 0 ? area.Substring(dot + 1) : area;
+            if (Places.TryGetValue(s, out var nice)) return nice;
             var sb = new System.Text.StringBuilder();
             for (int i = 0; i < s.Length; i++)
             {
@@ -253,6 +268,9 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
+        /// <summary>Index of the shot in <see cref="TapeShots"/> that gives the code away (the tape screen waits on it).</summary>
+        public const int TapeCodeShot = 3;
+
         /// <summary>The home video on the tape: what you see, one caption a shot. <paramref name="lk"/> (may be null) is the lock
         /// whose code the tape gives away.</summary>
         public static string[] TapeShots(CodeLockEntity lk, string place, int firstShelterDigit, DeterministicRandom rng)
@@ -266,7 +284,7 @@ namespace PrisonersOfOmar.Gameplay
             if (lk != null && lk.Info.Kind == Map.CodeKind.Time)
                 shots.Add("SHE POINTS AT THE BIG CLOCK. IT SAYS " + lk.Pretty() + ".\n\n'IT STOPPED WHEN YOUR FATHER LEFT. LEAVE IT LIKE THAT, MY BOY.'");
             else if (lk != null)
-                shots.Add("SHE LAUGHS AND TAPS A LITTLE PADLOCK.\n\n'MY THINGS IN THE " + place + ". " + Spaced(lk.Code) + ". LIKE MY BIRTHDAY, YOU REMEMBER?'");
+                shots.Add("SHE LAUGHS AND TAPS A LITTLE PADLOCK.\n\n'MY THINGS IN THE " + place + ". " + Spaced(lk.Code) + ". DON'T YOU FORGET IT, MY BOY.'");
             else
                 shots.Add("SHE WHISPERS TO THE CAMERA: 'THE BUNKER. IT STARTS WITH " + firstShelterDigit + "...'");
             shots.Add("THE PICTURE JUMPS. STATIC.");

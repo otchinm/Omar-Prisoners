@@ -153,6 +153,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             Vector3 eye = g.Eye;
             Vector3 fwd = g.Forward;
+            // (iteration 3) in her chair while the VCR plays that tape she only has eyes for it: just right next to her
+            bool entranced = W.TapePlaying && !_gRoaming && g.Mode == GrandmaMode.WatchingTv;
             int best = -1;
             float bestD = float.MaxValue;
             foreach (var kv in W.Avatars)
@@ -165,7 +167,8 @@ namespace PrisonersOfOmar.Gameplay
                 Vector3 chest = a.ChestPosition;
                 Vector3 to = chest - eye;
                 float d = to.magnitude;
-                bool close = d < 2.5f;
+                bool close = d < (entranced ? 1.2f : 2.5f);
+                if (!close && entranced) continue;
                 if (!close)
                 {
                     // old eyes in a dark room: light gives you away, the TV glare doesn't help her

@@ -210,7 +210,7 @@ namespace PrisonersOfOmar.Gameplay
             // the 4 code digits never go behind the shelter door they open
             var ordered = new List<int>(spots.Count);
             var later = new List<int>();
-            foreach (int i in spots) (ordered.Count < 4 && Map.NoteSpots[i].Area != "Tunnel" ? ordered : later).Add(i);
+            foreach (int i in spots) (ordered.Count < 4 && !NoteTexts.LateArea(Map.NoteSpots[i].Area) ? ordered : later).Add(i);
             ordered.AddRange(later);
             spots = ordered;
             var lore = new List<string>(NoteTexts.Lore);
@@ -219,6 +219,8 @@ namespace PrisonersOfOmar.Gameplay
             var hints = new List<CodeLockEntity>();
             foreach (var lk in CodeLocks) if (lk.Info.Name != "Shelter" && lk != TapeLock) hints.Add(lk);
             Notes = new NoteEntity[Map.NoteSpots.Count];
+            var clueLock = new int[Notes.Length];
+            for (int i = 0; i < clueLock.Length; i++) clueLock[i] = -1;
             int hint = 0, loreIdx = 0;
             for (int k = 0; k < spots.Count; k++)
             {
@@ -230,11 +232,12 @@ namespace PrisonersOfOmar.Gameplay
                     title = info.OnWall ? "WRITTEN ON THE WALL" : "A TORN NOTE";
                     text = NoteTexts.CodeNote(k, ShelterCode[k], rng, info.OnWall);
                 }
-                else if (hint < hints.Count && info.Area != "Tunnel")
+                else if (hint < hints.Count && !NoteTexts.LateArea(info.Area))
                 {
                     var lk = hints[hint++];
                     title = info.OnWall ? "SCRAWLED ON THE WALL" : "A FOLDED NOTE";
                     text = NoteTexts.LockHint(lk, NoteTexts.PlaceName(lk.Info.Area), rng, info.OnWall);
+                    clueLock[idx] = lk.Index;
                 }
                 else
                 {
@@ -242,6 +245,8 @@ namespace PrisonersOfOmar.Gameplay
                     text = lore.Count > 0 ? lore[loreIdx++ % lore.Count] : "...";
                 }
                 Notes[idx] = new NoteEntity(idx, info, title, text, _dynamicRoot);
+                if (k < 4) Notes[idx].CodeDigit = k;
+                Notes[idx].HintLock = clueLock[idx];
             }
 
             CarBatteryStartsDead = rng.Chance(0.5f);
@@ -525,7 +530,8 @@ namespace PrisonersOfOmar.Gameplay
 
         public void OpenNote(NoteEntity note)
         {
-            AddJournal("note:" + note.Index, note.Title, note.Text);
+            if (!LocalIsOmar)
+                AddJournal("note:" + note.Index, NoteTexts.PlaceName(note.Info.Area) + " - " + note.Title, note.Text, note.CodeDigit >= 0 || note.HintLock >= 0);
             UI.UIManager.Instance?.Push(new UI.NoteScreen(note.Title, note.Text));
         }
 
