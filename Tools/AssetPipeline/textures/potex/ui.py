@@ -647,60 +647,86 @@ def _pills(ctx):
 
 @icon("backpack")
 def _backpack(ctx):
-    """(iteration 3) Olive canvas rucksack seen from the front: top flap with two leather straps and buckles,
-    big front pocket, side pockets, a grab loop."""
+    """(iteration 3) Olive canvas rucksack seen from the front, like the model: a full bottom half and a slacker top
+    under the lid, the dark flap with a pale name strip and two leather straps down to rusty buckles, the front
+    pocket, darker side pockets, a flat grab loop."""
     W = H = 256
-    body = rrect(W, H, 58, 56, 198, 236, 26)
-    sides = clamp01(rrect(W, H, 36, 128, 70, 226, 12) + rrect(W, H, 186, 128, 220, 226, 12))
-    flap = rrect(W, H, 62, 44, 194, 124, 22)
-    pocket = rrect(W, H, 82, 150, 174, 226, 10)
+    lower = rrect(W, H, 50, 120, 206, 238, 20)
+    upper = rrect(W, H, 64, 50, 192, 132, 16)
+    sides = clamp01(rrect(W, H, 34, 150, 62, 224, 10) + rrect(W, H, 194, 150, 222, 224, 10))
+    flap = rrect(W, H, 68, 46, 188, 134, 14)
+    pocket = rrect(W, H, 82, 154, 174, 228, 10)
     loop = rrect(W, H, 108, 18, 148, 52, 14) * (1 - rrect(W, H, 118, 28, 138, 52, 8))
     img = solid(H, W, "#5c5c34") * tex_noise(ctx, H, W, 0.14)[..., None]
-    img = mix(img, "#4a4a2a", sides)
-    img = mix(img, "#40411f", flap)
-    img = mix(img, "#56562f", pocket)
-    img = mix(img, "#2c2c18", rrect(W, H, 82, 150, 174, 166, 4) * 0.8)          # pocket flap seam
-    for x in (92, 150):
-        img = mix(img, "#5a3a1e", rrect(W, H, x, 92, x + 16, 162, 3))           # leather straps
-        img = mix(img, "#a8a490", rrect(W, H, x - 3, 140, x + 19, 154, 3))      # buckles
+    img = mix(img, "#6a6a3e", rrect(W, H, 50, 120, 60, 238, 4) * lower)               # lit left edge
+    img = mix(img, "#3a3a22", rrect(W, H, 50, 222, 206, 238, 6) * lower)              # shadow along the bottom
+    img = mix(img, "#3e3e22", sides)
+    img = mix(img, "#34351c", flap)
+    img = mix(img, "#6e6e40", rrect(W, H, 68, 46, 188, 54, 6) * flap)                 # sun-faded fold on top
+    img = mix(img, "#d8d0b0", rrect(W, H, 112, 66, 144, 78, 2))                       # the old owner's name strip
+    img = mix(img, "#3a3020", rrect(W, H, 117, 70, 139, 73, 1) * 0.8)
+    img = mix(img, "#6a6a40", pocket)
+    img = mix(img, "#3c3d22", rrect(W, H, 82, 154, 174, 172, 4) * 0.85)               # the pocket's own flap
+    for x in (90, 150):
+        img = mix(img, "#5a3a1e", rrect(W, H, x, 46, x + 16, 140, 3))                 # leather straps over the flap
+        img = mix(img, "#8a8678", rrect(W, H, x - 3, 134, x + 19, 148, 3))            # rusty buckles
+        img = mix(img, "#5e5a4c", rrect(W, H, x + 2, 138, x + 14, 144, 2))
     img = mix(img, "#30301c", loop)
-    a = clamp01(body + sides + flap + pocket + loop)
+    a = clamp01(lower + upper + sides + flap + pocket + loop)
     return img, a
 
 
 @icon("smallkey")
 def _smallkey(ctx):
-    """(iteration 3) Small brass cabinet key on a string with a cardboard tag."""
+    """(iteration 3) Small brass cabinet key with a two-tooth bit, on a string to a card tag with cut corners, a brass
+    eyelet and a red padlock drawn on it (never a number - numbers are codes in this game)."""
     W = H = 256
     bow = clamp01(ellipse_mask(W, H, 150, 92, 34, 34) - ellipse_mask(W, H, 150, 92, 15, 15))
     shaft = poly(W, H, [(164, 116), (178, 106), (232, 196), (218, 206)])
-    bit = poly(W, H, [(206, 178), (222, 166), (240, 192), (228, 200), (220, 192), (214, 202)])
-    tag = poly(W, H, [(20, 40), (90, 22), (112, 96), (42, 116)])
+    bit = poly(W, H, [(206, 176), (224, 164), (232, 176), (226, 182), (238, 196), (226, 204)])
+    tag = poly(W, H, [(20, 52), (34, 30), (92, 18), (110, 90), (44, 112)])
     im, d = canvas(W, H)
-    d.line([(100, 60), (126, 78)], fill=255, width=5)
+    d.line([(46, 48), (122, 78)], fill=255, width=4)
     string = to_mask(im)
     img = solid(H, W, "#b8963c") * tex_noise(ctx, H, W, 0.12)[..., None]
+    img = mix(img, "#e0c060", clamp01(ellipse_mask(W, H, 140, 80, 26, 26) - ellipse_mask(W, H, 150, 92, 22, 22)) * bow * 0.6)
     img = mix(img, "#c8b48a", tag)
-    img = mix(img, "#2a2018", ellipse_mask(W, H, 66, 70, 9, 16) * (1 - ellipse_mask(W, H, 66, 70, 4, 10)) * tag)
+    img = mix(img, "#9a8a60", ellipse_mask(W, H, 46, 48, 11, 11))
+    img = mix(img, "#2a2018", ellipse_mask(W, H, 46, 48, 6, 6))
+    im2, d2 = canvas(W, H)
+    d2.arc([54, 46, 84, 76], 180, 360, fill=255, width=6)
+    d2.line([(57, 61), (57, 70)], fill=255, width=6)
+    d2.line([(81, 61), (81, 70)], fill=255, width=6)
+    d2.rectangle([48, 68, 90, 98], fill=255)
+    lock = to_mask(im2) * tag
+    img = mix(img, "#9a1a10", lock * 0.9)
+    img = mix(img, "#c8b48a", ellipse_mask(W, H, 69, 80, 4, 5) * lock)
     img = mix(img, "#d8d0b8", string)
-    return img, clamp01(bow + shaft + bit + tag + string)
+    return img, clamp01(bow + shaft + bit + tag + string + ellipse_mask(W, H, 46, 48, 11, 11))
 
 
 @icon("vhstape")
 def _vhstape(ctx):
-    """(iteration 3) A black VHS cassette with a hand-written paper label and the two reels in the window."""
+    """(iteration 3) A VHS cassette from above, like the model: dark shell with a lit rim, the smoked reel window
+    (hubs, wound tape) on the far half and the hand-written paper label by the spine."""
     W = H = 256
     body = rrect(W, H, 20, 62, 236, 194, 10)
-    img = solid(H, W, "#1c1c20") * tex_noise(ctx, H, W, 0.1)[..., None]
-    lab = rrect(W, H, 40, 76, 216, 120, 4)
-    img = mix(img, "#e0dccb", lab)
-    for x0 in (60, 88, 116, 148, 176):
-        img = mix(img, "#202050", rrect(W, H, x0, 90, x0 + 20, 106, 3) * 0.85)
-    win = rrect(W, H, 84, 134, 172, 178, 6)
+    img = solid(H, W, "#26262c") * tex_noise(ctx, H, W, 0.1)[..., None]
+    img = mix(img, "#4a4a52", clamp01(body - rrect(W, H, 26, 68, 230, 188, 8)))
+    win = rrect(W, H, 70, 80, 186, 118, 6)
     img = mix(img, "#0a0a0e", win)
-    for cx in (106, 150):
-        img = mix(img, "#4a3a2e", ellipse_mask(W, H, cx, 156, 15, 15))
-        img = mix(img, "#d8d4c8", ellipse_mask(W, H, cx, 156, 5, 5))
+    for cx, rr in ((100, 20), (156, 12)):
+        img = mix(img, "#4a3a2e", ellipse_mask(W, H, cx, 99, rr, rr) * win)
+        img = mix(img, "#d8d4c8", ellipse_mask(W, H, cx, 99, 9, 9))
+        for k in range(3):
+            a = k * 2.094
+            img = mix(img, "#2a2a2a", ellipse_mask(W, H, cx + np.cos(a) * 5, 99 + np.sin(a) * 5, 2.5, 2.5))
+    lab = rrect(W, H, 40, 128, 216, 176, 4)
+    img = mix(img, "#e0dccb", lab)
+    im, d = canvas(W, H)
+    d.line([(58, 156), (70, 140), (80, 156), (92, 140), (102, 156), (114, 142), (122, 156), (134, 140), (144, 156)], fill=255, width=7)
+    d.line([(160, 160), (196, 150)], fill=255, width=7)
+    img = mix(img, "#1c1c58", to_mask(im) * lab)
     return img, body
 
 
