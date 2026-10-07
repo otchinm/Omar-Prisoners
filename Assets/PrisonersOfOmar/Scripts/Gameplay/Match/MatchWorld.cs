@@ -544,7 +544,11 @@ namespace PrisonersOfOmar.Gameplay
         public void OpenNote(NoteEntity note)
         {
             if (!LocalIsOmar)
-                AddJournal("note:" + note.Index, NoteTexts.PlaceName(note.Info.Area) + " - " + note.Title, note.Text, note.CodeDigit >= 0 || note.HintLock >= 0);
+            {
+                var e = AddJournal("note:" + note.Index, NoteTexts.PlaceName(note.Info.Area) + " - " + note.Title, note.Text, note.CodeDigit >= 0 || note.HintLock >= 0);
+                if (note.HintLock >= 0 && note.HintLock < CodeLocks.Count) LinkJournal(e, CodeLocks[note.HintLock], true);
+                else if (note.CodeDigit >= 0) LinkJournal(e, FindCodeLock("Shelter"), false);
+            }
             UI.UIManager.Instance?.Push(new UI.NoteScreen(note.Title, note.Text));
         }
 

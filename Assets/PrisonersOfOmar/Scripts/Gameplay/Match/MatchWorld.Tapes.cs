@@ -228,7 +228,8 @@ namespace PrisonersOfOmar.Gameplay
                 else if (!gap) { sb.Append("\n[...]"); gap = true; }
             }
             if (TapeSpareDigit >= 0 && NoteTexts.TapeSpareShot < _tapeSeen.Length && _tapeSeen[NoteTexts.TapeSpareShot]) clue = true;
-            SetJournal("tape", "TAPE - 'MAMA 10/31'", sb.ToString(), clue);
+            var entry = SetJournal("tape", "TAPE - 'MAMA 10/31'", sb.ToString(), clue);
+            if (code < _tapeSeen.Length && _tapeSeen[code]) LinkJournal(entry, TapeLock ?? FindCodeLock("Shelter"), TapeLock != null);
         }
 
         // ------------------------------------------------------------------ journal (local)
@@ -236,21 +237,55 @@ namespace PrisonersOfOmar.Gameplay
         public readonly List<JournalEntry> Journal = new List<JournalEntry>();
         bool _journalHintPending;
 
-        /// <summary>Remembers something read / watched (once per key). <paramref name="clue"/> = it holds a code / a digit.</summary>
-        public void AddJournal(string key, string title, string text, bool clue = false)
+        /// <summary>Remembers something read / watched (once per key; returns the entry). <paramref name="clue"/> = it holds a
+        /// code / a digit.</summary>
+        public JournalEntry AddJournal(string key, string title, string text, bool clue = false)
         {
-            if (HasJournal(key)) return;
-            Journal.Add(new JournalEntry { Key = key, Title = title, Text = text, At = Time, Clue = clue });
+            foreach (var old in Journal) if (old.Key == key) return old;
+            var e = new JournalEntry { Key = key, Title = title, Text = text, At = Time, Clue = clue };
+            Journal.Add(e);
             // the hint shows once the note / tape screen is closed (it would hide behind it), for the first few entries
             if (Journal.Count <= 3) _journalHintPending = true;
+            return e;
         }
 
         /// <summary>Adds the entry, or rewrites it (the tape: more of it seen).</summary>
-        void SetJournal(string key, string title, string text, bool clue)
+        JournalEntry SetJournal(string key, string title, string text, bool clue)
         {
             foreach (var e in Journal)
-                if (e.Key == key) { e.Text = text; e.Clue |= clue; return; }
-            AddJournal(key, title, text, clue);
+                if (e.Key == key) { e.Text = text; e.Clue |= clue; return e; }
+            return AddJournal(key, title, text, clue);
+        }
+
+        /// <summary>Ties a journal entry to the lock it is a clue for (<paramref name="withCode"/>: it gives the whole code).</summary>
+        public void LinkJournal(JournalEntry e, CodeLockEntity lk, bool withCode)
+        {
+            if (e == null || lk == null) return;
+            e.LockIndex = lk.Index;
+            if (!withCode) return;
+            e.Code = CodeText(lk);
+            e.Place = NoteTexts.PlaceName(lk.Info.Area);
+        }
+
+        /// <summary>A code the way it is written down: "4 1 7", "7:45", "RED BLUE RED".</summary>
+        public static string CodeText(CodeLockEntity lk)
+            => lk.Info.Kind == CodeKind.Digits ? string.Join(" ", System.Linq.Enumerable.Select(lk.Code, c => c.ToString())) : lk.Pretty();
+
+        /// <summary>The lock this entry is a clue for has been opened (its note / tape has done its job).</summary>
+        public bool JournalUsed(JournalEntry e) => e != null && e.LockIndex >= 0 && e.LockIndex < CodeLocks.Count && CodeLocks[e.LockIndex].Open;
+
+        /// <summary>What the local player has found out about this lock (the code from a note read / the tape seen; the shelter
+        /// digits so far), null = nothing yet.</summary>
+        public string ClueFor(CodeLockEntity lk)
+        {
+            if (lk == null) return null;
+            if (lk.Info.Name == "Shelter")
+            {
+                string d = ShelterDigitsFound(out _);
+                return d == "_ _ _ _" ? null : d;
+            }
+            foreach (var e in Journal) if (e.LockIndex == lk.Index && e.Code != null) return e.Code;
+            return null;
         }
 
         public bool HasJournal(string key)
@@ -293,5 +328,9 @@ namespace PrisonersOfOmar.Gameplay
         public float At;
         /// <summary>Holds a code or a code digit (marked in the list).</summary>
         public bool Clue;
+        /// <summary>The code lock it is a clue for (-1 = none): once that is open the entry is crossed out.</summary>
+        public int LockIndex = -1;
+        /// <summary>The whole code it gives ("4 1 7"), written in red at the top of the page; and the lock's room.</summary>
+        public string Code, Place;
     }
 }

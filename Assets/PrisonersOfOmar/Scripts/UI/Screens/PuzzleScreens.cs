@@ -100,7 +100,13 @@ namespace PrisonersOfOmar.UI
             {
                 case CodeKind.Time: DrawClock(ui, input); break;
                 case CodeKind.Sequence: DrawSequence(ui, input); break;
-                default: DrawKeypad(ui, input); break;
+                default: if (Mechanical) DrawDial(ui, input); else DrawKeypad(ui, input); break;
+            }
+            // (Easy / Normal) what I have written down for this lock, on a slip of paper under it
+            if (Tuning.CurrentDifficulty <= Difficulty.Normal)
+            {
+                string clue = _w.ClueFor(Lock);
+                if (clue != null) DrawSlip(ui, "MY NOTES: " + clue);
             }
 
             if (_resultTimer > 0f)
@@ -114,6 +120,15 @@ namespace PrisonersOfOmar.UI
             bool eCloses = Lock.Info.Kind != CodeKind.Time && _code.Length == 0 && _t > 0.25f;
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E) && eCloses)
                 UIManager.Instance.Remove(this);
+        }
+
+        static void DrawSlip(VhsUI ui, string text)
+        {
+            var f = ui.TinyFont;
+            float w = ui.TextWidth(text, 1, f) + 14, h = f.LineHeight + 6;
+            var r = new Rect(ui.Width * 0.5f - w * 0.5f, ui.Height - h - 18, w, h);
+            ui.Rect(r, new Color(0.8f, 0.74f, 0.6f, 0.96f));
+            ui.Text(text, r.center.x, r.y + 3, new Color(0.14f, 0.1f, 0.08f), 1, Align.Center, f, false);
         }
 
         Color DisplayColor => _resultTimer > 0f ? (_ok ? VhsUI.Green : VhsUI.Red) : VhsUI.Green;
@@ -150,6 +165,78 @@ namespace PrisonersOfOmar.UI
                 else if (ch == '\b') { if (_code.Length > 0 && _resultTimer <= 0f && !_waiting) _code = _code.Substring(0, _code.Length - 1); }
             }
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) PressKey("OK");
+        }
+
+        // ------------------------------------------------------------------ number wheels (a padlock on furniture)
+
+        int[] _wheels;
+        int _wheel;
+
+        string WheelCode
+        {
+            get
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (int d in _wheels) sb.Append((char)('0' + d));
+                return sb.ToString();
+            }
+        }
+
+        void RollWheel(int i, int step)
+        {
+            if (_resultTimer > 0f || _waiting || i < 0 || i >= _wheels.Length) return;
+            _wheels[i] = (_wheels[i] + step + 10) % 10;
+            _code = WheelCode;   // touched: E no longer walks away from it
+            AudioManager.Play2D(Snd.InventoryScroll, 0.6f, 0.85f + _wheels[i] * 0.03f);
+        }
+
+        /// <summary>The combination padlock up close: a chrome shackle over a black body with its number wheels. W/S (or the
+        /// mouse wheel / a click on the upper or lower half) rolls the wheel, A/D picks one, digits set them in turn.</summary>
+        void DrawDial(VhsUI ui, bool input)
+        {
+            if (_wheels == null) _wheels = new int[Length];
+            const float ww = 26f, gap = 6f;
+            float inner = Length * ww + (Length - 1) * gap, bw = inner + 28f;
+            var panel = UIStyle.Panel(ui, new Rect(ui.Width * 0.5f - bw * 0.5f - 18, ui.Height * 0.5f - 88, bw + 36, 176), 0.92f);
+            ui.Text(Lock.Info.Label ?? "COMBINATION PADLOCK", panel.center.x, panel.y + 6, VhsUI.Yellow, 1, Align.Center);
+            float cx = panel.center.x, top = panel.y + 24;
+            var chrome = new Color(0.72f, 0.72f, 0.74f);
+            ui.Rect(cx - bw * 0.3f, top, 5, 28, chrome);
+            ui.Rect(cx + bw * 0.3f - 5, top, 5, 28, chrome);
+            ui.Rect(cx - bw * 0.3f, top, bw * 0.6f, 5, chrome);
+            var body = new Rect(cx - bw * 0.5f, top + 26, bw, 96);
+            ui.Rect(body, new Color(0.07f, 0.07f, 0.08f, 1f));
+            ui.Frame(body, new Color(0.3f, 0.3f, 0.32f));
+            ui.Rect(cx - 1, body.y + 4, 3, 6, new Color(0.9f, 0.9f, 0.86f));   // the white mark
+            float x0 = cx - inner * 0.5f;
+            var tf = ui.TinyFont;
+            for (int i = 0; i < Length; i++)
+            {
+                var r = new Rect(x0 + i * (ww + gap), body.y + 14, ww, 62);
+                ui.Rect(r, new Color(0.15f, 0.15f, 0.16f));
+                ui.Rect(r.x, r.center.y - 9, r.width, 18, new Color(0.24f, 0.24f, 0.25f));
+                ui.Text(((_wheels[i] + 9) % 10).ToString(), r.center.x, r.y + 4, VhsUI.Dim, 1, Align.Center, tf);
+                ui.Text(_wheels[i].ToString(), r.center.x, r.center.y - ui.LineHeight() * 0.5f + 1, VhsUI.White, 1, Align.Center);
+                ui.Text(((_wheels[i] + 1) % 10).ToString(), r.center.x, r.yMax - tf.LineHeight - 3, VhsUI.Dim, 1, Align.Center, tf);
+                ui.Frame(r, i == _wheel ? VhsUI.Yellow : new Color(0f, 0f, 0f, 0.8f));
+                if (input && ui.Click && ui.Hover(r)) { _wheel = i; RollWheel(i, ui.Mouse.y < r.center.y ? -1 : 1); }
+            }
+            string state = _resultTimer > 0f ? ResultText : _waiting ? (Mathf.Repeat(_t, 0.5f) < 0.25f ? "..." : "") : "";
+            if (state.Length > 0) ui.Text(state, cx, body.yMax - ui.LineHeight() - 4, DisplayColor, 1, Align.Center);
+            var ok = new Rect(cx - 30, panel.yMax - 22, 60, 15);
+            if (Button(ui, ok, "TRY IT", input) && !_waiting && _resultTimer <= 0f) { _code = WheelCode; Submit(_code); }
+            UIStyle.Footer(ui, "W/S ROLL   A/D WHEEL   ENTER TRY   J JOURNAL   ESC");
+            if (!input || _waiting || _resultTimer > 0f) return;
+            if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow)) _wheel = (_wheel + Length - 1) % Length;
+            if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow)) _wheel = (_wheel + 1) % Length;
+            if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.mouseScrollDelta.y > 0.1f) RollWheel(_wheel, -1);
+            if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow) || Input.mouseScrollDelta.y < -0.1f) RollWheel(_wheel, 1);
+            foreach (char ch in Input.inputString)
+            {
+                if (ch >= '0' && ch <= '9') { RollWheel(_wheel, (ch - '0') - _wheels[_wheel]); _wheel = Mathf.Min(Length - 1, _wheel + 1); }
+                else if (ch == '\b') _wheel = Mathf.Max(0, _wheel - 1);
+            }
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) { _code = WheelCode; Submit(_code); }
         }
 
         // ------------------------------------------------------------------ time (clock hands)
@@ -487,7 +574,19 @@ namespace PrisonersOfOmar.UI
                 float lx = 16, ly = 40, lw = Mathf.Min(150, ui.Width * 0.36f);
                 // the shelter digits collected so far
                 string digits = _w.ShelterDigitsFound(out bool complete);
-                if (digits != "_ _ _ _") { ui.Text("SHELTER: " + digits, lx, ly, complete ? VhsUI.Yellow : VhsUI.Dim, 1, Align.Left, tiny); ly += ui.LineHeight(1, tiny) + 4; }
+                if (digits != "_ _ _ _") { ui.Text("SHELTER: " + digits, lx, ly, complete ? VhsUI.Yellow : VhsUI.Dim, 1, Align.Left, tiny); ly += ui.LineHeight(1, tiny) + 1; }
+                // every whole code found so far, one line each (crossed out once its lock is open)
+                var shown = new HashSet<int>();
+                foreach (var ce in list)
+                {
+                    if (ce.Code == null || !shown.Add(ce.LockIndex) || shown.Count > 4) continue;
+                    bool open = _w.JournalUsed(ce);
+                    string cl = (ce.Place ?? "LOCK") + ": " + ce.Code;
+                    ui.Text(cl, lx, ly, open ? VhsUI.Dim : VhsUI.Yellow, 1, Align.Left, tiny);
+                    if (open) ui.Rect(lx, ly + tiny.LineHeight * 0.45f, ui.TextWidth(cl, 1, tiny), 1, VhsUI.Dim);
+                    ly += ui.LineHeight(1, tiny) + 1;
+                }
+                ly += 3;
                 int rowH = ui.LineHeight(1, tiny) + 3;
                 int rows = Mathf.Max(1, Mathf.FloorToInt((ui.Height - ly - 30) / rowH));
                 int first = Mathf.Clamp(_sel - rows / 2, 0, Mathf.Max(0, list.Count - rows));
@@ -497,9 +596,12 @@ namespace PrisonersOfOmar.UI
                     var r = new Rect(lx, ly + (i - first) * rowH, lw, rowH - 1);
                     bool hover = ui.Hover(r);
                     if (i == _sel) ui.Rect(r, new Color(1, 1, 1, 0.12f));
+                    bool used = _w.JournalUsed(list[i]);
                     string row = (list[i].Clue ? "* " : "  ") + ShortClock(list[i].At, _w.NightLength) + " " + list[i].Title;
                     if (row.Length > maxChars) row = row.Substring(0, maxChars - 1) + ".";
-                    ui.Text(row, r.x + 2, r.y + 1, i == _sel ? VhsUI.Yellow : list[i].Clue ? VhsUI.White : VhsUI.Dim, 1, Align.Left, tiny);
+                    ui.Text(row, r.x + 2, r.y + 1, i == _sel ? VhsUI.Yellow : list[i].Clue && !used ? VhsUI.White : VhsUI.Dim, 1, Align.Left, tiny);
+                    // its lock is open: the note has done its job, crossed out
+                    if (used) ui.Rect(r.x + 2, r.y + 1 + tiny.LineHeight * 0.45f, ui.TextWidth(row, 1, tiny), 1, VhsUI.Dim);
                     if (input && ui.Click && hover && _sel != i) { _sel = i; AudioManager.Play2D(Snd.InventoryScroll, 0.5f, 1f, AudioCategory.Ui); }
                 }
                 // the page: wrapped once, scrolled when it is longer than the sheet
@@ -511,6 +613,13 @@ namespace PrisonersOfOmar.UI
                 var ink = new Color(0.12f, 0.1f, 0.08f);
                 ui.Text(e.Title, tx, py, new Color(0.35f, 0.05f, 0.05f), 1, Align.Left, tiny, false);
                 float y = py + ui.LineHeight(1, tiny) + 5;
+                if (e.Code != null)
+                {
+                    // the code it gives, in red ink at the top of the page
+                    bool open = _w.JournalUsed(e);
+                    ui.Text("CODE: " + e.Code + (e.Place != null ? " - " + e.Place : "") + (open ? "  (OPEN NOW)" : ""), tx, y, new Color(0.6f, 0.06f, 0.04f), 1, Align.Left, tiny, false);
+                    y += ui.LineHeight(1, tiny) + 4;
+                }
                 var nf = ui.Wrap(e.Text, (int)tw, 1, ui.Font).Count * ui.LineHeight() > paper.yMax - y - 4 ? tiny : ui.Font;
                 var lines = ui.Wrap(e.Text, (int)tw, 1, nf);
                 int fit = Mathf.Max(1, Mathf.FloorToInt((paper.yMax - 6 - y) / nf.LineHeight));
