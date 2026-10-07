@@ -197,6 +197,25 @@ namespace PrisonersOfOmar.Gameplay
                         break;
                     }
 
+                case AdminCmd.TapePlay:
+                    {
+                        int vi = W.SocketIndex("Vcr");
+                        if (vi < 0) { Admin.HostLog(sender, "NO VCR ON THIS MAP"); break; }
+                        if (_tape == TapeMode.Empty) ForceSolveSocket(vi);
+                        else if (_tape != TapeMode.Playing) { if (TapeUsedUp) _tapePlays = 0; PlayTapeHost(-1); }
+                        Admin.HostLog(sender, "TAPE PLAYING (PLAY " + _tapePlays + (Tuning.TapePlays > 0 ? " OF " + Tuning.TapePlays : "") + ")");
+                        break;
+                    }
+                case AdminCmd.TapeStop:
+                    if (_tape == TapeMode.Playing) BroadcastTape(TapeMode.Stopped, -1);
+                    Admin.HostLog(sender, "TAPE: " + _tape.ToString().ToUpperInvariant());
+                    break;
+                case AdminCmd.TapeReset:
+                    _tapePlays = 0;
+                    if (_tape == TapeMode.Chewed) BroadcastTape(TapeMode.Stopped, -1);
+                    Admin.HostLog(sender, "TAPE PLAYS RESET");
+                    break;
+
                 // ---------------------------------------------------------------- events / match
                 case AdminCmd.TriggerEvent: Event((WorldEventKind)a); break;
                 case AdminCmd.AddMinutes: W.AdminAddTime(Mathf.Clamp(f <= 0 ? 10f : f, 0.5f, 120f) * 60f); break;

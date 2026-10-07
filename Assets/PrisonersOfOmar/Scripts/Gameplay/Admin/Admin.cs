@@ -58,6 +58,7 @@ namespace PrisonersOfOmar.Gameplay
         SeeMyself,
         // ---- iteration 3 puzzles (Docs/ITERATION3_PLAN.md)
         ShowCodes, SolveSockets, OpenCodeLocks, UnlockDrawers, WatchTape, ShowPuzzles,
+        TapePlay, TapeStop, TapeReset,
     }
 
     public sealed class AdminCmdInfo
@@ -155,6 +156,9 @@ namespace PrisonersOfOmar.Gameplay
             Add(AdminCmd.OpenCodeLocks, J, "OPEN ALL CODE LOCKS", AdminArg.None);
             Add(AdminCmd.UnlockDrawers, J, "UNLOCK ALL PADLOCKED DRAWERS", AdminArg.None);
             Add(AdminCmd.WatchTape, J, "WATCH THE TAPE", AdminArg.None, local: true, hint: "PLAYS IT HERE, NOTHING CHANGES");
+            Add(AdminCmd.TapePlay, J, "TAPE: PLAY / REWIND", AdminArg.None, hint: "PUTS IT IN THE VCR IF NEEDED");
+            Add(AdminCmd.TapeStop, J, "TAPE: STOP", AdminArg.None, hint: "NO PLAY USED UP, NOT CHEWED");
+            Add(AdminCmd.TapeReset, J, "TAPE: RESET PLAYS", AdminArg.None, hint: "UNCHEWS IT, ALL PLAYS BACK");
 
             Add(AdminCmd.TriggerEvent, E, "TRIGGER EVENT", AdminArg.Event);
             Add(AdminCmd.AddMinutes, M, "SKIP TIME", AdminArg.Number, def: 10f, hint: "MINUTES OF MATCH TIME");

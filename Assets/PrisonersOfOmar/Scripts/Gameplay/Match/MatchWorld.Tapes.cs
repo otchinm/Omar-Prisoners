@@ -115,6 +115,7 @@ namespace PrisonersOfOmar.Gameplay
             var was = Tape;
             Tape = mode;
             TapePlays = plays;
+            if (mode != TapeMode.Chewed && _chewed != null) { Destroy(_chewed); _chewed = null; }   // (admin reset)
             if (mode == TapeMode.Playing)
             {
                 _tapeElapsed = elapsed;
