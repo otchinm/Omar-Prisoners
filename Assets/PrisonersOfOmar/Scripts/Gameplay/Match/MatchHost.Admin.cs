@@ -157,22 +157,45 @@ namespace PrisonersOfOmar.Gameplay
                 case AdminCmd.OpenShelter: { var o = EditObj(); o.ShelterOpen = true; CommitObj(o); break; }
                 // ---- iteration 3 puzzles
                 case AdminCmd.ShowCodes:
-                    if (W.CodeLocks.Count == 0) Admin.HostLog(sender, "NO CODE LOCKS");
-                    foreach (var lk in W.CodeLocks)
-                        Admin.HostLog(sender, (lk.Info.Label ?? lk.Info.Name) + " (" + NoteTexts.PlaceName(lk.Info.Area) + "): " + lk.Pretty()
-                            + (lk.Open ? " - OPEN" : "") + (lk == W.TapeLock ? " - ON THE TAPE" : ""));
-                    break;
+                    {
+                        // packed into as few log lines as possible (the panel shows the last three)
+                        if (W.CodeLocks.Count == 0) { Admin.HostLog(sender, "NO CODE LOCKS"); break; }
+                        var line = new System.Text.StringBuilder();
+                        foreach (var lk in W.CodeLocks)
+                        {
+                            var d = lk.Embedded ? W.DrawerWithCodeLock(lk.Index) : null;
+                            string e = (d != null ? Admin.PadlockName(d).Replace(" CODE", "") : NoteTexts.PlaceName(lk.Info.Name)) + " " + lk.Pretty()
+                                + (lk == W.TapeLock ? " (TAPE)" : "") + (lk.Open ? " OPEN" : "");
+                            if (line.Length > 0 && line.Length + e.Length + 3 > 64) { Admin.HostLog(sender, line.ToString()); line.Clear(); }
+                            if (line.Length > 0) line.Append(" | ");
+                            line.Append(e);
+                        }
+                        if (line.Length > 0) Admin.HostLog(sender, line.ToString());
+                        break;
+                    }
                 case AdminCmd.SolveSockets:
-                    for (int i = 0; i < W.Sockets.Length; i++) ForceSolveSocket(i);
-                    Admin.HostLog(sender, W.Sockets.Length + " SOCKET(S) DONE");
-                    break;
+                    {
+                        int n = 0;
+                        for (int i = 0; i < W.Sockets.Length; i++) if (ForceSolveSocket(i)) n++;
+                        Admin.HostLog(sender, n > 0 ? n + " SOCKET(S) COMPLETED" : "ALL SOCKETS ALREADY DONE");
+                        break;
+                    }
                 case AdminCmd.OpenCodeLocks:
-                    // every puzzle lock, silently; the shelter (an exit) has its own command
-                    for (int i = 0; i < W.CodeLocks.Count; i++) if (W.CodeLocks[i].Info.Name != "Shelter") OpenCodeLockHost(i, sender, true);
-                    break;
+                    {
+                        // every puzzle lock, silently; the shelter (an exit) has its own command
+                        int n = 0;
+                        for (int i = 0; i < W.CodeLocks.Count; i++)
+                            if (W.CodeLocks[i].Info.Name != "Shelter" && !W.CodeLocks[i].Open) { OpenCodeLockHost(i, sender, true); n++; }
+                        Admin.HostLog(sender, n > 0 ? "OPENED " + n + " CODE LOCK(S)" : "NO CLOSED CODE LOCKS LEFT");
+                        break;
+                    }
                 case AdminCmd.UnlockDrawers:
-                    foreach (var d in W.Drawers) if (d.Locked) UnlockDrawer(d, 4, 0f);
-                    break;
+                    {
+                        int n = 0;
+                        foreach (var d in W.Drawers) if (d.Locked) { UnlockDrawer(d, 4, 0f); n++; }
+                        Admin.HostLog(sender, n > 0 ? "UNLOCKED " + n + " DRAWER(S)" : "NO PADLOCKED DRAWERS LEFT");
+                        break;
+                    }
 
                 // ---------------------------------------------------------------- events / match
                 case AdminCmd.TriggerEvent: Event((WorldEventKind)a); break;

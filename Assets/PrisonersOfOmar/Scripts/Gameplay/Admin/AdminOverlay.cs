@@ -57,15 +57,16 @@ namespace PrisonersOfOmar.Gameplay
             {
                 // (iteration 3) sockets with their progress, code locks and padlocks with their codes
                 var gold = new Color(1f, 0.85f, 0.35f);
+                // done ones are dimmed, so what is left stands out
                 foreach (var s in w.Sockets)
                     if ((s.InteractPoint - eye).sqrMagnitude < 40f * 40f)
-                        Label(ui, cam, s.InteractPoint + Vector3.up * 0.3f, s.Info.Name.ToUpperInvariant() + " " + s.Count + "/" + s.Info.Needed + (s.Solved ? " DONE" : ""), gold);
+                        Label(ui, cam, s.InteractPoint + Vector3.up * 0.3f, NoteTexts.PlaceName(s.Info.Name) + " " + s.Count + "/" + s.Info.Needed + (s.Solved ? " DONE" : ""), s.Solved ? VhsUI.Dim : gold);
                 foreach (var lk in w.CodeLocks)
                     if (!lk.Embedded && (lk.InteractPoint - eye).sqrMagnitude < 40f * 40f)
-                        Label(ui, cam, lk.InteractPoint + Vector3.up * 0.3f, (lk.Info.Label ?? lk.Info.Name) + " " + lk.Pretty() + (lk.Open ? " OPEN" : ""), gold);
+                        Label(ui, cam, lk.InteractPoint + Vector3.up * 0.3f, NoteTexts.PlaceName(lk.Info.Name) + " " + lk.Pretty() + (lk.Open ? " OPEN" : ""), lk.Open ? VhsUI.Dim : gold);
                 foreach (var d in w.Drawers)
                     if (d.Lock != DrawerLockKind.None && (d.InteractPoint - eye).sqrMagnitude < 40f * 40f)
-                        Label(ui, cam, d.InteractPoint + Vector3.up * 0.15f, (d.Lock == DrawerLockKind.Code ? "DIAL " + (d.CodeLock != null ? d.CodeLock.Pretty() : "?") : "KEY") + (d.Locked ? "" : " OPEN"), gold);
+                        Label(ui, cam, d.InteractPoint + Vector3.up * 0.15f, Admin.PadlockName(d) + (d.Lock == DrawerLockKind.Code && d.CodeLock != null ? " " + d.CodeLock.Pretty() : "") + (d.Locked ? "" : " OPEN"), d.Locked ? gold : VhsUI.Dim);
             }
             if (Admin.IsOn(AdminCmd.ShowNav) && w.Map != null && w.Map.Nav != null)
             {

@@ -463,7 +463,7 @@ namespace PrisonersOfOmar.Gameplay
                     }
                     break;
                 case AdminCmd.TeleportToLocation:
-                    if (w != null && TryLocation(w, s, out var lp)) TeleportSelf(w, lp); else AddLog("UNKNOWN PLACE");
+                    if (w != null && TryLocation(w, s, out var lp, out var look)) TeleportSelf(w, lp, look); else AddLog("UNKNOWN PLACE");
                     break;
                 case AdminCmd.TeleportToPlayer:
                     {
@@ -480,10 +480,16 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        static void TeleportSelf(MatchWorld w, UnityEngine.Vector3 p)
+        static void TeleportSelf(MatchWorld w, UnityEngine.Vector3 p, UnityEngine.Vector3? look = null)
         {
             if (UnityEngine.Physics.Raycast(p + UnityEngine.Vector3.up * 1.2f, UnityEngine.Vector3.down, out var hit, 4f, Layers.Solid, UnityEngine.QueryTriggerInteraction.Ignore)) p = hit.point;
-            w.TeleportLocal(p);
+            float? yaw = null;
+            if (look.HasValue)
+            {
+                var d = look.Value - p;
+                if (d.x * d.x + d.z * d.z > 0.01f) yaw = UnityEngine.Mathf.Atan2(d.x, d.z) * UnityEngine.Mathf.Rad2Deg;
+            }
+            w.TeleportLocal(p, yaw);
         }
 
         /// <summary>Undo every local effect (match torn down / logout).</summary>
@@ -533,14 +539,18 @@ namespace PrisonersOfOmar.Gameplay
         static List<KeyValuePair<string, UnityEngine.Vector3>> PuzzlePoints(MatchWorld w)
         {
             var list = new List<KeyValuePair<string, UnityEngine.Vector3>>();
-            foreach (var s in w.Sockets) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + s.Info.Name.ToUpperInvariant(), s.InteractPoint));
+            foreach (var s in w.Sockets) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + NoteTexts.PlaceName(s.Info.Name), s.InteractPoint));
             foreach (var lk in w.CodeLocks)
-                if (!lk.Embedded) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + lk.Info.Name.ToUpperInvariant(), lk.InteractPoint));
+                if (!lk.Embedded) list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PUZZLE: " + NoteTexts.PlaceName(lk.Info.Name), lk.InteractPoint));
+            // the kind first, so a long room name is what gets cut in the panel
             foreach (var d in w.Drawers)
                 if (d.Lock != DrawerLockKind.None)
-                    list.Add(new KeyValuePair<string, UnityEngine.Vector3>("PADLOCK " + d.Index + ": " + NoteTexts.PlaceName(w.Map.AreaAt(d.InteractPoint)) + (d.Lock == DrawerLockKind.Code ? " (CODE)" : " (KEY)"), d.InteractPoint));
+                    list.Add(new KeyValuePair<string, UnityEngine.Vector3>(PadlockName(d) + " " + NoteTexts.PlaceName(w.Map.AreaAt(d.InteractPoint)), d.InteractPoint));
             return list;
         }
+
+        /// <summary>The one name the admin tools use for a padlocked drawer: "PADLOCK 34 CODE" / "PADLOCK 34 KEY".</summary>
+        public static string PadlockName(DrawerEntity d) => "PADLOCK " + d.Index + (d.Lock == DrawerLockKind.Code ? " CODE" : " KEY");
 
         /// <summary>A floor spot in front of a puzzle: halfway from the closest nav node of its room, or that node.</summary>
         static UnityEngine.Vector3 InFrontOf(MatchWorld w, UnityEngine.Vector3 target)
@@ -561,9 +571,11 @@ namespace PrisonersOfOmar.Gameplay
             return UnityEngine.Physics.CheckSphere(mid + UnityEngine.Vector3.up * 1f, 0.3f, Layers.Solid, UnityEngine.QueryTriggerInteraction.Ignore) ? best : mid;
         }
 
-        static bool TryLocation(MatchWorld w, string name, out UnityEngine.Vector3 p)
+        /// <summary>Where a teleport destination lands, and what to face there (null = keep the current yaw).</summary>
+        static bool TryLocation(MatchWorld w, string name, out UnityEngine.Vector3 p, out UnityEngine.Vector3? look)
         {
             p = UnityEngine.Vector3.zero;
+            look = null;
             if (string.IsNullOrEmpty(name) || w.Map == null) return false;
             if (name == "OMAR'S SPAWN") { p = w.Map.OmarSpawn.position; return true; }
             if (w.Map.AreaBounds.TryGetValue(name, out var bnd))
@@ -581,11 +593,12 @@ namespace PrisonersOfOmar.Gameplay
             }
             if (name.StartsWith("PUZZLE: ") || name.StartsWith("PADLOCK "))
                 foreach (var pp in PuzzlePoints(w))
-                    if (pp.Key == name) { p = InFrontOf(w, pp.Value); return true; }
+                    if (pp.Key == name) { p = InFrontOf(w, pp.Value); look = pp.Value; return true; }
             if (w.Map.Markers.TryGetValue(name, out var t) && t != null)
             {
                 p = t.position + t.forward * 1.2f;
                 p.y = t.position.y - 1f;
+                look = t.position;
                 return true;
             }
             return false;

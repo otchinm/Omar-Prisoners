@@ -19,10 +19,10 @@ namespace PrisonersOfOmar.Gameplay
         }
 
         /// <summary>Move the local character (admin teleport). Owner-authoritative movement: the host follows.</summary>
-        public void TeleportLocal(Vector3 p)
+        public void TeleportLocal(Vector3 p, float? yaw = null)
         {
-            if (LocalPrisoner != null) LocalPrisoner.AdminTeleport(p);
-            else if (LocalOmar != null) LocalOmar.AdminTeleport(p);
+            if (LocalPrisoner != null) LocalPrisoner.AdminTeleport(p, yaw);
+            else if (LocalOmar != null) LocalOmar.AdminTeleport(p, yaw);
         }
 
         void OnAdminTeleport(int sender, NetReader r)

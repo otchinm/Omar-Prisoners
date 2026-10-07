@@ -322,11 +322,12 @@ namespace PrisonersOfOmar.Gameplay
         }
 
         /// <summary>Admin teleport (the host follows our position).</summary>
-        public void AdminTeleport(Vector3 p)
+        public void AdminTeleport(Vector3 p, float? yaw = null)
         {
             var st = Status;
             if (st == null || st.Hidden || st.InCar) return;
             EndDrag();
+            if (yaw.HasValue) _yaw = yaw.Value;
             Teleport(p, _yaw);
         }
 

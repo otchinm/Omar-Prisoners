@@ -185,7 +185,7 @@ namespace PrisonersOfOmar.UI
             float ly = ui.Height - 40;
             ui.Rect(8, ly - 3, ui.Width - 16, 1, new Color(1, 1, 1, 0.2f));
             int n = Admin.Log.Count;
-            for (int i = Mathf.Max(0, n - 3); i < n; i++)
+            for (int i = Mathf.Max(0, n - 3); i < n; i++)   // (SHOW ALL CODES packs its codes into these lines)
             {
                 ui.Text(Admin.Log[i], 10, ly, VhsUI.Yellow, 1, Align.Left, ui.TinyFont);
                 ly += ui.LineHeight(1, ui.TinyFont) + 1;
@@ -295,7 +295,8 @@ namespace PrisonersOfOmar.UI
         static string Short(string s)
         {
             s = s.Replace("House.", "").Replace("Basement.", "BSMT ").ToUpperInvariant();
-            return s.Length > 18 ? s.Substring(0, 18) : s;
+            int max = s.StartsWith("PUZZLE") || s.StartsWith("PADLOCK") ? 28 : 18;   // puzzle names carry the kind + the room
+            return s.Length > max ? s.Substring(0, max) : s;
         }
 
         void Execute(AdminCmdInfo c, NetSession s)

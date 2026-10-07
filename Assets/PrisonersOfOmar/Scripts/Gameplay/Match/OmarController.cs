@@ -127,8 +127,9 @@ namespace PrisonersOfOmar.Gameplay
         public bool Rushing => Time.time < _rushUntil;
 
         /// <summary>Admin teleport (the host follows our position).</summary>
-        public void AdminTeleport(Vector3 p)
+        public void AdminTeleport(Vector3 p, float? yaw = null)
         {
+            if (yaw.HasValue) _yaw = yaw.Value;
             _motor.Teleport(p, _yaw);
             _teleportSeq++;
         }

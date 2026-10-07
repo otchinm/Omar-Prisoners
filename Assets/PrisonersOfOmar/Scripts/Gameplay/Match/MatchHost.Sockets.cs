@@ -34,14 +34,14 @@ namespace PrisonersOfOmar.Gameplay
             S.SendToAll(NetChannel.Reliable);
         }
 
-        /// <summary>Completes a socket outright (admin): fills it with its first accepted item type.</summary>
-        void ForceSolveSocket(int id)
+        /// <summary>Completes a socket outright (admin): fills it with its first accepted item type. False = already done.</summary>
+        bool ForceSolveSocket(int id)
         {
-            if (id < 0 || id >= W.Sockets.Length || W.Sockets[id].Solved) return;
+            if (id < 0 || id >= W.Sockets.Length || W.Sockets[id].Solved) return false;
             var s = W.Sockets[id];
             BroadcastSocket(id, s.Info.Needed, true, s.Info.Accepts.Length > 0 ? s.Info.Accepts[0] : ItemType.None, 255);
-            DeliverNoise(s.InteractPoint, s.Info.SolveNoise);
             SocketSolved(id, -1);
+            return true;
         }
 
         /// <summary>The socket is complete: its generic result, then whatever the feature that owns it does.</summary>
