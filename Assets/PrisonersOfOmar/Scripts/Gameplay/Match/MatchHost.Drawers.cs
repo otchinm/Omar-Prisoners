@@ -16,7 +16,15 @@ namespace PrisonersOfOmar.Gameplay
             var st = W.StatusOf(sender);
             if (st == null || st.Life != LifeState.Free || st.Hidden || st.Trapped || st.InCar) return;
             var d = W.Drawers[id];
-            if (d.Locked || d.Open == open || !Near(sender, d.InteractPoint, 3f)) return;
+            if (!Near(sender, d.InteractPoint, 3f)) return;
+            if (d.Locked)
+            {
+                // (iteration 3) tugging at a padlocked drawer: it rattles against the lock (everyone near hears it)
+                float now = Time.unscaledTime;
+                if (open && (!_tugAt.TryGetValue(sender, out var last) || now - last >= 0.6f)) { _tugAt[sender] = now; RattleDrawer(d); DeliverNoise(d.InteractPoint, 1.5f); }
+                return;
+            }
+            if (d.Open == open) return;
             var w = S.Begin(Msg.DrawerState);
             w.WriteShort((short)id);
             w.WriteBool(open);
@@ -47,6 +55,18 @@ namespace PrisonersOfOmar.Gameplay
                     UnlockDrawer(d, 3, 22f);
                     break;
             }
+        }
+
+        readonly System.Collections.Generic.Dictionary<int, float> _tugAt = new System.Collections.Generic.Dictionary<int, float>();
+
+        /// <summary>A padlocked drawer rattles (tugged at / a wrong combination): Msg.DrawerLock with how 5, nothing opens.</summary>
+        void RattleDrawer(DrawerEntity d)
+        {
+            if (d == null || !d.Locked) return;
+            var w = S.Begin(Msg.DrawerLock);
+            w.WriteShort((short)d.Index);
+            w.WriteByte(5);
+            S.SendToAll(NetChannel.Reliable);
         }
 
         void UnlockDrawer(DrawerEntity d, byte how, float noise)

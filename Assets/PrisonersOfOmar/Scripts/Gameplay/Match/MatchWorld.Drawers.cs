@@ -210,7 +210,7 @@ namespace PrisonersOfOmar.Gameplay
                 return true;
             }
             if (who.Has(ItemType.Lockpick)) { p = InteractPrompt.Hold("PICK THE PADLOCK", 3f, ItemType.Lockpick, 2f); return true; }
-            p = InteractPrompt.Info(who.Has(ItemType.Crowbar) ? "PADLOCKED. (HOLD THE CROWBAR TO PRY IT)" : "PADLOCKED. A SMALL KEYHOLE...");
+            p = InteractPrompt.Press(who.Has(ItemType.Crowbar) ? "PADLOCKED. (HOLD THE CROWBAR TO PRY IT)" : "PADLOCKED. A SMALL KEYHOLE... (E: TUG AT IT)");
             return true;
         }
 
@@ -223,7 +223,9 @@ namespace PrisonersOfOmar.Gameplay
             if (Lock == DrawerLockKind.Code) { if (CodeLock != null) w.OpenCodeLock(CodeLock); return; }
             int key = TaggedKey(who);
             if (key < 0) key = who.ItemId(ItemType.SmallKey);
-            w.SendUse(UseTarget.DrawerLock, Index, key >= 0 ? key : who.ItemId(ItemType.Lockpick));
+            if (key < 0) key = who.ItemId(ItemType.Lockpick);
+            if (key < 0) { w.SendDrawer(Index, true); return; }   // nothing to open it with: tug at it
+            w.SendUse(UseTarget.DrawerLock, Index, key);
         }
 
         /// <summary>A small key in the player's pockets whose tag names this drawer (-1 = none).</summary>
@@ -242,6 +244,7 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Host: unlocked (how: 0 small key, 1 lockpick, 2 code, 3 pried with a crowbar, 4 admin).</summary>
         public void Unlock(int how)
         {
+            if (how == 5) { Rattle(); return; }
             if (!Locked) return;
             Locked = false;
             if (CodeLock != null) CodeLock.Open = true;   // a pried / admin-opened drawer takes no more codes
@@ -265,6 +268,16 @@ namespace PrisonersOfOmar.Gameplay
             // face up on the floor, the shackle pointing some way or other (the same on every peer)
             Vector3 along = Quaternion.AngleAxis(Index * 67f + 20f, Vector3.up) * OutDir;
             lk.SetPositionAndRotation(hit.point + Vector3.up * 0.0095f, Quaternion.LookRotation(Vector3.up, along));
+        }
+
+        float _rattle;
+
+        /// <summary>Tugged at / a wrong combination: it jerks against the padlock and clanks.</summary>
+        void Rattle()
+        {
+            if (!Locked) return;
+            _rattle = 0.35f;
+            AudioManager.Play3D(Snd.LockedRattle, InteractPoint, 0.8f, Random.Range(0.92f, 1.08f), 1.5f, 10f);
         }
 
         public void Apply(bool open)
@@ -295,7 +308,15 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Slides the drawer; items lying inside move with it.</summary>
         public void Tick(float dt, System.Collections.Generic.List<ItemEntity> items)
         {
-            if (Info.Drawer == null || Mathf.Approximately(_t, _target)) return;
+            if (Info.Drawer == null) return;
+            if (_rattle > 0f && Locked)
+            {
+                _rattle -= dt;
+                Info.Drawer.position = _shut + OutDir * (Mathf.Sin(_rattle * 95f) * 0.007f * Mathf.Clamp01(_rattle / 0.35f));
+                if (_rattle <= 0f) Info.Drawer.position = _shut;
+                return;
+            }
+            if (Mathf.Approximately(_t, _target)) return;
             _t = Mathf.MoveTowards(_t, _target, dt / 0.32f);
             float e = _target > 0.5f ? 1f - (1f - _t) * (1f - _t) : _t * _t;   // fast start, soft stop when pulled out
             Vector3 next = _shut + Info.OpenOffset * e;

@@ -52,7 +52,7 @@ namespace PrisonersOfOmar.UI
                 case 4: UIManager.Instance.Remove(this); break;
                 default:
                     _ok = false; _resultTimer = 1f; _code = "";
-                    AudioManager.Play2D(Mechanical ? Snd.LockedRattle : Snd.KeypadWrong, 0.9f);
+                    if (!Mechanical) AudioManager.Play2D(Snd.KeypadWrong, 0.9f);   // a padlock rattles in the world (heard by all)
                     break;
             }
         }

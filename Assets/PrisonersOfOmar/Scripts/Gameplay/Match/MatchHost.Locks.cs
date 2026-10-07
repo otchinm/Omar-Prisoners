@@ -30,7 +30,7 @@ namespace PrisonersOfOmar.Gameplay
             _codeTryAt[sender] = now;
             bool ok = code == lk.Code;
             CodeAnswer(sender, id, (byte)(ok ? 1 : 0));
-            if (!ok) { DeliverNoise(lk.InteractPoint, lk.Info.WrongNoise); return; }
+            if (!ok) { RattleDrawer(W.DrawerWithCodeLock(id)); DeliverNoise(lk.InteractPoint, lk.Info.WrongNoise); return; }
             OpenCodeLockHost(id, sender);
         }
 

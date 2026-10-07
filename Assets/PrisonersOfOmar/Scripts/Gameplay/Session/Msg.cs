@@ -109,7 +109,7 @@ namespace PrisonersOfOmar.Gameplay
         CodeReq = 161,       // client -> host: try a code on a code lock (lock, code)
         CodeResult = 162,    // host -> that client: the answer (lock, status: 0 wrong, 1 right, 2 already open, 3 too fast, 4 refused)
         CodeLockState = 163, // host -> all: a code lock opened (lock, open, player)
-        DrawerLock = 164,    // host -> all: a locked drawer was unlocked (drawer, how: 0 key, 1 lockpick, 2 code, 3 pried, 4 admin)
+        DrawerLock = 164,    // host -> all: a locked drawer was unlocked (drawer, how: 0 key, 1 lockpick, 2 code, 3 pried, 4 admin) or rattled (5: still locked)
         TapeState = 165,     // host -> all: the VCR (state: 0 empty, 1 playing, 2 stopped, 3 chewed; plays so far; seconds into this play; player / 255)
     }
 
