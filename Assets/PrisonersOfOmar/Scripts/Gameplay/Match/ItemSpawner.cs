@@ -30,7 +30,7 @@ namespace PrisonersOfOmar.Gameplay
                 case ItemType.Fuse: return "Basement.Generator|House.RadioRoom|Tunnel";
                 case ItemType.CageKey: return "House.CageRoom|Tunnel";
                 case ItemType.Crowbar: return "House.Bathroom|Tunnel";   // the bathroom is boarded up
-                case ItemType.SmallKey: return "Tunnel";
+                case ItemType.SmallKey: return "Tunnel|OutsideGate";
                 case ItemType.VhsTape: return "House.Living|Tunnel";   // never right next to the VCR
                 default: return null;
             }
@@ -166,6 +166,9 @@ namespace PrisonersOfOmar.Gameplay
                         if (s.Small && !FitsDrawer(t)) continue;
                         if (pass == 0 && s.Tier == ItemSpawnTier.Key) continue;
                         if (t == ItemType.SmallKey && s.Area != null && MatchesAny(s.Area, Forbidden(t))) continue;
+                        // nothing an escape depends on lies past the chained gate / behind the shelter door
+                        if (pass == 0 && s.Area != null && NoteTexts.LateArea(s.Area)) continue;
+                        if (t == ItemType.Backpack && s.Area != null && NoteTexts.LateArea(s.Area)) continue;
                         pick = s; break;
                     }
                 if (pick == null) continue; // (a big item finds no free spot that is not a drawer)

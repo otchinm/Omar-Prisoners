@@ -15,7 +15,7 @@ namespace PrisonersOfOmar.UI
         public readonly CodeLockEntity Lock;
         string _code = "";
         int _hour = 12, _minute;
-        float _resultTimer = -1f, _t, _waitT;
+        float _resultTimer = -1f, _t, _waitT, _resendAt = -1f;
         bool _ok, _waiting;
         /// <summary>A padlock on furniture: a mechanical dial (clicks and rattles), not an electronic keypad.</summary>
         bool Mechanical => Lock.Embedded;
@@ -47,7 +47,7 @@ namespace PrisonersOfOmar.UI
                     _ok = true; _resultTimer = 1.2f;
                     AudioManager.Play2D(Mechanical ? Snd.KeyUnlock : Snd.KeypadOk, 0.9f);
                     break;
-                case 3: break;   // the host saw two tries within a second: just send it again
+                case 3: _waiting = true; _waitT = 0f; _resendAt = Time.unscaledTime + 1.05f; break;   // too fast: send it again in a moment
                 case 4: UIManager.Instance.Remove(this); break;
                 default:
                     _ok = false; _resultTimer = 1f; _code = "";
@@ -90,8 +90,10 @@ namespace PrisonersOfOmar.UI
             }
             // somebody else opened it
             if (Lock.Open && !(_ok && _resultTimer > 0f)) { _ok = true; _waiting = false; _resultTimer = 0.8f; }
+            // the host said "too fast": resend the same code once the second is up
+            if (_resendAt > 0f && Time.unscaledTime >= _resendAt) { _resendAt = -1f; _waitT = 0f; _w.SendCode(Lock, Lock.Info.Kind == CodeKind.Time ? TimeCode : _code); }
             // the host always answers; if nothing came back (lost / ignored), let the player try again
-            if (_waiting && (_waitT += Time.unscaledDeltaTime) > 2f) { _waiting = false; _code = ""; AudioManager.Play2D(Snd.UiError, 0.6f); }
+            else if (_resendAt < 0f && _waiting && (_waitT += Time.unscaledDeltaTime) > 2f) { _waiting = false; _code = ""; AudioManager.Play2D(Snd.UiError, 0.6f); }
             UIStyle.Dim(ui, 0.55f);
             switch (Lock.Info.Kind)
             {
@@ -269,7 +271,7 @@ namespace PrisonersOfOmar.UI
 
         void PressSymbol(int i)
         {
-            if (_resultTimer > 0f || _waiting) return;
+            if (_resultTimer > 0f || _waiting || _code.Length >= Length) return;
             AudioManager.Play2D(Snd.KeypadBeep, 0.7f, 0.8f + i * 0.08f);
             _code += (char)('0' + i);
             if (_code.Length >= Length) Submit(_code);
