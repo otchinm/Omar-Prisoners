@@ -45,7 +45,7 @@ namespace PrisonersOfOmar.Gameplay
             Add(ItemType.Revolver, "REVOLVER", HoldPose.Pistol, "An old revolver with two rounds left. It won't stop him for long... but the old woman is a different story.", charge: true, key: true, dropNoise: 6f);
             Add(ItemType.Backpack, "BACKPACK", HoldPose.OneHandSmall, "An old canvas rucksack. With it on my back I can carry five things instead of three.", dropNoise: 3f);
             Add(ItemType.VhsTape, "VHS TAPE", HoldPose.OneHandSmall, "A home video cassette. The label says 'MAMA 10/31' in thick marker. There is a VCR on the old woman's TV... and she never takes her eyes off that TV.", key: true);
-            Add(ItemType.SmallKey, "SMALL KEY", HoldPose.OneHandSmall, "A little brass key on a string. Someone drew a little red padlock on the tag. Some drawer in this house is locked with a padlock like this. It will only open one - it stays in the lock.");
+            Add(ItemType.SmallKey, "SMALL KEY", HoldPose.OneHandSmall, "A little brass key on a string. Someone drew a little red padlock on the tag and scrawled a room under it. Some drawer in this house is locked with a padlock like this. It will only open one - it stays in the lock.");
         }
 
         /// <summary>Worn items go on the body instead of into a slot (see <see cref="LocalInventory.WornSlot"/>).</summary>

@@ -79,7 +79,7 @@ namespace PrisonersOfOmar.UI
             y += 4;
             if (it != null)
             {
-                y += ui.TextWrapped(it.Def.Description, textX, y, 150, VhsUI.White, 1, Align.Left, ui.TinyFont);
+                y += ui.TextWrapped(it.Def.Description + (it.TagText != null ? " " + it.TagText + "." : ""), textX, y, 150, VhsUI.White, 1, Align.Left, ui.TinyFont);
                 if (it.Def.HasCharge) ui.Text((it.Type == ItemType.Lighter ? "FUEL " : "BATTERY ") + Mathf.RoundToInt(it.Charge * 100f) + "%", textX, y + 6, it.Charge < 0.2f ? VhsUI.Red : VhsUI.Yellow);
             }
             else ui.TextWrapped(inv.HasBackpack ? "NOTHING HERE. WITH THE BACKPACK I CAN CARRY FIVE THINGS." : "NOTHING HERE. I CAN CARRY THREE THINGS.", textX, y, 150, VhsUI.Dim, 1, Align.Left, ui.TinyFont);

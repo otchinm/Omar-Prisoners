@@ -20,6 +20,11 @@ namespace PrisonersOfOmar.Gameplay
         public int Slot = -1;
         public bool Consumed;
         public WorldItem World;
+        /// <summary>(iteration 3) Small keys: the drawer their tag names (any small key fits any key padlock, the tag only says
+        /// which one it was for) and the room on the tag (null = smudged).</summary>
+        public int TagDrawer = -1;
+        public string Tag;
+        public string TagText => Type != ItemType.SmallKey || TagDrawer < 0 ? null : Tag != null ? "THE TAG SAYS: " + Tag : "THE TAG IS SMUDGED";
         public ItemDef Def => ItemDefs.Get(Type);
         public bool InWorld => World != null && !Consumed && Holder < 0;
     }
@@ -85,7 +90,7 @@ namespace PrisonersOfOmar.Gameplay
                 return true;
             }
             if (who.Inventory != null && who.Inventory.Full) { prompt = InteractPrompt.Info(Entity.Def.Name + " - INVENTORY FULL (G TO DROP)"); return true; }
-            prompt = InteractPrompt.Press("TAKE " + Entity.Def.Name);
+            prompt = InteractPrompt.Press("TAKE " + Entity.Def.Name + (Entity.TagText != null ? " (" + Entity.TagText + ")" : ""));
             return true;
         }
 

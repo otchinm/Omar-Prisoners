@@ -204,7 +204,11 @@ namespace PrisonersOfOmar.Gameplay
                 p = InteractPrompt.Press(who.Has(ItemType.Crowbar) ? "COMBINATION PADLOCK - TRY A CODE (OR HOLD THE CROWBAR)" : "A COMBINATION PADLOCK - TRY A CODE");
                 return true;
             }
-            if (who.Has(ItemType.SmallKey)) { p = InteractPrompt.Hold("UNLOCK IT WITH THE SMALL KEY", 0.8f, ItemType.SmallKey); return true; }
+            if (who.Has(ItemType.SmallKey))
+            {
+                p = InteractPrompt.Hold(TaggedKey(who) >= 0 ? "UNLOCK IT - THE TAG ON MY KEY MATCHES" : "UNLOCK IT WITH THE SMALL KEY", 0.8f, ItemType.SmallKey);
+                return true;
+            }
             if (who.Has(ItemType.Lockpick)) { p = InteractPrompt.Hold("PICK THE PADLOCK", 3f, ItemType.Lockpick, 2f); return true; }
             p = InteractPrompt.Info(who.Has(ItemType.Crowbar) ? "PADLOCKED. (HOLD THE CROWBAR TO PRY IT)" : "PADLOCKED. A SMALL KEYHOLE...");
             return true;
@@ -217,8 +221,22 @@ namespace PrisonersOfOmar.Gameplay
             if (!Locked) { w.SendDrawer(Index, !Open); return; }
             if (who.Held == ItemType.Crowbar) { w.SendUse(UseTarget.DrawerLock, Index, who.ItemId(ItemType.Crowbar)); return; }
             if (Lock == DrawerLockKind.Code) { if (CodeLock != null) w.OpenCodeLock(CodeLock); return; }
-            int key = who.ItemId(ItemType.SmallKey);
+            int key = TaggedKey(who);
+            if (key < 0) key = who.ItemId(ItemType.SmallKey);
             w.SendUse(UseTarget.DrawerLock, Index, key >= 0 ? key : who.ItemId(ItemType.Lockpick));
+        }
+
+        /// <summary>A small key in the player's pockets whose tag names this drawer (-1 = none).</summary>
+        int TaggedKey(Interactor who)
+        {
+            var inv = who.Inventory;
+            if (inv == null) return -1;
+            for (int i = 0; i < inv.Slots.Length; i++)
+            {
+                var it = inv.At(i);
+                if (it != null && it.Type == ItemType.SmallKey && it.TagDrawer == Index) return it.Id;
+            }
+            return -1;
         }
 
         /// <summary>Host: unlocked (how: 0 small key, 1 lockpick, 2 code, 3 pried with a crowbar, 4 admin).</summary>

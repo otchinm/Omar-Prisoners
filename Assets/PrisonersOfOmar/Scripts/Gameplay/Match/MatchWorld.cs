@@ -294,6 +294,16 @@ namespace PrisonersOfOmar.Gameplay
                 Items.Add(e);
                 WorldItem.Create(e, p.Position, p.Yaw, _dynamicRoot);
             }
+            // (iteration 3) each small key's tag names a key-padlocked drawer, in id / drawer order (smudged on Nightmare)
+            var tagged = Items.FindAll(i => i.Type == ItemType.SmallKey);
+            int kd = 0;
+            foreach (var d in Drawers)
+            {
+                if (d.Lock != DrawerLockKind.Key || kd >= tagged.Count) continue;
+                tagged[kd].TagDrawer = d.Index;
+                tagged[kd].Tag = Tuning.CurrentDifficulty == Difficulty.Nightmare ? null : NoteTexts.PlaceName(Map.AreaAt(d.Info.ItemPoint));
+                kd++;
+            }
             // one lighter per prisoner (in slot 0), ids after the world items, in roster order
             foreach (var pl in Session.Players)
             {
