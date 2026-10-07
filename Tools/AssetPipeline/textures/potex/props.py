@@ -1396,6 +1396,69 @@ def radio_set(ctx):
     return finish(ctx, img, light=0.04, grain=0.02)
 
 
+@texture("Props/vcr", (128, 64), q=50)
+def vcr(ctx):
+    """(iteration 3) Her VCR (a made-up brand). Layout MUST match PropLibrary.Vcr: front (0,0,128,28) with the tape door
+    at (13,7,64,10) and the clock glass behind the glowing display, top (0,28,64,36) with vents at the back edge, sides /
+    back (64,28,64,36)."""
+    W, H = ctx.W, ctx.H
+    r = ctx.sub(1)
+    fy = 28 / 64.0                     # bottom of the front region
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    v = yy / H
+    # black plastic everywhere first (top, sides, back)
+    t = clamp01(0.5 + 0.1 * fft_noise(r, H, W, beta=2.4))
+    img = gradient_map(t, [(0, "#0e0e10"), (0.5, "#161618"), (1, "#202024")])
+    # front: champagne aluminium over a black strip
+    alu = gradient_map(clamp01(v / (0.62 * fy)), [(0, "#b4b0a2"), (1, "#8e8a7e")])
+    streak = np.repeat(r.random((H, 1)).astype(np.float32), W, axis=1)
+    alu = alu * (0.94 + 0.08 * streak)[..., None]
+    img = mix(img, alu, rect(H, W, 0, 0, 1, 0.62 * fy))
+    img = mix(img, "#141416", rect(H, W, 0, 0.62 * fy, 1, fy))
+    img = mix(img, "#5a5850", rect(H, W, 0, 0.62 * fy - 0.006, 1, 0.62 * fy))
+    m, sh = bevel(H, W, 0.0, 0.0, 1.0, fy, W * 0.01)
+    img = apply_bevel(img, sh, 0.3)
+    # the tape door (its own box uses this rect) with a lit top lip
+    dx0, dy0, dx1, dy1 = 13 / 128, 7 / 64, 77 / 128, 17 / 64
+    img = mix(img, "#0a0a0c", rect(H, W, dx0, dy0, dx1, dy1))
+    img = mix(img, "#4a4a50", rect(H, W, dx0, dy0, dx1, dy0 + 0.012))
+    img, _ = put_text(img, ["VHS"], FONT_ROAD, 60, ((dx1 - 0.085) * W, (dy0 + 0.04) * H, (dx1 - 0.015) * W, (dy1 - 0.03) * H), "#9a9a92", stretch=True)
+    # brand and model above the door, a line of small print on the strip
+    img, _ = put_text(img, ["HOMEVISION"], FONT_ROAD, 60, (0.11 * W, 0.02 * H, 0.38 * W, 0.085 * H), "#3a3830", stretch=True)
+    img, _ = put_text(img, ["HQ  4 HEAD"], FONT_ROAD, 40, (0.62 * W, 0.02 * H, 0.78 * W, 0.06 * H), "#4a4840", stretch=True)
+    img, _ = put_text(img, ["VIDEO CASSETTE RECORDER"], FONT_ROAD, 40, (0.05 * W, 0.335 * H, 0.42 * W, 0.385 * H), "#7a7a70", stretch=True)
+    # smoked glass behind the clock display
+    img = mix(img, "#06090a", rect(H, W, 0.70, 0.066, 0.90, 0.193))
+    img = mix(img, "#3a4440", rect(H, W, 0.70, 0.066, 0.90, 0.074) * 0.6)
+    # top: vent slots along the back edge, a peeling warranty sticker, dust, a coffee cup ring
+    for i in range(10):
+        x0 = 0.04 + i * 0.042
+        img = mix(img, "#020203", rect(H, W, x0, fy + 0.04, x0 + 0.022, fy + 0.15))
+    img = mix(img, "#8a8a84", rect(H, W, 0.38, fy + 0.44, 0.47, fy + 0.5))
+    img, _ = put_text(img, ["VOID IF", "REMOVED"], FONT_ROAD, 30, (0.385 * W, (fy + 0.445) * H, 0.465 * W, (fy + 0.495) * H), "#2a2a28", stretch=True)
+    ring = ellipse_mask(W, H, 0.15 * W, (fy + 0.33) * H, 0.035 * W, 0.07 * H) - ellipse_mask(W, H, 0.15 * W, (fy + 0.33) * H, 0.029 * W, 0.058 * H)
+    img = mix(img, "#3a3026", clamp01(ring) * 0.55 * rect(H, W, 0, fy, 0.5, 1))
+    img = mix(img, "#4a4640", grime(ctx.sub(3), H, W, cover=0.35, beta=2.4, sharp=0.5) * 0.35 * rect(H, W, 0, fy, 0.5, 1))
+    # sides / back: a grille of holes on the back half
+    for gy in range(4):
+        for gx in range(12):
+            img = mix(img, "#030304", ellipse_mask(W, H, (0.56 + gx * 0.035) * W, (fy + 0.12 + gy * 0.06) * H, W * 0.006, W * 0.006))
+    img = dirt_pass(ctx, img, 0.3, 0.3)
+    sc = scratches_mask(ctx.sub(2), H, W, 25, length=(10, 40), width=2, tile=False)
+    img = mix(img, "#8a8a80", sc * 0.25)
+    return finish(ctx, img, light=0.04, grain=0.02)
+
+
+@texture("Props/vcr_clock", (32, 8), k=8, q=70, bits=5, desat=0.0, dark=1.0)
+def vcr_clock(ctx):
+    """(iteration 3) The VCR clock (emissive, tinted green by the material): 12:00 over the ghosts of unlit segments."""
+    W, H = ctx.W, ctx.H
+    img = np.zeros((H, W, 3), np.float32) + np.array(col("#060806"), np.float32)
+    img, _ = put_text(img, ["88:88"], FONT_PIXEL, 120, (0.08 * W, 0.12 * H, 0.92 * W, 0.88 * H), "#141a16", stretch=True)
+    img, _ = put_text(img, ["12:00"], FONT_PIXEL, 120, (0.08 * W, 0.12 * H, 0.92 * W, 0.88 * H), "#f0fff4", stretch=True)
+    return clamp01(img)
+
+
 @texture("Props/generator", (64, 64), k=8, q=45)
 def generator(ctx):
     W, H = ctx.W, ctx.H

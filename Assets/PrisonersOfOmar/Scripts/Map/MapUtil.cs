@@ -110,6 +110,8 @@ namespace PrisonersOfOmar.Map
         public const string Keypad = Props + "keypad";
         public const string FuseBox = Props + "fusebox";
         public const string RadioSet = Props + "radio_set";
+        public const string Vcr = Props + "vcr";
+        public const string VcrClock = Props + "vcr_clock";
         public const string Generator = Props + "generator";
         public const string CageBars = Props + "cage_bars";
         public const string MannequinBurnt = Props + "mannequin_burnt";

@@ -534,22 +534,48 @@ namespace PrisonersOfOmar.Map
             Col(ctx, pos, yaw, new Vector3(0, 0.25f, 0.05f), new Vector3(0.62f, 0.5f, 0.55f), SurfaceType.Wood, "Tv");
         }
 
-        /// <summary>(iteration 3) VCR on top of a <see cref="CrtTv"/> (same origin and yaw as the TV). Returns the world pose of a
-        /// tape pushed half into its slot.</summary>
+        /// <summary>(iteration 3) VCR on top of a <see cref="CrtTv"/> (same origin and yaw as the TV), on a lace doily, its
+        /// clock blinking 12:00 like every VCR nobody ever set (dark when the power is cut). Returns the world pose of a tape
+        /// pushed half into its slot.</summary>
+        // vcr.png 128x64: front (0,0,128,28) with the tape door at (13,7,64,10), top (0,28,64,36), sides / back (64,28,64,36)
         public static Pose Vcr(MapContext ctx, MeshBuilder mb, Vector3 tvPos, float yaw)
         {
+            Rect P(float x, float y, float w, float h) => new Rect(x / 128f, 1f - (y + h) / 64f, w / 128f, h / 64f);
             Begin(mb, tvPos, yaw);
-            Gray(mb, 0.75f);
-            var shell = Mat.Lit(Tex.Plastic, new Color(0.22f, 0.22f, 0.23f));
-            Box(mb, shell, new Vector3(0, 0.53f, -0.05f), new Vector3(0.4f, 0.08f, 0.26f));
-            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.55f, 0.55f, 0.57f)), new Vector3(0, 0.535f, -0.181f), new Vector3(0.38f, 0.06f, 0.004f));   // silver front panel
-            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.04f, 0.04f, 0.05f)), new Vector3(-0.06f, 0.54f, -0.184f), new Vector3(0.2f, 0.03f, 0.004f));   // tape flap
-            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.3f, 0.3f, 0.3f)), new Vector3(0.12f, 0.525f, -0.184f), new Vector3(0.09f, 0.018f, 0.004f));    // buttons
-            Box(mb, Mat.Lit(Tex.Plastic, new Color(0.9f, 0.1f, 0.06f)), new Vector3(0.15f, 0.552f, -0.184f), new Vector3(0.012f, 0.008f, 0.004f)); // REC lamp
+            Gray(mb, 0.85f);
+            Box(mb, Mat.Lit(Tex.Cloth, new Color(0.86f, 0.82f, 0.72f)), new Vector3(0f, 0.491f, -0.04f), new Vector3(0.46f, 0.002f, 0.3f));   // her doily
+            var black = Mat.Lit(Tex.Plastic, new Color(0.07f, 0.07f, 0.08f));
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = 0; sz < 2; sz++)
+                    Box(mb, black, new Vector3(sx * 0.16f, 0.495f, sz == 0 ? -0.15f : 0.05f), new Vector3(0.03f, 0.006f, 0.03f));
+            mb.Material = Mat.Lit(Tex.Vcr);
+            Rect side = P(64, 28, 64, 36);
+            mb.AddBox(new Vector3(0f, 0.5405f, -0.05f), new Vector3(0.4f, 0.085f, 0.26f),
+                new BoxUVRects { NegZ = P(0, 0, 128, 28), PosY = P(0, 28, 64, 36), PosX = side, NegX = side, PosZ = side, NegY = side });
+            mb.AddBox(new Vector3(-0.06f, 0.545f, -0.1815f), new Vector3(0.2f, 0.03f, 0.003f), BoxUVRects.All(P(13, 7, 64, 10)));   // tape door
+            // piano keys on the black strip: STOP REW PLAY FF PAUSE and a red REC
+            for (int i = 0; i < 6; i++)
+                Box(mb, i == 5 ? Mat.Lit(Tex.Plastic, new Color(0.7f, 0.12f, 0.08f)) : Mat.Lit(Tex.MetalDark, new Color(0.62f, 0.62f, 0.6f)),
+                    new Vector3(0.065f + i * 0.024f, 0.512f, -0.183f), new Vector3(0.022f, 0.011f, 0.008f));
+            // the power cord out of the back, down the side of the TV and the stand to the wall socket
+            mb.Material = black;
+            Vector3[] cord = { new Vector3(0.15f, 0.52f, 0.08f), new Vector3(0.27f, 0.495f, 0.1f), new Vector3(0.315f, 0.44f, 0.12f),
+                               new Vector3(0.32f, 0.005f, 0.14f), new Vector3(0.49f, 0.005f, 0.16f), new Vector3(0.5f, -0.5f, 0.18f) };
+            for (int i = 0; i + 1 < cord.Length; i++) mb.AddBeam(cord[i], cord[i + 1], 0.005f);
             Gray(mb, 1f);
             End(mb);
             var r = MapMath.Yaw(yaw);
-            return new Pose(tvPos + r * new Vector3(-0.06f, 0.54f, -0.159f), r);
+            // the green clock display and the two lamps glow with the house power
+            var g = ctx.GlowBuilder(HouseBuilder.GlowBulbs);
+            g.Push(tvPos, r);
+            g.Material = ctx.GlowMat(Tex.VcrClock, new Color(0.35f, 1f, 0.65f), new Color(0.03f, 0.05f, 0.04f));
+            g.AddBox(new Vector3(0.12f, 0.556f, -0.1812f), new Vector3(0.07f, 0.018f, 0.002f), BoxUVRects.All(new Rect(0, 0, 1, 1)), BoxFaces.NegZ);
+            g.Material = ctx.GlowColor(new Color(1f, 0.15f, 0.08f));
+            g.AddBox(new Vector3(0.175f, 0.556f, -0.1812f), new Vector3(0.006f, 0.006f, 0.003f), BoxUV.Local, 1f);
+            g.Material = ctx.GlowColor(new Color(0.3f, 1f, 0.3f));
+            g.AddBox(new Vector3(0.19f, 0.556f, -0.1812f), new Vector3(0.006f, 0.006f, 0.003f), BoxUV.Local, 1f);
+            g.Pop();
+            return new Pose(tvPos + r * new Vector3(-0.06f, 0.545f, -0.159f), r);
         }
 
         /// <summary>Screen center (local to the TV origin) and its size.</summary>
