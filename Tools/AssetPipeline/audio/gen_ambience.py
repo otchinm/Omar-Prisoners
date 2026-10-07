@@ -388,6 +388,113 @@ def tv_static_loop(rng):
     return dsp.crush(dsp.norm(y) * 0.9, 8)
 
 
+# --------------------------------------------------------------------------------------------- the home video tape
+# "Happy Birthday to You" (public domain), 3/4: (semitones from the tonic, beats)
+_BIRTHDAY = [(-5, 0.75), (-5, 0.25), (-3, 1), (-5, 1), (0, 1), (-1, 2),
+             (-5, 0.75), (-5, 0.25), (-3, 1), (-5, 1), (2, 1), (0, 2),
+             (-5, 0.75), (-5, 0.25), (7, 1), (4, 1), (0, 1), (-1, 1), (-3, 2),
+             (5, 0.75), (5, 0.25), (4, 1), (0, 1), (2, 1), (0, 2.5)]
+
+
+def old_voice(f0_curve, amp, rng, vowel=(650.0, 1080.0, 2650.0)):
+    """A thin, wobbly old woman's voice: a jittery glottal saw through three formants (a hum opening to 'ah')."""
+    n = len(f0_curve)
+    vib = 1.0 + 0.012 * np.sin(TAU * np.cumsum(np.full(n, 5.3)) / SR) + 0.004 * dsp.smooth_rand(n, rng, 9.0, circular=False)
+    f = f0_curve * vib
+    ph = np.cumsum(f) / SR
+    src = 2.0 * (ph % 1.0) - 1.0 + 0.08 * dsp.white(n, rng)
+    src = dsp.lp(src, 3800, 2)
+    y = dsp.resonbank(src, [vowel[0], vowel[1], vowel[2], 3400.0], [5.0, 7.0, 9.0, 10.0], [1.0, 0.55, 0.25, 0.12])
+    y = y + 0.25 * dsp.resonbank(src, [260.0], [4.0], [1.0])   # nasal hum
+    return dsp.norm(y) * amp
+
+
+def birthday_hum(rng, beat=0.56, tonic=372.0):
+    """Her off-key 'Happy Birthday', slow, drifting flat, sliding between the notes."""
+    total = sum(b for _, b in _BIRTHDAY) * beat + 0.6
+    n = N(total)
+    f0 = np.zeros(n)
+    amp = np.zeros(n)
+    t = 0.0
+    prev = None
+    drift = 0.0
+    for semis, beats in _BIRTHDAY:
+        a, d = N(t), N(beats * beat)
+        drift -= rng.uniform(0.02, 0.09)                       # she sinks flat as she goes
+        f = tonic * 2 ** ((semis + drift + rng.uniform(-0.25, 0.25)) / 12.0)
+        seg = np.full(d, f)
+        if prev is not None:                                   # a slide into each note
+            k = min(d, N(0.07))
+            seg[:k] = np.linspace(prev, f, k)
+        f0[a:a + d] = seg[:max(0, min(d, n - a))]
+        e = np.ones(d)
+        k = min(d // 3, N(0.05))
+        e[:k] = np.linspace(0.35, 1.0, k)
+        e[-k:] = np.linspace(1.0, 0.55, k)
+        amp[a:a + d] = e[:max(0, min(d, n - a))] * rng.uniform(0.8, 1.0)
+        prev = f
+        t += beats * beat
+    f0[f0 <= 0] = tonic * 0.8
+    amp = dsp.lp(amp, 12.0, 1)
+    return old_voice(f0, amp, rng)
+
+
+def tv_speaker(x, rng, circular=True):
+    """A small CRT TV speaker playing a worn home video: narrow band, a little crunch, wow and flutter."""
+    y = cbp(x, 260, 3400, 2) if circular else dsp.bp(x, 260, 3400, 2)
+    y = dsp.sat(dsp.norm(y) * 1.3, 1.6)
+    y = dsp.wowflutter(y, rng, wow=0.0022, wow_rate=0.55, flutter=0.00035, flutter_rate=6.5, circular=circular)
+    return y
+
+
+@sound("Ambience/tape_video_loop", norm=("lufs", -19.0, -3.0), desc="the home video tape through the TV speaker: room tone, her off-key Happy Birthday hum, a clap, a laugh", **EMIT)
+def tape_video_loop(rng):
+    n = L(24.0)
+    room = cbp(dsp.pink(n, rng), 200, 2400) * (0.6 + 0.4 * unit(dsp.smooth_rand(n, rng, 0.4)))
+    murmur = cbp(dsp.brown(n, rng), 300, 900) * np.clip(dsp.smooth_rand(n, rng, 0.9), 0, 1) ** 2
+    motor = np.sin(TAU * dsp.phase(dsp.qfreq(1870.0, n), n)) * (0.5 + 0.5 * lfo(n, 0.25, rng))
+    hiss = cbp(dsp.white(n, rng), 2500, 7000)
+    buf = 0.35 * dsp.norm(room) + 0.2 * dsp.norm(murmur) + 0.025 * motor + 0.12 * dsp.norm(hiss)
+    # handling bumps of the camera
+    for _ in range(5):
+        b = dsp.burst(N(0.12), rng, tau=0.03, lp_hz=600)
+        dsp.place(buf, dsp.norm(b) * rng.uniform(0.2, 0.45), rng.uniform(0, n), circular=True)
+    # her song, then a single clap and a short cackle
+    hum = birthday_hum(rng)
+    start = N(1.4)
+    dsp.place(buf, hum, start, 1.0, circular=True)
+    end = start + len(hum)
+    clap = dsp.norm(dsp.burst(N(0.08), rng, tau=0.012, lp_hz=3500, hp_hz=600))
+    dsp.place(buf, clap, end + N(0.5), 0.7, circular=True)
+    for i in range(4):
+        f0 = np.full(N(0.13), 520.0 - 25 * i)
+        e = dsp.ar(len(f0), 0.01, 0.08)
+        ha = old_voice(f0, e, rng, vowel=(800.0, 1250.0, 2700.0))
+        dsp.place(buf, ha, end + N(1.1 + 0.19 * i), 0.55, circular=True)
+    return dsp.crush(dsp.norm(tv_speaker(buf, rng)) * 0.9, 10)
+
+
+@sound("Ambience/tape_scream", norm=("peak", -1.0), desc="a woman's scream on the home video, through the TV speaker, distorting at its peak, then a tracking dropout")
+def tape_scream(rng):
+    x = dsp.norm(sfx.scream_fragment("screams_long", 3.6, 3.0, 1.0))
+    e = np.ones(len(x))
+    k = N(0.35)
+    e[-k:] = np.linspace(1.0, 0.0, k)
+    x = x * e
+    y = dsp.bp(x, 300, 3200, 2)
+    y = dsp.hardclip(dsp.norm(y) * 1.8, 0.62)                  # the recording clips at its peak
+    y = dsp.wowflutter(y, rng, wow=0.003, wow_rate=0.7, flutter=0.0004, flutter_rate=6.0)
+    # the tracking gives out at the end: a dropout, a burst of snow, the tail pitched down
+    tail = N(0.45)
+    a = len(y) - tail
+    y[a:a + N(0.06)] = 0.0
+    snow = dsp.band_noise(tail, rng, 800, 6000) * dsp.ar(tail, 0.005, 0.3) * 0.5
+    y = dsp.place(y, snow, a)
+    y[a + N(0.06):] = dsp.pad(dsp.resample(y[a + N(0.06):], 0.82), len(y) - a - N(0.06))
+    hiss = dsp.band_noise(len(y), rng, 2000, 7000) * 0.04
+    return dsp.crush(dsp.norm(y + hiss), 10)
+
+
 @sound("Ambience/radio_static_loop", sr=22050, norm=("lufs", -18.0, -2.0), desc="AM/shortwave radio static with heterodyne whistles", **EMIT)
 def radio_static_loop(rng):
     n = L(6.0)
