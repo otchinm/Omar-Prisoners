@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image  # noqa: E402
 
 from potex import core, sources  # noqa: E402
-from potex import env, decals, props, foliage, sky, fx, ui  # noqa: E402,F401  (registers builders)
+from potex import env, decals, props, foliage, sky, fx, ui, tape_frames  # noqa: E402,F401  (registers builders)
 from potex import qa  # noqa: E402
 
 
