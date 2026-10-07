@@ -624,10 +624,11 @@ def screwdriver():
 
 def backpack():
     """backpack.png 64x64 (iteration 3, old army-surplus rucksack): canvas (0,0,32,32) flap (32,0,32,16) pocket (32,16,32,16)
-    strap (0,32,32,8) leather (0,40,32,8) side (0,48,32,16) buckle (32,32,16,16) bottom (32,48,32,16)."""
+    strap (0,32,32,8) leather (0,40,32,8) bottom (0,48,32,16) buckle (32,32,16,16) side pocket (32,48,16,16)
+    side (48,32,16,32, portrait: the bag's sides are taller than deep)."""
     c = Canvas(64, 64, 31)
     r = c.rng
-    olive, dark = rgb("#5a5a34"), rgb("#3c3d22")
+    olive = rgb("#5a5a34")
 
     def canvas(h, w, color=olive, stains=0.35):
         t = fabric(h, w, color, r, folds=0.22, grain=0.1, weave=0.05, stains=stains, stain_color=rgb("#2e2a1a"))
@@ -644,31 +645,55 @@ def backpack():
             m[y:y + 2 * S, x1 - S // 2:x1 + 1] = 1
         return mix(img, rgb("#8a8458"), m * 0.7)
 
+    def edged(img, color="#2a2a16", k=0.85):
+        """1 px dark seam round the region so the box edges read at 240p."""
+        h, w = img.shape[:2]
+        m = np.zeros((h, w), np.float32)
+        m[:S], m[-S:], m[:, :S], m[:, -S:] = 1, 1, 1, 1
+        return mix(img, rgb(color), m * k)
+
     body = canvas(32 * S, 32 * S)
-    body = stitches(body, 32 * S, 32 * S, S)
-    # a faded stencilled number, like surplus kit
-    body = mix(body, rgb("#2a2a18"), text_mask(32 * S, 32 * S, "US", 16 * S, 18 * S, int(7 * S), stroke=1) * 0.45)
-    c.put(0, 0, body)
-    flap = canvas(16 * S, 32 * S, dark, 0.25)
-    flap = stitches(flap, 16 * S, 32 * S, S)
-    c.put(32, 0, flap)
-    pocket = canvas(16 * S, 32 * S, rgb("#55552f"), 0.3)
-    u, v = uv_grid(16 * S, 32 * S)
-    pocket = mix(pocket, dark, ((v < 0.32)).astype(np.float32) * 0.8)          # the pocket's own little flap
-    pocket = shade(pocket, 1 - 0.25 * (np.abs(v - 0.32) < 0.03))
-    c.put(32, 16, stitches(pocket, 16 * S, 32 * S, S))
+    u, v = uv_grid(32 * S, 32 * S)
+    body = shade(body, 0.9 + 0.2 * v)                                          # light from above, darker lower down
+    c.put(0, 0, edged(stitches(body, 32 * S, 32 * S, S)))
+
+    # the flap: dark, sun-faded at the top, a name strip from the prisoner who carried it before
+    flap = canvas(16 * S, 32 * S, rgb("#34351c"), 0.25)
+    fu, fv = uv_grid(16 * S, 32 * S)
+    flap = mix(flap, rgb("#4a4a2a"), smoothstep(0.55, 1.0, fv) * 0.5)   # sun-faded fold
+    tag = draw_mask(16 * S, 32 * S, lambda d: d.rectangle([10 * S, 9 * S, 22 * S, 13 * S], fill=255))
+    flap = mix(flap, rgb("#d8d0b0"), tag * 0.9)
+    pts = [(11.2 + i * 0.75, 11 + (1.2 if i % 3 == 0 else -0.8 if i % 3 == 1 else 0.3)) for i in range(14)]
+    scrawl = draw_mask(16 * S, 32 * S, lambda d: d.line([(x * S, y * S) for x, y in pts], fill=255, width=S))
+    flap = mix(flap, rgb("#1c1810"), scrawl * 0.85)
+    c.put(32, 0, edged(stitches(flap, 16 * S, 32 * S, S), "#1e1e10"))
+
+    pocket = canvas(16 * S, 32 * S, rgb("#6a6a40"), 0.3)
+    pu, pv = uv_grid(16 * S, 32 * S)
+    pocket = mix(pocket, rgb("#3c3d22"), (pv > 0.7).astype(np.float32) * 0.8)     # the pocket's own little flap
+    pocket = shade(pocket, 1 - 0.3 * (np.abs(pv - 0.7) < 0.03))
+    pocket = mix(pocket, rgb("#2a2a18"), text_mask(16 * S, 32 * S, "U.S.", 16 * S, 10.5 * S, int(7 * S), stroke=1) * 0.6)
+    c.put(32, 16, edged(stitches(pocket, 16 * S, 32 * S, S)))
+
     webbing = fill(8 * S, 32 * S, rgb("#3a3a24"))
     yy = np.mgrid[0:8 * S, 0:32 * S][0]
     webbing = shade(webbing, 0.85 + 0.3 * ((yy // S) % 2))
-    c.put(0, 32, grime(webbing, r, 0.3, (0.12, 0.1, 0.06)))
-    leather = plastic(8 * S, 32 * S, "#5a3a1e", r, dirt=0.5)
-    c.put(0, 40, leather)
-    side = canvas(16 * S, 32 * S, rgb("#525230"), 0.4)
-    c.put(0, 48, stitches(side, 16 * S, 32 * S, S))
-    c.put(32, 32, metal(16 * S, 16 * S, "#8a8678", r, scratches=0.3, rust=0.5))
-    c.put(48, 32, metal(16 * S, 16 * S, "#6a665a", r, scratches=0.3, rust=0.6))
+    c.put(0, 32, edged(grime(webbing, r, 0.3, (0.12, 0.1, 0.06)), "#1e1e12", 0.6))
+    c.put(0, 40, edged(plastic(8 * S, 32 * S, "#5a3a1e", r, dirt=0.5), "#2a1a0c", 0.6))
+
     bottom = canvas(16 * S, 32 * S, rgb("#3e3c26"), 0.6)
-    c.put(32, 48, grime(bottom, r, 0.6, (0.2, 0.16, 0.1)))
+    bottom = grime(bottom, r, 0.6, (0.2, 0.16, 0.1))
+    bottom = mix(bottom, rgb("#3a120c"), soft_ellipse(16 * S, 32 * S, 20 * S, 9 * S, 6 * S, 3.5 * S, soft=3) * 0.5)   # old, dark
+    c.put(0, 48, edged(bottom))
+
+    buckle = metal(16 * S, 16 * S, "#5e5a4c", r, scratches=0.3, rust=0.7)
+    c.put(32, 32, edged(buckle, "#24221c", 0.7))
+    sp = canvas(16 * S, 16 * S, rgb("#4a4a2a"), 0.4)
+    c.put(32, 48, edged(stitches(sp, 16 * S, 16 * S, S)))
+    side = canvas(32 * S, 16 * S, rgb("#525230"), 0.4)
+    su, sv = uv_grid(32 * S, 16 * S)
+    side = shade(side, 0.88 + 0.18 * sv)
+    c.put(48, 32, edged(stitches(side, 32 * S, 16 * S, S)))
     return c.done()
 
 

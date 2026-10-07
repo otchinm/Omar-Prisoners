@@ -566,7 +566,7 @@ namespace PrisonersOfOmar.Characters
         }
 
         // backpack.png 64x64: canvas (0,0,32,32) flap (32,0,32,16) pocket (32,16,32,16) strap (0,32,32,8) leather (0,40,32,8)
-        //                   side (0,48,32,16) buckle (32,32,16,16) bottom (32,48,32,16)
+        //                   bottom (0,48,32,16) buckle (32,32,16,16) side pocket (32,48,16,16) side (48,32,16,32, portrait)
         const float BackpackW = 0.30f, BackpackH = 0.40f, BackpackD = 0.15f;
 
         /// <summary>(iteration 3) Old canvas rucksack, pivot = centre of the bag, the shoulder straps on the +Z side
@@ -576,36 +576,42 @@ namespace PrisonersOfOmar.Characters
             const float W = 64, H = 64;
             mb.SetMaterial(Mat("backpack"));
             Rect canvas = R(0, 0, 32, 32, W, H), flap = R(32, 0, 32, 16, W, H), pocket = R(32, 16, 32, 16, W, H);
-            Rect strap = R(0, 32, 32, 8, W, H), leather = R(0, 40, 32, 8, W, H), side = R(0, 48, 32, 16, W, H);
-            Rect buckle = R(32, 32, 16, 16, W, H), bottom = R(32, 48, 32, 16, W, H);
-            const float w = BackpackW, h = BackpackH, d = BackpackD;
-            // the bag, a little fuller at the bottom
-            mb.AddBox(new Vector3(0f, 0.01f, 0f), new Vector3(w, h - 0.02f, d),
+            Rect strap = R(0, 32, 32, 8, W, H), leather = R(0, 40, 32, 8, W, H), bottom = R(0, 48, 32, 16, W, H);
+            Rect buckle = R(32, 32, 16, 16, W, H), sidePocket = R(32, 48, 16, 16, W, H), side = R(48, 32, 16, 32, W, H);
+            const float w = BackpackW, d = BackpackD;
+            // two bodies: a full, sagging bottom half and a slacker top half under the lid (bottom at y = -0.2)
+            mb.AddBox(new Vector3(0f, -0.095f, 0f), new Vector3(w + 0.01f, 0.21f, d + 0.02f),
                 new BoxUVRects { PosZ = canvas, NegZ = canvas, PosX = side, NegX = side, PosY = canvas, NegY = bottom });
-            mb.AddBox(new Vector3(0f, -h * 0.5f + 0.03f, 0f), new Vector3(w + 0.012f, 0.06f, d + 0.012f),
-                new BoxUVRects { PosZ = bottom, NegZ = bottom, PosX = bottom, NegX = bottom, PosY = bottom, NegY = bottom });
-            // top flap folded over the front
-            mb.AddBox(new Vector3(0f, h * 0.5f + 0.005f, -0.004f), new Vector3(w + 0.01f, 0.025f, d + 0.012f), BoxUVRects.All(flap));
-            Box(mb, new Vector3(0f, h * 0.5f - 0.075f, -d * 0.5f - 0.008f), Quaternion.Euler(-4f, 0f, 0f), new Vector3(w * 0.82f, 0.16f, 0.012f), BoxUVRects.All(flap));
-            // big front pocket and two side pockets
-            mb.AddBox(new Vector3(0f, -0.085f, -d * 0.5f - 0.024f), new Vector3(w * 0.74f, 0.15f, 0.048f),
-                new BoxUVRects { PosZ = pocket, NegZ = pocket, PosX = side, NegX = side, PosY = flap, NegY = bottom });
+            mb.AddBox(new Vector3(0f, 0.095f, 0.002f), new Vector3(w - 0.012f, 0.17f, d - 0.008f),
+                new BoxUVRects { PosZ = canvas, NegZ = canvas, PosX = side, NegX = side, PosY = canvas, NegY = bottom });
+            // the lid on top and its flap hanging down the front (wider at the bottom where the bag bulges)
+            mb.AddBox(new Vector3(0f, 0.185f, -0.004f), new Vector3(w, 0.022f, d + 0.004f),
+                new BoxUVRects { PosY = R(32, 0, 32, 8, W, H), NegY = bottom, PosZ = strap, NegZ = strap, PosX = strap, NegX = strap });
+            Box(mb, new Vector3(0f, 0.10f, -0.088f), Quaternion.Euler(4f, 0f, 0f), new Vector3(w * 0.86f, 0.19f, 0.008f),
+                new BoxUVRects { NegZ = flap, PosZ = flap, PosX = strap, NegX = strap, PosY = strap, NegY = strap });
+            // the front pocket under the flap, the side pockets set forward (they barely show from the front when worn)
+            mb.AddBox(new Vector3(0f, -0.105f, -0.105f), new Vector3(w * 0.72f, 0.13f, 0.04f),
+                new BoxUVRects { PosZ = pocket, NegZ = pocket, PosX = sidePocket, NegX = sidePocket, PosY = strap, NegY = bottom });
             for (int sx = -1; sx <= 1; sx += 2)
             {
-                mb.AddBox(new Vector3(sx * (w * 0.5f + 0.02f), -0.09f, -0.012f), new Vector3(0.04f, 0.15f, d * 0.6f),
-                    new BoxUVRects { PosZ = side, NegZ = side, PosX = pocket, NegX = pocket, PosY = flap, NegY = bottom });
-                // flap straps + buckles on the front
+                mb.AddBox(new Vector3(sx * 0.17f, -0.11f, -0.045f), new Vector3(0.03f, 0.12f, 0.07f),
+                    new BoxUVRects { PosZ = sidePocket, NegZ = sidePocket, PosX = sidePocket, NegX = sidePocket, PosY = strap, NegY = bottom });
+                // flap straps lying on the lid and the flap, down into buckles sewn on between the flap and the pocket
                 float x = sx * 0.075f;
-                Bar(mb, new Vector3(x, h * 0.5f - 0.02f, -d * 0.5f - 0.016f), new Vector3(x, 0.02f, -d * 0.5f - 0.05f), 0.026f, 0.005f, leather);
-                mb.AddBox(new Vector3(x, 0.025f, -d * 0.5f - 0.052f), new Vector3(0.03f, 0.022f, 0.008f), BoxUVRects.All(buckle));
-                // shoulder straps on the back side, the upper end loops forward over the shoulder
-                Bar(mb, new Vector3(sx * 0.085f, h * 0.5f - 0.03f, d * 0.5f + 0.006f), new Vector3(sx * 0.1f, -h * 0.5f + 0.05f, d * 0.5f + 0.006f), 0.048f, 0.01f, strap);
-                Bar(mb, new Vector3(sx * 0.085f, h * 0.5f - 0.03f, d * 0.5f + 0.006f), new Vector3(sx * 0.09f, h * 0.5f + 0.03f, d * 0.5f + 0.09f), 0.048f, 0.01f, strap);
-                mb.AddBox(new Vector3(sx * 0.1f, -h * 0.5f + 0.06f, d * 0.5f + 0.012f), new Vector3(0.04f, 0.03f, 0.008f), BoxUVRects.All(buckle));
+                Bar(mb, new Vector3(x, 0.1985f, -0.055f), new Vector3(x, 0.1985f, -0.084f), 0.022f, 0.005f, leather);
+                Bar(mb, new Vector3(x, 0.1985f, -0.084f), new Vector3(x, 0.19f, -0.0885f), 0.022f, 0.005f, leather);
+                Bar(mb, new Vector3(x, 0.19f, -0.0885f), new Vector3(x, 0.006f, -0.1011f), 0.022f, 0.005f, leather);
+                Bar(mb, new Vector3(x, 0.006f, -0.1011f), new Vector3(x, -0.012f, -0.0945f), 0.022f, 0.005f, leather);
+                mb.AddBox(new Vector3(x, -0.016f, -0.0895f), new Vector3(0.032f, 0.026f, 0.009f), BoxUVRects.All(buckle));
+                // shoulder straps flat on the back side, folding over the top edge into the lid
+                Bar(mb, new Vector3(sx * 0.085f, 0.165f, 0.08f), new Vector3(sx * 0.1f, -0.17f, 0.091f), 0.048f, 0.01f, strap);
+                Bar(mb, new Vector3(sx * 0.085f, 0.165f, 0.08f), new Vector3(sx * 0.085f, 0.2f, 0.066f), 0.048f, 0.01f, strap);
+                mb.AddBox(new Vector3(sx * 0.1f, -0.16f, 0.094f), new Vector3(0.04f, 0.03f, 0.008f), BoxUVRects.All(buckle));
             }
-            // grab loop on top
-            Bar(mb, new Vector3(-0.03f, h * 0.5f + 0.017f, 0.02f), new Vector3(0f, h * 0.5f + 0.04f, 0.02f), 0.018f, 0.006f, strap);
-            Bar(mb, new Vector3(0f, h * 0.5f + 0.04f, 0.02f), new Vector3(0.03f, h * 0.5f + 0.017f, 0.02f), 0.018f, 0.006f, strap);
+            // flat grab loop on top at the back
+            Bar(mb, new Vector3(-0.025f, 0.196f, 0.055f), new Vector3(-0.02f, 0.221f, 0.055f), 0.016f, 0.005f, strap);
+            Bar(mb, new Vector3(-0.02f, 0.221f, 0.055f), new Vector3(0.02f, 0.221f, 0.055f), 0.016f, 0.005f, strap);
+            Bar(mb, new Vector3(0.02f, 0.221f, 0.055f), new Vector3(0.025f, 0.196f, 0.055f), 0.016f, 0.005f, strap);
         }
 
         // smallkey.png 32x32: brass (0,0,16,32) tag (16,0,16,32)
@@ -683,6 +689,36 @@ namespace PrisonersOfOmar.Characters
             pack.transform.localPosition = center - chest;
             pack.transform.localRotation = Quaternion.Euler(-4f, 0f, 0f);   // leans back a touch
             pack.transform.localScale = Vector3.one * s;
+            if (spec != null) FrontStraps(pack.transform, spec, s, back, center);
+        }
+
+        /// <summary>The shoulder straps coming over the shoulders and down the chest (the clearest "he wears a backpack" cue
+        /// from the front). Built in the pack's own space so they go away with it.</summary>
+        static void FrontStraps(Transform pack, BodySpec spec, float s, float back, Vector3 center)
+        {
+            float frontZ = 0f;
+            for (int k = 5; k <= 7 && k < spec.Torso.Length; k++) frontZ = Mathf.Max(frontZ, spec.Torso[k].F + spec.Torso[k].C);
+            Quaternion inv = Quaternion.Inverse(pack.localRotation);
+            Vector3 Local(Vector3 root) => inv * (root - center) / s;
+            var mb = new MeshBuilder();
+            mb.SetMaterial(Mat("backpack"));
+            Rect strap = R(0, 32, 32, 8, 64, 64), buckle = R(32, 32, 16, 16, 64, 64);
+            float y = spec.ShoulderY;
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                Vector3[] p =
+                {
+                    new Vector3(sx * 0.085f, 0.2f, 0.066f),   // the top of the strap on the bag (pack space)
+                    Local(new Vector3(sx * 0.075f * s, y - 0.02f * s, -(back - 0.005f))),
+                    Local(new Vector3(sx * 0.085f * s, y + 0.045f * s, -0.03f * s)),
+                    Local(new Vector3(sx * 0.095f * s, y + 0.015f * s, frontZ * 0.6f)),
+                    Local(new Vector3(sx * 0.105f * s, y - 0.16f * s, frontZ + 0.006f)),
+                };
+                for (int i = 0; i + 1 < p.Length; i++) Bar(mb, p[i], p[i + 1], 0.042f, 0.007f, strap);
+                Box(mb, p[p.Length - 1], Quaternion.LookRotation(p[p.Length - 1] - p[p.Length - 2], Vector3.forward),
+                    new Vector3(0.03f, 0.006f, 0.022f), BoxUVRects.All(buckle));
+            }
+            mb.Build("Straps_Front", pack, Layers.Item);
         }
 
         // ============================================================================================ Omar's tools
