@@ -97,7 +97,7 @@ namespace PrisonersOfOmar.Characters
                 case ItemType.Revolver: return new Vector3(0f, 0.0175f, -0.05f);
                 case ItemType.Screwdriver: return new Vector3(0f, 0.0145f, -0.04f);
                 case ItemType.Backpack: return new Vector3(0f, BackpackH * 0.5f, 0f);
-                case ItemType.SmallKey: return new Vector3(0.004f, 0.0015f, 0.009f);
+                case ItemType.SmallKey: return new Vector3(0.004f, 0.002f, 0.009f);
                 case ItemType.VhsTape: return new Vector3(0f, 0.0125f, 0f);
                 default: return new Vector3(0, 0.03f, 0);
             }
@@ -614,23 +614,32 @@ namespace PrisonersOfOmar.Characters
             Bar(mb, new Vector3(0.02f, 0.221f, 0.055f), new Vector3(0.025f, 0.196f, 0.055f), 0.016f, 0.005f, strap);
         }
 
-        // smallkey.png 32x32: brass (0,0,16,32) tag (16,0,16,32)
-        /// <summary>(iteration 3) A small brass cabinet key on a string with a cardboard tag, lying flat (pivot = the bow).</summary>
+        // smallkey.png 32x32: brass (0,0,16,32) tag face (16,0,16,16, top of the image = the string end) tag card (16,16,16,8)
+        //                   string (16,24,16,8)
+        /// <summary>(iteration 3) A small brass cabinet key on a string with a cardboard tag, lying flat (pivot = the bow).
+        /// The tag carries a padlock mark, never a number (numbers are codes in this game).</summary>
         static void SmallKey(MeshBuilder mb)
         {
             mb.SetMaterial(Mat("smallkey"));
-            Rect brass = R(0, 0, 16, 32, 32, 32), tag = R(16, 0, 16, 32, 32, 32);
-            const int N = 7;
+            Rect brass = R(0, 0, 16, 32, 32, 32), tagFace = R(16, 0, 16, 16, 32, 32), card = R(16, 16, 16, 8, 32, 32);
+            Rect twine = R(16, 24, 16, 8, 32, 32);
+            // round bow, collar, shank and a two-tooth bit
+            const int N = 8;
             for (int i = 0; i < N; i++)
             {
                 float a0 = (float)i / N * Mathf.PI * 2f, a1 = (float)(i + 1) / N * Mathf.PI * 2f;
-                Bar(mb, new Vector3(Mathf.Cos(a0) * 0.009f, 0, Mathf.Sin(a0) * 0.009f), new Vector3(Mathf.Cos(a1) * 0.009f, 0, Mathf.Sin(a1) * 0.009f), 0.004f, 0.003f, brass);
+                Bar(mb, new Vector3(Mathf.Cos(a0) * 0.010f, 0, Mathf.Sin(a0) * 0.010f), new Vector3(Mathf.Cos(a1) * 0.010f, 0, Mathf.Sin(a1) * 0.010f), 0.0045f, 0.0035f, brass);
             }
-            Bar(mb, new Vector3(0, 0, 0.009f), new Vector3(0, 0, 0.046f), 0.0035f, 0.0025f, brass);
-            mb.AddBox(new Vector3(0.0045f, 0, 0.04f), new Vector3(0.006f, 0.0025f, 0.009f), BoxUVRects.All(brass));
-            // the string and the tag
-            Bar(mb, new Vector3(0, 0, -0.009f), new Vector3(-0.006f, 0, -0.03f), 0.0012f, 0.0012f, tag);
-            mb.AddBox(new Vector3(-0.008f, 0, -0.046f), new Vector3(0.022f, 0.001f, 0.034f), BoxUVRects.All(tag));
+            mb.AddBox(new Vector3(0, 0, 0.012f), new Vector3(0.008f, 0.004f, 0.004f), BoxUVRects.All(brass));
+            Bar(mb, new Vector3(0, 0, 0.012f), new Vector3(0, 0, 0.05f), 0.0038f, 0.0032f, brass);
+            mb.AddBox(new Vector3(0.0045f, 0, 0.041f), new Vector3(0.007f, 0.003f, 0.004f), BoxUVRects.All(brass));
+            mb.AddBox(new Vector3(0.0035f, 0, 0.047f), new Vector3(0.005f, 0.003f, 0.003f), BoxUVRects.All(brass));
+            // the string and the tag (cut corners at the string end), turned a little
+            Bar(mb, new Vector3(0, 0, -0.011f), new Vector3(-0.0067f, 0.0008f, -0.0322f), 0.0012f, 0.0012f, twine);
+            var tagRot = Quaternion.Euler(0f, 12f, 0f);
+            Box(mb, new Vector3(-0.009f, 0, -0.043f), tagRot, new Vector3(0.024f, 0.0012f, 0.030f),
+                new BoxUVRects { PosY = tagFace, NegY = card, PosX = card, NegX = card, PosZ = card, NegZ = card });
+            Box(mb, new Vector3(-0.009f, 0, -0.043f) + tagRot * new Vector3(0f, 0f, 0.018f), tagRot, new Vector3(0.016f, 0.0012f, 0.006f), BoxUVRects.All(card));
         }
 
         // vhstape.png 64x32: label (0,0,48,16) shell (0,16,48,16) spine label (48,0,16,16) window + reels (48,16,16,16)

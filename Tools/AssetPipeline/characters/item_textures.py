@@ -698,14 +698,31 @@ def backpack():
 
 
 def smallkey():
-    """smallkey.png 32x32 (iteration 3): brass (0,0,16,32), cardboard tag with a scribbled number (16,0,16,32)."""
+    """smallkey.png 32x32 (iteration 3): brass (0,0,16,32) with dark edges, cardboard tag face (16,0,16,16) with an eyelet
+    and a red padlock mark (never a number: numbers are codes in this game), plain card (16,16,16,8), string (16,24,16,8)."""
     c = Canvas(32, 32, 32)
     r = c.rng
-    c.put(0, 0, metal(32 * S, 16 * S, "#a88a3c", r, brushed=False, scratches=0.4, rust=0.15))
-    tag = paper(32 * S, 16 * S, "#c8b48a", r, dirt=0.5)
-    tag = mix(tag, rgb("#2a2018"), text_mask(32 * S, 16 * S, "7", 8 * S, 16 * S, int(12 * S), stroke=1) * 0.8)
-    tag = mix(tag, rgb("#6a5a40"), soft_ellipse(32 * S, 16 * S, 8 * S, 4 * S, 2 * S, 2 * S) * 0.9)   # the string hole
+    brass = metal(32 * S, 16 * S, "#a88a3c", r, brushed=False, scratches=0.4, rust=0.15)
+    m = np.zeros((32 * S, 16 * S), np.float32)
+    m[:, :S], m[:, -S:] = 1, 1
+    c.put(0, 0, mix(brass, rgb("#6a5424"), m * 0.8))
+    tag = paper(16 * S, 16 * S, "#c8b48a", r, dirt=0.5)
+    # brass eyelet at the string end (top of the image = towards the key)
+    tag = mix(tag, rgb("#8a7a5a"), soft_ellipse(16 * S, 16 * S, 8 * S, 2.3 * S, 2.1 * S, 2.1 * S))
+    tag = mix(tag, rgb("#2a2018"), soft_ellipse(16 * S, 16 * S, 8 * S, 2.3 * S, 1.0 * S, 1.0 * S))
+    # a padlock drawn in red marker: shackle arc over a filled body
+    red = rgb("#9a1a10")
+    mark = draw_mask(16 * S, 16 * S, lambda d: (d.arc([5.4 * S, 5.2 * S, 10.6 * S, 10.4 * S], 180, 360, fill=255, width=int(1.1 * S)),
+                                               d.line([5.9 * S, 7.8 * S, 5.9 * S, 9.4 * S], fill=255, width=int(1.1 * S)),
+                                               d.line([10.1 * S, 7.8 * S, 10.1 * S, 9.4 * S], fill=255, width=int(1.1 * S)),
+                                               d.rectangle([4.4 * S, 9.2 * S, 11.6 * S, 14.2 * S], fill=255)))
+    tag = mix(tag, red, mark * 0.85)
+    tag = mix(tag, rgb("#c8b48a"), draw_mask(16 * S, 16 * S, lambda d: d.ellipse([7.3 * S, 10.6 * S, 8.7 * S, 12.0 * S], fill=255)) * 0.8)
     c.put(16, 0, tag)
+    c.put(16, 16, paper(8 * S, 16 * S, "#b8a47a", r, dirt=0.6))
+    twine = fill(8 * S, 16 * S, rgb("#8a7a60"))
+    xx = np.mgrid[0:8 * S, 0:16 * S][1]
+    c.put(16, 24, shade(twine, 0.8 + 0.3 * ((xx // S) % 2)))
     return c.done()
 
 
