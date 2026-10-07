@@ -149,6 +149,7 @@ namespace PrisonersOfOmar.Gameplay
         public DrawerLockKind Lock;
         public CodeLockEntity CodeLock;
         GameObject _padlock;
+        Transform _hasp;
         float _t, _target;
         readonly Vector3 _shut;
 
@@ -175,10 +176,14 @@ namespace PrisonersOfOmar.Gameplay
             {
                 _padlock = ItemMeshFactory.BuildPadlock(kind == DrawerLockKind.Code);
                 var b = Info.Interact.bounds;
-                Vector3 front = b.center + OutDir * 0.012f + Vector3.up * Mathf.Min(0.03f, b.extents.y * 0.4f);
+                // the hasp near the top edge like on a real drawer: its plate goes on the frame just above
+                Vector3 front = b.center + OutDir * 0.0105f + Vector3.up * Mathf.Max(0f, b.extents.y - 0.035f);
                 _padlock.transform.SetParent(Info.Drawer, true);
                 _padlock.transform.SetPositionAndRotation(front, Quaternion.LookRotation(OutDir, Vector3.up));
                 GeoUtil.SetLayerRecursive(_padlock, Layers.World);
+                // the hasp belongs to the furniture: it stays put when the drawer slides out
+                _hasp = _padlock.transform.Find("Hasp");
+                if (_hasp != null && Info.Drawer.parent != null) _hasp.SetParent(Info.Drawer.parent, true);
             }
             catch (System.Exception e) { Debug.LogException(e); }
         }
@@ -222,10 +227,26 @@ namespace PrisonersOfOmar.Gameplay
             if (!Locked) return;
             Locked = false;
             if (CodeLock != null) CodeLock.Open = true;   // a pried / admin-opened drawer takes no more codes
-            if (_padlock != null) Object.Destroy(_padlock);
-            _padlock = null;
+            // the open lock hangs back on the staple (a small key stays in it); a crowbar tears it all out onto the floor
+            try { DropLock(ItemMeshFactory.OpenPadlock(_padlock != null ? _padlock.transform : null, _hasp, how)); }
+            catch (System.Exception e) { Debug.LogException(e); }
             string snd = how == 1 ? Snd.Lockpick : how == 3 ? Snd.WoodBreak : Snd.KeyUnlock;
             AudioManager.Play3D(snd, InteractPoint, how == 3 ? 1f : 0.7f, Random.Range(0.94f, 1.06f), 1.5f, how == 3 ? 25f : 10f);
+        }
+
+        void DropLock(Transform lk)
+        {
+            if (lk == null) return;
+            Vector3 from = lk.position + OutDir * 0.12f + Vector3.up * 0.05f;
+            if (!Physics.Raycast(from, Vector3.down, out var hit, 3f, 1 << Layers.World, QueryTriggerInteraction.Ignore))
+            {
+                Object.Destroy(lk.gameObject);
+                return;
+            }
+            if (Info.Drawer.parent != null) lk.SetParent(Info.Drawer.parent, true);
+            // face up on the floor, the shackle pointing some way or other (the same on every peer)
+            Vector3 along = Quaternion.AngleAxis(Index * 67f + 20f, Vector3.up) * OutDir;
+            lk.SetPositionAndRotation(hit.point + Vector3.up * 0.0095f, Quaternion.LookRotation(Vector3.up, along));
         }
 
         public void Apply(bool open)

@@ -653,28 +653,134 @@ namespace PrisonersOfOmar.Characters
             mb.AddBox(new Vector3(0f, 0.0128f, 0.012f), new Vector3(0.09f, 0.0006f, 0.03f), BoxUVRects.All(window));   // the reel window
         }
 
-        // padlock.png 32x32: brass (0,0,16,16) shackle (16,0,16,16) keyhole face (0,16,16,16) dial face (16,16,16,16)
-        /// <summary>(iteration 3) The padlock on a locked drawer, hanging from its hasp (pivot = the hasp on the drawer front,
-        /// the lock face towards +Z). <paramref name="dial"/> = a combination padlock.</summary>
+        // padlock.png 64x32: brass (0,0,16,16) steel (16,0,16,16) keyhole face (0,16,16,16) enamel face (16,16,16,16)
+        //                   hasp strap (32,0,16,32) wheel digits (48,0,16,8) black enamel (48,8,16,8) torn wood (48,16,16,16)
+        /// <summary>(iteration 3) The padlock on a locked drawer (pivot = the staple on the drawer front, +Z = out of the
+        /// drawer, sit it on the face about 3.5 cm under the top edge). <paramref name="dial"/> = a three-wheel combination
+        /// padlock. Children: "Staple" (on the drawer), "Torn" (hidden: raw wood where a crowbar tore the staple out),
+        /// "Hasp" (hinge plate on the frame above the drawer - reparent it to the furniture so it stays when the drawer
+        /// slides; its child "Strap" swings on the hinge) and "Lock" (pivot = the top of the shackle, through the staple;
+        /// children "Shackle" and, on a key padlock, a hidden "Key"). See <see cref="OpenPadlock"/>.</summary>
         public static GameObject BuildPadlock(bool dial)
         {
             var go = new GameObject(dial ? "CombinationLock" : "Padlock");
             go.layer = Layers.World;
+            const float W = 64, H = 32;
+            var mat = Mat("padlock");
+            Rect brass = R(0, 0, 16, 16, W, H), steel = R(16, 0, 16, 16, W, H), hole = R(0, 16, 16, 16, W, H), face = R(16, 16, 16, 16, W, H);
+            Rect strip = R(32, 0, 16, 32, W, H), digits = R(48, 0, 16, 8, W, H), enamel = R(48, 8, 16, 8, W, H), wood = R(48, 16, 16, 16, W, H);
+            Rect body = dial ? enamel : brass;
+
+            // the staple: a U standing out of the drawer front (its eye faces sideways, the shackle goes through it)
             var mb = new MeshBuilder();
-            mb.SetMaterial(Mat("padlock"));
-            Rect brass = R(0, 0, 16, 16, 32, 32), steel = R(16, 0, 16, 16, 32, 32), hole = R(0, 16, 16, 16, 32, 32), face = R(16, 16, 16, 16, 32, 32);
-            // the hasp plate screwed to the drawer, its staple sticking out
-            mb.AddBox(new Vector3(0f, 0.004f, 0.002f), new Vector3(0.02f, 0.034f, 0.004f), BoxUVRects.All(steel));
-            Bar(mb, new Vector3(-0.007f, 0.012f, 0.004f), new Vector3(-0.007f, 0.012f, 0.014f), 0.003f, 0.003f, steel);
-            Bar(mb, new Vector3(0.007f, 0.012f, 0.004f), new Vector3(0.007f, 0.012f, 0.014f), 0.003f, 0.003f, steel);
-            // shackle through the staple, the body hanging under it
-            Bar(mb, new Vector3(-0.008f, -0.006f, 0.014f), new Vector3(-0.008f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
-            Bar(mb, new Vector3(0.008f, -0.006f, 0.014f), new Vector3(0.008f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
-            Bar(mb, new Vector3(-0.0095f, 0.016f, 0.014f), new Vector3(0.0095f, 0.016f, 0.014f), 0.0032f, 0.0032f, steel);
-            mb.AddBox(new Vector3(0f, -0.019f, 0.014f), new Vector3(0.03f, 0.028f, 0.014f),
-                new BoxUVRects { PosZ = dial ? face : hole, NegZ = brass, PosX = brass, NegX = brass, PosY = brass, NegY = brass });
-            mb.Build("Mesh", go.transform, Layers.World);
+            mb.SetMaterial(mat);
+            Bar(mb, new Vector3(0f, -0.006f, 0.003f), new Vector3(0f, -0.006f, 0.016f), 0.003f, 0.003f, steel);
+            Bar(mb, new Vector3(0f, 0.006f, 0.003f), new Vector3(0f, 0.006f, 0.016f), 0.003f, 0.003f, steel);
+            Bar(mb, new Vector3(0f, -0.0075f, 0.016f), new Vector3(0f, 0.0075f, 0.016f), 0.003f, 0.003f, steel);
+            mb.Build("Staple", go.transform, Layers.World);
+            var torn = new MeshBuilder();
+            torn.SetMaterial(mat);
+            torn.AddBox(new Vector3(0f, 0.008f, 0.0006f), new Vector3(0.03f, 0.045f, 0.0012f), BoxUVRects.All(wood));
+            torn.Build("Torn", go.transform, Layers.World).SetActive(false);
+
+            // the hasp: a plate screwed to the frame above the drawer, the slotted strap hanging over the staple
+            var hasp = Child(go.transform, "Hasp", new Vector3(0f, 0.057f, 0.0025f), Quaternion.identity);
+            var hm = new MeshBuilder();
+            hm.SetMaterial(mat);
+            hm.AddBox(new Vector3(0f, 0.008f, 0f), new Vector3(0.026f, 0.016f, 0.003f), BoxUVRects.All(strip));
+            for (int sx = -1; sx <= 1; sx += 2) hm.AddBox(new Vector3(sx * 0.007f, 0.009f, 0.002f), new Vector3(0.006f, 0.006f, 0.002f), BoxUVRects.All(steel));
+            Cyl(hm, new Vector3(-0.014f, 0f, 0.002f), new Vector3(0.014f, 0f, 0.002f), 0.0028f, 0.0028f, 6, steel, steel, steel);
+            hm.Build("Mesh", hasp, Layers.World);
+            var strap = Child(hasp, "Strap", Vector3.zero, Quaternion.identity);
+            var sm = new MeshBuilder();
+            sm.SetMaterial(mat);
+            sm.AddBox(new Vector3(0f, -0.035f, 0f), new Vector3(0.026f, 0.07f, 0.003f), BoxUVRects.All(strip));
+            sm.Build("Mesh", strap, Layers.World);
+
+            // the lock itself, hanging from the shackle threaded through the staple's eye
+            var lk = Child(go.transform, "Lock", new Vector3(0f, 0.003f, 0.010f), Quaternion.Euler(0f, 0f, dial ? -5f : 6f));
+            var lm = new MeshBuilder();
+            lm.SetMaterial(mat);
+            if (dial)
+            {
+                lm.AddBox(new Vector3(0f, -0.036f, 0f), new Vector3(0.036f, 0.034f, 0.018f),
+                    new BoxUVRects { PosZ = face, NegZ = enamel, PosX = enamel, NegX = enamel, PosY = steel, NegY = enamel });
+                for (int i = -1; i <= 1; i++)   // three number wheels standing 4 mm proud of the face
+                    Cyl(lm, new Vector3(i * 0.0095f - 0.0035f, -0.043f, 0.007f), new Vector3(i * 0.0095f + 0.0035f, -0.043f, 0.007f), 0.0062f, 0.0062f, 10, digits, enamel, enamel);
+            }
+            else
+            {
+                lm.AddBox(new Vector3(0f, -0.033f, 0f), new Vector3(0.04f, 0.026f, 0.016f),
+                    new BoxUVRects { PosZ = hole, NegZ = brass, PosX = brass, NegX = brass, PosY = brass, NegY = brass });
+                Cyl(lm, new Vector3(0f, -0.046f, -0.0075f), new Vector3(0f, -0.046f, 0.0075f), 0.02f, 0.02f, 8, brass, brass, brass);
+            }
+            lm.Build("Mesh", lk, Layers.World);
+            var shackle = Child(lk, "Shackle", Vector3.zero, Quaternion.identity);
+            var km = new MeshBuilder();
+            km.SetMaterial(mat);
+            float sw = dial ? 0.004f : 0.0045f, legTop = -0.011f, legBot = dial ? -0.02f : -0.021f;
+            for (int sx = -1; sx <= 1; sx += 2) Bar(km, new Vector3(sx * 0.011f, legBot, 0f), new Vector3(sx * 0.011f, legTop, 0f), sw, sw, steel);
+            const int A = 5;
+            for (int i = 0; i < A; i++)
+            {
+                float a0 = Mathf.PI * i / A, a1 = Mathf.PI * (i + 1) / A;
+                Bar(km, new Vector3(Mathf.Cos(a0) * 0.011f, legTop + Mathf.Sin(a0) * 0.011f, 0f), new Vector3(Mathf.Cos(a1) * 0.011f, legTop + Mathf.Sin(a1) * 0.011f, 0f), sw, sw, steel);
+            }
+            km.Build("Mesh", shackle, Layers.World);
+            if (!dial)
+            {
+                // the small key left turned in the lock (shown when it was opened with one), its tag dangling
+                var key = Child(lk, "Key", new Vector3(0f, -0.033f, 0.008f), Quaternion.identity);
+                var ym = new MeshBuilder();
+                ym.SetMaterial(Mat("smallkey"));
+                Rect kb = R(0, 0, 16, 32, 32, 32), tagFace = R(16, 0, 16, 16, 32, 32), card = R(16, 16, 16, 8, 32, 32), twine = R(16, 24, 16, 8, 32, 32);
+                Bar(ym, new Vector3(0f, 0f, -0.005f), new Vector3(0f, 0f, 0.014f), 0.0038f, 0.0032f, kb);
+                ym.AddBox(new Vector3(0f, 0f, 0.014f), new Vector3(0.008f, 0.004f, 0.004f), BoxUVRects.All(kb));
+                const int N = 8;
+                for (int i = 0; i < N; i++)
+                {
+                    float a0 = (float)i / N * Mathf.PI * 2f, a1 = (float)(i + 1) / N * Mathf.PI * 2f;
+                    Bar(ym, new Vector3(Mathf.Cos(a0) * 0.01f, 0f, 0.026f + Mathf.Sin(a0) * 0.01f), new Vector3(Mathf.Cos(a1) * 0.01f, 0f, 0.026f + Mathf.Sin(a1) * 0.01f), 0.0045f, 0.0035f, kb);
+                }
+                Bar(ym, new Vector3(0f, 0f, 0.036f), new Vector3(0.002f, -0.024f, 0.037f), 0.0012f, 0.0012f, twine);
+                ym.AddBox(new Vector3(0.003f, -0.038f, 0.037f), new Vector3(0.024f, 0.03f, 0.0012f),
+                    new BoxUVRects { PosZ = tagFace, NegZ = card, PosX = card, NegX = card, PosY = card, NegY = card });
+                ym.Build("Mesh", key, Layers.World);
+                key.gameObject.SetActive(false);
+            }
             return go;
+        }
+
+        /// <summary>A drawer padlock coming off (how: 0 small key, 1 lockpick, 2 code, 3 crowbar, 4 admin). Unlocked, the
+        /// strap is flipped up and the open lock hung back on the staple (the small key left in it for how 0). Pried with a
+        /// crowbar, the staple and the hasp are torn out: the lock is unparented and returned for the caller to drop.</summary>
+        public static Transform OpenPadlock(Transform root, Transform hasp, int how)
+        {
+            if (root == null) return null;
+            var lk = root.Find("Lock");
+            if (how == 3)
+            {
+                if (hasp != null) hasp.gameObject.SetActive(false);
+                var staple = root.Find("Staple");
+                if (staple != null) staple.gameObject.SetActive(false);
+                var torn = root.Find("Torn");
+                if (torn != null) torn.gameObject.SetActive(true);
+                if (lk != null) lk.SetParent(null, true);
+                return lk;
+            }
+            var strap = hasp != null ? hasp.Find("Strap") : null;
+            if (strap != null) strap.localRotation = Quaternion.Euler(-100f, 0f, 0f);
+            if (lk != null)
+            {
+                // the body drops off the shackle (still threaded through the staple) and swings a little
+                lk.localRotation = Quaternion.Euler(0f, 0f, lk.localRotation.eulerAngles.z > 180f ? -16f : 16f);
+                var shackle = lk.Find("Shackle");
+                if (shackle != null) shackle.localPosition = new Vector3(0f, 0.009f, 0f);
+                lk.localPosition += lk.localRotation * new Vector3(0f, -0.009f, 0f);
+                var key = lk.Find("Key");
+                if (key != null) key.gameObject.SetActive(how == 0);
+            }
+            return null;
         }
 
         /// <summary>Hangs a <see cref="Build"/>(Backpack) model on a character's back: parented to the chest bone, its

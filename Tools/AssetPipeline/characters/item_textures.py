@@ -727,26 +727,56 @@ def smallkey():
 
 
 def padlock():
-    """padlock.png 32x32 (iteration 3, on locked drawers): brass body (0,0,16,16), steel shackle (16,0,16,16),
-    keyhole face (0,16,16,16), combination dial face (16,16,16,16)."""
-    c = Canvas(32, 32, 33)
+    """padlock.png 64x32 (iteration 3, on locked drawers): old brass (0,0,16,16), steel (16,0,16,16), keyhole face with a
+    bright escutcheon (0,16,16,16), black enamel face of the combination lock with a white mark and a red dot (16,16,16,16),
+    rusty hasp strap with a slot and two screw holes (32,0,16,32), number wheel band (48,0,16,8), plain black enamel
+    (48,8,16,8), splintered raw wood where a crowbar tore the staple out (48,16,16,16)."""
+    import math
+    c = Canvas(64, 32, 33)
     r = c.rng
-    body = metal(16 * S, 16 * S, "#9a7a30", r, brushed=False, scratches=0.4, rust=0.25)
-    c.put(0, 0, body)
+
+    def edged(img, color, k=0.8):
+        h, w = img.shape[:2]
+        m = np.zeros((h, w), np.float32)
+        m[:S], m[-S:], m[:, :S], m[:, -S:] = 1, 1, 1, 1
+        return mix(img, rgb(color), m * k)
+
+    brass = metal(16 * S, 16 * S, "#7a6028", r, brushed=False, scratches=0.4, rust=0.25)
+    c.put(0, 0, edged(brass, "#3a2a10"))
     c.put(16, 0, metal(16 * S, 16 * S, "#8a8c90", r, scratches=0.3, rust=0.3))
-    face = metal(16 * S, 16 * S, "#9a7a30", r, brushed=False, scratches=0.3, rust=0.2)
-    face = mix(face, rgb("#141008"), soft_ellipse(16 * S, 16 * S, 8 * S, 6 * S, 1.6 * S, 1.6 * S))
-    face = mix(face, rgb("#141008"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.4 * S, 6 * S, 8.6 * S, 11 * S], fill=255)))
-    c.put(0, 16, face)
-    dial = metal(16 * S, 16 * S, "#2a2a2c", r, brushed=False, scratches=0.2)
-    dial = mix(dial, rgb("#d8d4c8"), soft_ellipse(16 * S, 16 * S, 8 * S, 8 * S, 6 * S, 6 * S) * 0.15)
+    face = metal(16 * S, 16 * S, "#7a6028", r, brushed=False, scratches=0.3, rust=0.2)
+    face = mix(face, rgb("#c8b060"), soft_ellipse(16 * S, 16 * S, 8 * S, 8.5 * S, 3.6 * S, 4.6 * S))     # escutcheon
+    face = mix(face, rgb("#141008"), soft_ellipse(16 * S, 16 * S, 8 * S, 7 * S, 1.5 * S, 1.5 * S))
+    face = mix(face, rgb("#141008"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.4 * S, 7 * S, 8.6 * S, 11.5 * S], fill=255)))
+    c.put(0, 16, edged(face, "#3a2a10"))
+    enamel = plastic(16 * S, 16 * S, "#141416", r, dirt=0.2)
+    enamel = mix(enamel, rgb("#e8e4d8"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.4 * S, 1.5 * S, 8.6 * S, 5 * S], fill=255)) * 0.9)
+    enamel = mix(enamel, rgb("#c02018"), soft_ellipse(16 * S, 16 * S, 8 * S, 7 * S, 0.9 * S, 0.9 * S))
+    c.put(16, 16, edged(enamel, "#050506", 0.6))
+
+    strap = metal(32 * S, 16 * S, "#4a4640", r, brushed=False, scratches=0.3, rust=0.85)
+    strap = mix(strap, rgb("#0c0a08"), draw_mask(32 * S, 16 * S, lambda d: d.rectangle([5 * S, 24 * S, 11 * S, 28.5 * S], fill=255)))  # the slot
+    for x in (4.5, 11.5):
+        strap = mix(strap, rgb("#1a1410"), soft_ellipse(32 * S, 16 * S, x * S, 4 * S, 1.2 * S, 1.2 * S))
+    c.put(32, 0, edged(strap, "#1e1a14", 0.7))
+
+    band = fill(8 * S, 16 * S, rgb("#101012"))
     for k in range(10):
-        import math
-        a = k / 10 * 2 * math.pi
-        x, y = 8 * S + math.sin(a) * 5.6 * S, 8 * S - math.cos(a) * 5.6 * S
-        dial = mix(dial, rgb("#e0dccc"), soft_ellipse(16 * S, 16 * S, x, y, 0.5 * S, 0.5 * S))
-    dial = mix(dial, rgb("#c02018"), draw_mask(16 * S, 16 * S, lambda d: d.rectangle([7.5 * S, 0.5 * S, 8.5 * S, 3 * S], fill=255)))
-    c.put(16, 16, dial)
+        x0 = k * 1.6
+        band = mix(band, rgb("#e0dccc"), draw_mask(8 * S, 16 * S, lambda d, x0=x0: d.rectangle([(x0 + 0.5) * S, 2.5 * S, (x0 + 1.1) * S, 5.5 * S], fill=255)) * 0.85)
+    c.put(48, 0, band)
+    c.put(48, 8, plastic(8 * S, 16 * S, "#141416", r, dirt=0.2))
+
+    wood = fill(16 * S, 16 * S, rgb("#a8845a"))
+    n = fbm(16 * S, 16 * S, 5, r, octaves=3)
+    yy, xx = np.mgrid[0:16 * S, 0:16 * S] / float(S)
+    grain = 0.5 + 0.5 * np.sin(xx * 2.2 + n * 3)
+    wood = shade(wood, 0.8 + 0.3 * grain)
+    for (x, y) in ((8, 3), (8, 12)):
+        wood = mix(wood, rgb("#1a1008"), soft_ellipse(16 * S, 16 * S, x * S, y * S, 1.1 * S, 1.4 * S))
+    splinters = smoothstep(0.55, 0.75, fbm(16 * S, 16 * S, 9, r, octaves=2))
+    wood = mix(wood, rgb("#5a3a1e"), splinters * 0.6)
+    c.put(48, 16, wood)
     return c.done()
 
 
