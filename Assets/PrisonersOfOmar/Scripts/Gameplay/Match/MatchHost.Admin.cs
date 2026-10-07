@@ -43,6 +43,7 @@ namespace PrisonersOfOmar.Gameplay
                         if (st.TrappedBy >= 0 && st.TrappedBy < W.Traps.Count) BroadcastTrap(W.Traps[st.TrappedBy], TrapState.Disarmed, -1, false);
                         if (W.Objectives.CarDriver == a) { var o = EditObj(); o.CarDriver = -1; CommitObj(o); }
                         st.Life = LifeState.Dead; st.HidingSpot = -1; st.Cage = -1; st.TrappedBy = -1; st.CarSeat = -1;
+                        DropAllOnDeath(a, PosOf(a));
                         Commit(st);
                         SetChase(a, false);
                     }
@@ -61,7 +62,11 @@ namespace PrisonersOfOmar.Gameplay
                     break;
                 case AdminCmd.ClearInventory:
                     if (_inv.TryGetValue(sender, out var cs))
+                    {
                         for (int i = 0; i < cs.Length; i++) if (cs[i] >= 0) DropItem(sender, cs[i], me + new Vector3(i * 0.3f - 0.6f, 0f, 0.5f), 0f, W.GetItem(cs[i])?.Charge ?? 1f);
+                        // the backpack too (after the slots), so the 3-slot state can be tested again
+                        if (_pack.TryGetValue(sender, out var pk)) DropItem(sender, pk, me + new Vector3(0f, 0f, 1f), 0f, 1f);
+                    }
                     break;
 
                 // ---------------------------------------------------------------- Omar

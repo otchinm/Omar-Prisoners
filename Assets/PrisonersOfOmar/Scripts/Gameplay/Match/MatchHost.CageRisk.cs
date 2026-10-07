@@ -46,6 +46,7 @@ namespace PrisonersOfOmar.Gameplay
             st.Cage = -1;
             st.Injured = false;
             st.TeleportSeq++;
+            DropAllOnDeath(occ, c.Info.Inside.position);
             _struggle[occ * 2] = 0;
             _cageRattleAt[cage] = -999f;
             Commit(st);

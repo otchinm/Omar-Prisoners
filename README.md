@@ -56,7 +56,7 @@ takes over his body.
 | E | interact (hold for long actions), hide in wardrobes / lockers / **under beds** | RMB | scream (one of 4 screams) |
 | hold LMB on a door + move the mouse | swing the door open / shut (physical doors) | walk into a door | shove it open |
 | F / LMB | use item (Zippo open + strike / close, flashlight, bandage, throw bottle, fire the revolver...) | E | unlock doors, **search** hiding spots (looks under beds, flips them on whoever hides there), smash boards |
-| 1 2 3 / wheel | select slot | T | string a tripwire across a doorway |
+| 1-5 / wheel | select slot (4-5 with a backpack) | T | string a tripwire across a doorway |
 | G | drop item | G | set a bear trap |
 | Tab | inventory | Q | sense nearby prisoners |
 | Esc | menu (the game keeps running) | Esc | menu |
@@ -70,7 +70,7 @@ locked in **their own cage in a random cell room** (the cage room upstairs, the 
 parking lot); playing alone there is exactly one cage. After a few seconds the locks fail. Omar spends the first
 ~20 seconds waking up in the furnace room in the basement.
 
-**Inventory.** Each prisoner carries **3 items**. Slot 1 always starts with a **lighter**: it is your light,
+**Inventory.** Each prisoner carries **3 items** (5 while wearing the **backpack**). Slot 1 always starts with a **lighter**: it is your light,
 it burns fuel, and Omar can see the flame from far away. Items lie around the whole map, and their positions are
 **randomised every match**:
 
@@ -87,6 +87,12 @@ it burns fuel, and Omar can see the flame from far away. Items lie around the wh
 | Crowbar | Pry boarded doors; breaks Omar's grip once |
 | Bottle | Throw it to make noise somewhere else |
 | Painkillers | Stamina, and ignore the limp for a while |
+| Backpack | Worn on the back, not carried: 3 -> 5 slots (one per map, two on Easy) |
+| Small key | Opens one padlocked drawer (a lockpick does too; a crowbar pries any padlock open, loudly) |
+| VHS tape | Put it in the VCR on the grandmother's TV and watch it: one shot gives away a code |
+
+**Puzzles.** A few drawers in the house are **padlocked** (key or 3-digit combination). Combinations, the shelter code
+and other codes are written in **notes** around the map; everything you read or watch goes into the **journal (J)**.
 
 **Stealth.** Running, doors, dropping or throwing things make **noise**. Omar's player sees it as ripples
 through walls, and the AI comes to investigate. Darkness and crouching hide you; your own lighter or flashlight

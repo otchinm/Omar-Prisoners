@@ -287,7 +287,8 @@ namespace PrisonersOfOmar.UI
             "GET OUT BEFORE 6 AM. THE GATE, THE CAR, THE SHELTER, THE RADIO OR THE FUEL DRUMS.\n\n" +
             "WASD  MOVE        SHIFT  RUN        C  CROUCH\n" +
             "E  INTERACT / HIDE        HOLD LMB  DRAG A DOOR\n" +
-            "F  USE ITEM        1-3  SELECT        G  DROP        TAB  ITEMS",
+            "F  USE ITEM        1-5  SELECT        G  DROP\n" +
+            "TAB  ITEMS        J  JOURNAL (NOTES, TAPES)",
             "NOBODY LEAVES BEFORE DAWN.\n\n" +
             "WASD  MOVE        SHIFT  RUN        LMB  CLEAVER        RMB  SCREAM\n" +
             "E  UNLOCK / SEARCH / SMASH        Q  SENSE\n" +

@@ -121,12 +121,19 @@ namespace PrisonersOfOmar.UI
                 bool sel = i == inv.Selected;
                 ui.Rect(r, new Color(0, 0, 0, sel ? 0.65f : 0.4f));
                 ui.Frame(r, sel ? new Color(1, 1, 1, 0.8f) : new Color(1, 1, 1, 0.22f));
+                ui.Text((i + 1).ToString(), r.x + 1, r.y, new Color(1, 1, 1, sel ? 0.55f : 0.25f), 1, Align.Left, ui.TinyFont);   // the key
                 var it = inv.At(i);
                 if (it == null) continue;
                 var icon = UITex.Get(it.Def.Icon);
                 if (icon != null) ui.Image(icon, new Rect(r.x + 2, r.y + 2, s - 4, s - 4), new Color(1, 1, 1, sel ? 1f : 0.6f));
                 else ui.Text(it.Def.Name.Substring(0, 1), r.center.x, r.y + 4, VhsUI.White, 1, Align.Center);
                 if (it.Def.HasCharge) ui.Rect(r.x + 1, r.yMax - 2, (s - 2) * it.Charge, 1, it.Charge < 0.2f ? VhsUI.Red : VhsUI.Yellow);
+            }
+            // (iteration 3) the worn backpack: a faint icon after the slots (it is on the back, not in a slot)
+            if (inv.HasBackpack)
+            {
+                var bi = UITex.Get(ItemDefs.Get(ItemType.Backpack).Icon);
+                if (bi != null) ui.Image(bi, new Rect(x + inv.Capacity * (s + 4) + 2, y + 3, s - 6, s - 6), new Color(1, 1, 1, 0.45f));
             }
             var held = inv.Held;
             if (held != null) ui.Text(held.Def.Name + (held.Def.HasCharge ? "  " + Mathf.RoundToInt(held.Charge * 100f) + "%" : ""), x, y - ui.LineHeight() - 1, new Color(1, 1, 1, 0.55f));

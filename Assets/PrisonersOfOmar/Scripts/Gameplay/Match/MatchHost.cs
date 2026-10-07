@@ -968,18 +968,14 @@ namespace PrisonersOfOmar.Gameplay
         {
             var st = Edit(target);
             Vector3 pos = PosOf(target);
-            // Omar takes everything but the lighter
+            // Omar takes everything but the lighter (the backpack stays on: it is worn, not carried)
             if (_inv.TryGetValue(target, out var slots))
             {
                 for (int i = 0; i < slots.Length; i++)
                 {
                     var it = W.GetItem(slots[i]);
                     if (it == null || it.Type == ItemType.Lighter) continue;
-                    Vector3 scatter = new Vector3(_rng.Range(-0.6f, 0.6f), 0, _rng.Range(-0.6f, 0.6f));
-                    Vector3 p = pos + scatter + Vector3.up * 0.5f;
-                    if (Physics.Raycast(p, Vector3.down, out var hit, 3f, Layers.Solid, QueryTriggerInteraction.Ignore)) p = hit.point;
-                    else p = pos;
-                    DropItem(target, it.Id, p, _rng.Range(0f, 360f), it.Charge);
+                    DropItem(target, it.Id, GroundNear(pos, 0.6f), _rng.Range(0f, 360f), it.Charge);
                 }
             }
             if (st.HidingSpot >= 0) BroadcastHide(st.HidingSpot, -1, true);
@@ -995,11 +991,12 @@ namespace PrisonersOfOmar.Gameplay
             {
                 st.Life = LifeState.Dead;
                 st.Cage = -1;
+                DropAllOnDeath(target, pos);
             }
             else
             {
                 int cage = PickCageFor(target, pos);
-                if (cage < 0) { st.Life = LifeState.Dead; }
+                if (cage < 0) { st.Life = LifeState.Dead; DropAllOnDeath(target, pos); }
                 else
                 {
                     st.Life = LifeState.Caged;
@@ -1009,6 +1006,26 @@ namespace PrisonersOfOmar.Gameplay
             }
             Commit(st);
             CheckEnd();
+        }
+
+        /// <summary>A floor point within <paramref name="spread"/> m of <paramref name="pos"/> (things dropped around a body).</summary>
+        Vector3 GroundNear(Vector3 pos, float spread)
+        {
+            Vector3 p = pos + new Vector3(_rng.Range(-spread, spread), 0.5f, _rng.Range(-spread, spread));
+            return Physics.Raycast(p, Vector3.down, out var hit, 3f, Layers.Solid, QueryTriggerInteraction.Ignore) ? hit.point : pos;
+        }
+
+        /// <summary>(iteration 3) A prisoner dies: everything still on them falls where they are - the slots first (the lighter
+        /// too), then the worn backpack (slots 4-5 must be empty before it comes off), so the only backpack is never lost.</summary>
+        void DropAllOnDeath(int player, Vector3 pos)
+        {
+            if (_inv.TryGetValue(player, out var slots))
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    var it = W.GetItem(slots[i]);
+                    if (it != null) DropItem(player, it.Id, GroundNear(pos, 0.5f), _rng.Range(0f, 360f), it.Charge);
+                }
+            if (_pack.TryGetValue(player, out var pack)) DropItem(player, pack, GroundNear(pos, 0.3f), _rng.Range(0f, 360f), 1f);
         }
 
         public void OnDetectReq(int sender, NetReader r)

@@ -413,7 +413,8 @@ namespace PrisonersOfOmar.Gameplay
         {
             var inv = _w.Inventory;
             int slot = GameInput.SlotPressed;
-            if (slot >= 0) SelectSlot(slot);
+            if (slot >= inv.Capacity) _w.AddMessage("I CAN ONLY CARRY THREE THINGS. A BAG WOULD HELP...", 2f);
+            else if (slot >= 0) SelectSlot(slot);
             float scroll = GameInput.Scroll;
             if (scroll > 0.1f) SelectSlot((inv.Selected + inv.Capacity - 1) % inv.Capacity);
             else if (scroll < -0.1f) SelectSlot((inv.Selected + 1) % inv.Capacity);

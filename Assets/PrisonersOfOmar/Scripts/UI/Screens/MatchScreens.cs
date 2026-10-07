@@ -74,7 +74,9 @@ namespace PrisonersOfOmar.UI
             float y = 62;
             string title = (it != null ? it.Def.Name + " " : "EMPTY SLOT ") + (_slot + 1) + "/" + cap;
             ui.Text(title, textX, y, VhsUI.White);
-            y += ui.LineHeight() + 6;
+            y += ui.LineHeight() + 2;
+            if (inv.HasBackpack) { ui.Text("ON MY BACK: BACKPACK (+2 SLOTS)", textX, y, VhsUI.Dim, 1, Align.Left, ui.TinyFont); y += ui.LineHeight(1, ui.TinyFont); }
+            y += 4;
             if (it != null)
             {
                 y += ui.TextWrapped(it.Def.Description, textX, y, 150, VhsUI.White, 1, Align.Left, ui.TinyFont);
