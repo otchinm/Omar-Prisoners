@@ -38,6 +38,7 @@ namespace PrisonersOfOmar.Map
             Props.Papers(mb, V(0.6f, F, 2.2f), 102, 4, 0.5f);
             Props.Bottles(mb, V(-1.1f, F, -7.3f), 103, 3, 0.2f);
             ctx.Common(A, V(1.0f, F, -7.5f));
+            ctx.BackpackSpot(A, V(1.0f, F, -7.5f), 160f, 1 | 2 | 4);   // (iteration 3) by the front door, a prisoner's who got that far
             // drag marks: from the front door towards the basement stairs
             var smear = Mat.Decal("blood_smear");
             for (int i = 0; i < 5; i++)
@@ -427,6 +428,7 @@ namespace PrisonersOfOmar.Map
             Arch.Decal(mb, Mat.Decal("water_stain"), V(-0.5f, CU - 0.01f, 2f), Vector3.down, 2.0f, 1.6f, 20f);
             ctx.Key(A, V(-2.45f, F + 0.48f + 0.36f, 7.4f));
             ctx.Common(A, V(-2.4f, F, -6.9f));
+            ctx.BackpackSpot(A, V(-2.4f, F, -6.9f), 30f, 1 | 2);
             ctx.WallNote(A, V(-2.92f, F + 1.5f, 0.6f), Vector3.right);
             Arch.Bulb(ctx, mb, GlowBulbs, V(0, CU, -4.5f), 0.55f, Warm, 1.0f, 6.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "UpperHall_Bulb_S", false, 0.5f);
             Arch.Bulb(ctx, mb, GlowBulbs, V(0, CU, 6.0f), 0.5f, Warm, 0.95f, 6f, PsxFlicker.FaultyBulb, LightGroup.Power, "UpperHall_Bulb_N", false, 0.35f);
@@ -470,6 +472,7 @@ namespace PrisonersOfOmar.Map
             ctx.TapeSpot("cagetable", A, V(-3.5f, F + Props.TableTop, -1.0f), 10f, 1);   // (iteration 3) he wants them to watch it
             ctx.Common(A, V(-4.0f, F, -7.45f));
             ctx.Common(A, V(-5.0f, F, -1.6f));
+            ctx.BackpackSpot(A, V(-5.0f, F, -1.6f), 70f, 1);   // (iteration 3) by the mattress: someone's who never left
             ctx.WallNote(A, V(-3.08f, F + 1.45f, -6.9f), Vector3.left);
             Arch.Bulb(ctx, mb, GlowBulbs, V(-6.5f, CU, -3.0f), 0.65f, Warm, 1.05f, 5.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Cage_Bulb", false, 0.75f);
             ctx.Marker("CageRoom", V(-5.0f, F + 1.6f, -3.0f), Quaternion.LookRotation(Vector3.left));
@@ -730,6 +733,7 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(6.35f, F + Props.BarrelTop, -0.5f));
             ctx.Key(A, V(10.52f, F + Props.ShelfLevel(1), 0.62f));
             ctx.Key(A, V(8.2f, F, -0.6f));
+            ctx.BackpackSpot(A, V(8.2f, F, -0.6f), 200f, 1 | 2 | 4);   // (iteration 3) thrown in with the supplies
             ctx.Common(A, V(3.55f, F + 0.6f + 0.36f, 2.35f));
             Arch.Bulb(ctx, mb, GlowBulbs, V(7.0f, CU, 1.0f), 0.45f, Warm, 0.9f, 4.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Closet_Bulb", false, 0.3f);
             ctx.Nav.Add(V(7.4f, F, 0.8f), A);

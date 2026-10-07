@@ -79,6 +79,16 @@ static class Program
         }
         for (int dif = 0; dif < 4; dif++)
             if (!data.TapeSpots.Any(t => (t.Difficulties & (1 << dif)) != 0) && dif < 2) Console.WriteLine("tape spots: none for difficulty " + dif + "  << PROBLEM");
+        // the backpack's prepared places are item spots that take it (not drawers), each difficulty has one, alone: in the house
+        foreach (var b in data.BackpackSpots)
+        {
+            var near = data.ItemSpawns.OrderBy(s => (s.Position - b.Position).sqrMagnitude).FirstOrDefault();
+            bool ok = near != null && (near.Position - b.Position).magnitude < 0.05f && !near.Small;
+            Console.WriteLine("backpack spot @" + b.Area + " " + b.Position.ToString("F2") + " difficulties " + b.Difficulties + (ok ? "" : "  << PROBLEM (not on a free item spot)"));
+        }
+        for (int dif = 0; dif < 4; dif++)
+            if (data.BackpackSpots.Count > 0 && !data.BackpackSpots.Any(b => (b.Difficulties & (1 << dif)) != 0)) Console.WriteLine("backpack spots: none for difficulty " + dif + "  << PROBLEM");
+        if (data.BackpackSpots.Count > 0 && !data.BackpackSpots.Any(b => b.Area.StartsWith("House."))) Console.WriteLine("backpack spots: none in the house  << PROBLEM");
         var world = UnityEngine.Object.AllGameObjects.ToList();
         var colliders = Physics.AllColliders.ToList();
 

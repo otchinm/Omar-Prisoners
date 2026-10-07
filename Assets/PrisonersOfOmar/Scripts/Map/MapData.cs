@@ -76,6 +76,8 @@ namespace PrisonersOfOmar.Map
         public readonly List<ItemSpawnInfo> GunSpots = new List<ItemSpawnInfo>();
         /// <summary>(iteration 3) Prepared places for the home video tape, each with its own little story (one is picked per match).</summary>
         public readonly List<TapeSpotInfo> TapeSpots = new List<TapeSpotInfo>();
+        /// <summary>(iteration 3) Prepared places for the backpack (ItemSpawner: 2 on Easy, else 1; in the house when playing alone).</summary>
+        public readonly List<TapeSpotInfo> BackpackSpots = new List<TapeSpotInfo>();
         /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
         public readonly List<Bounds> CrawlSpaces = new List<Bounds>();
 

@@ -134,8 +134,9 @@ namespace PrisonersOfOmar.Gameplay
         /// <param name="codeLockedSpots">item points of drawers with a combination padlock: each gets one of the key items that
         /// fit a drawer (the code is in the notes, a crowbar pries it open).</param>
         /// <param name="tape">(iteration 3) tonight's place for the tape (<see cref="PickTapePlace"/>); null = an ordinary key spot.</param>
+        /// <param name="prisoners">(iteration 3) playing alone, the backpack always lies in the house.</param>
         public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f,
-            IList<Vector3> keyLockedSpots = null, IList<Vector3> codeLockedSpots = null, TapePlace tape = null)
+            IList<Vector3> keyLockedSpots = null, IList<Vector3> codeLockedSpots = null, TapePlace tape = null, int prisoners = 2)
         {
             var rng = DeterministicRandom.For(seed, "items");
             var result = new List<Placement>();
@@ -152,7 +153,7 @@ namespace PrisonersOfOmar.Gameplay
             AddN(ItemType.Lockpick, 3);
             AddN(ItemType.Bottle, 5);
             AddN(ItemType.Pills, 2);
-            AddN(ItemType.Backpack, 1);   // (iteration 3) 5 slots instead of 3 for whoever finds it (2 on Easy)
+            if (map.BackpackSpots.Count == 0) AddN(ItemType.Backpack, 1);   // (iteration 3) else at its prepared places, below
 
             var spots = new List<ItemSpawnInfo>(map.ItemSpawns);
             rng.Shuffle(spots);
@@ -204,6 +205,23 @@ namespace PrisonersOfOmar.Gameplay
                 }
                 if (near != null) used.Add(near);
                 result.Add(new Placement { Type = ItemType.VhsTape, Position = tape.Position, Yaw = tape.Yaw, Charge = 1f });
+            }
+            // (iteration 3) the backpack (5 slots instead of 3) at its prepared places: 2 on Easy, else 1; out in the shed /
+            // barn only from Hard up, and always in the house when playing alone
+            if (map.BackpackSpots.Count > 0)
+            {
+                int bit = 1 << (int)Tuning.CurrentDifficulty;
+                var bp = map.BackpackSpots.FindAll(b => (b.Difficulties & bit) != 0 && (prisoners > 1 || (b.Area != null && b.Area.StartsWith("House."))));
+                if (bp.Count == 0) bp = map.BackpackSpots.FindAll(b => b.Area != null && b.Area.StartsWith("House."));
+                var brng = DeterministicRandom.For(seed, "backpack");
+                brng.Shuffle(bp);
+                int want = Tuning.CurrentDifficulty == Difficulty.Easy ? 2 : 1;
+                for (int i = 0; i < want && i < bp.Count; i++)
+                {
+                    foreach (var s in spots)
+                        if (!used.Contains(s) && (s.Position - bp[i].Position).sqrMagnitude < 0.36f) { used.Add(s); break; }
+                    result.Add(new Placement { Type = ItemType.Backpack, Position = bp[i].Position, Yaw = bp[i].Yaw, Charge = 1f });
+                }
             }
             // (iteration 2) exactly one revolver (2 rounds) at one of the dedicated spots
             if (map.GunSpots.Count > 0)

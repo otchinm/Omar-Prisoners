@@ -434,6 +434,7 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(20.6f, F + Props.WorkbenchTop, -0.5f));
             ctx.Key(A, V(17.6f - 0.62f, F + Props.ShelfLevel(1), 1.52f));
             ctx.Common(A, V(14.5f, F, -3.55f));
+            ctx.BackpackSpot(A, V(14.5f, F, -3.55f), 120f, 4 | 8);   // (iteration 3) far out in the shed: worth the risk
             ctx.DeskNote(A, V(20.45f, F + Props.WorkbenchTop + 0.003f, -1.2f), 90f);
             Arch.Bulb(ctx, mb, GlowExt, V(17.5f, 2.5f + 0.5f, -1f), 0.55f, HouseBuilder.Warm, 0.85f, 4.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Shed_Bulb", false, 0.55f);
             ctx.Nav.Add(V(16.8f, 0f, -1.0f), A);

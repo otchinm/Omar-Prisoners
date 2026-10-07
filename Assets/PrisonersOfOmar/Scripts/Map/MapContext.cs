@@ -248,6 +248,11 @@ namespace PrisonersOfOmar.Map
         public void TapeSpot(string kind, string area, Vector3 p, float yaw, int difficulties, bool drawer = false)
             => Data.TapeSpots.Add(new TapeSpotInfo { Kind = kind, Area = area, Position = p, Yaw = yaw, Difficulties = difficulties, Drawer = drawer });
 
+        /// <summary>(iteration 3) A prepared place for the backpack (an item spot that takes it), same difficulty bits as
+        /// <see cref="TapeSpot"/>.</summary>
+        public void BackpackSpot(string area, Vector3 p, float yaw, int difficulties)
+            => Data.BackpackSpots.Add(new TapeSpotInfo { Kind = "backpack", Area = area, Position = p, Yaw = yaw, Difficulties = difficulties });
+
         public void Tripwire(string area, Vector3 a, Vector3 b)
             => Data.TrapSpots.Add(new TrapSpotInfo { Kind = TrapKind.Tripwire, A = a, B = b, Area = area });
 

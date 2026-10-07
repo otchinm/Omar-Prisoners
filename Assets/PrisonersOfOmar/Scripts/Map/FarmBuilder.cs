@@ -234,6 +234,7 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(28.4f, 0.02f + Props.HayH * 2f, 55.0f));
             ctx.Common(A, V(15.05f, 0.02f, 55.45f));
             ctx.Key(A, V(23.3f, 0.02f, 66.6f));
+            ctx.BackpackSpot(A, V(23.3f, 0.02f, 66.6f), 250f, 4 | 8);   // (iteration 3) in the barn
             ctx.Common(A, V(19.0f, 0.02f + Props.BarrelTop, 66.9f));
             ctx.Key(A, V(13.4f, 0.02f, 60.4f) + V(0, 0, 0.9f));
             ctx.Tripwire(A, V(20.54f, 0.14f, 68.14f), V(21.46f, 0.14f, 68.14f));
