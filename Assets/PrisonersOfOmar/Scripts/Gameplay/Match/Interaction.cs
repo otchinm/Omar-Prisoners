@@ -16,6 +16,8 @@ namespace PrisonersOfOmar.Gameplay
         public float NoiseWhileHolding;
         /// <summary>Hold the left mouse button and move the mouse (doors) instead of pressing E.</summary>
         public bool IsDrag;
+        /// <summary>(iteration 3) A looping sound heard (by this player only) while E is held, e.g. the VCR rewinding.</summary>
+        public string HoldSound;
 
         public static InteractPrompt Press(string text, ItemType item = ItemType.None) => new InteractPrompt { Text = text, Enabled = true, UsesItem = item };
         public static InteractPrompt Hold(string text, float seconds, ItemType item = ItemType.None, float noise = 0f) => new InteractPrompt { Text = text, HoldTime = seconds, Enabled = true, UsesItem = item, NoiseWhileHolding = noise };

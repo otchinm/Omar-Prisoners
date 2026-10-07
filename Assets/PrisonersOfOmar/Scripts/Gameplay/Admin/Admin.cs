@@ -475,7 +475,7 @@ namespace PrisonersOfOmar.Gameplay
                     if (w != null) { var p = CrosshairPoint(out var n); TeleportSelf(w, p + n * 0.5f); }
                     break;
                 case AdminCmd.WatchTape:
-                    if (w != null && w.TapeShots.Length > 0) UI.UIManager.Instance?.Push(new UI.TapeScreen(w.TapeShots)); else AddLog("NO TAPE ON THIS MAP");
+                    if (w != null && w.TapeShots.Length > 0) UI.UIManager.Instance?.Push(new UI.TapeScreen(w, true)); else AddLog("NO TAPE ON THIS MAP");
                     break;
             }
         }

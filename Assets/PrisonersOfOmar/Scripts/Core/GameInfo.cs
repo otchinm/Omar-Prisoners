@@ -6,8 +6,9 @@ namespace PrisonersOfOmar
         public const string Title = "THE PRISONERS OF OMAR";
         public const string Version = "0.1.0";
         /// <summary>Bump whenever the wire protocol changes; peers with a different value are rejected.</summary>
-        public const int ProtocolVersion = 5; // 3: LobbyReq carries the lobby CODE (secret prisoner); 4: iteration 3 stage A (items, sockets, code locks,
-                                              // padlocks: Msg 160-164, UseTarget.Socket / DrawerLock); 5: CodeResult carries a status byte
+        public const int ProtocolVersion = 6; // 3: LobbyReq carries the lobby CODE (secret prisoner); 4: iteration 3 stage A (items, sockets, code locks,
+                                              // padlocks: Msg 160-164, UseTarget.Socket / DrawerLock); 5: CodeResult carries a status byte;
+                                              // 6: the VCR is run by the host (Msg.TapeState 165, UseTarget.Vcr)
         public const int MaxPrisoners = 4;
         public const int MaxPlayers = MaxPrisoners + 1; // 4 prisoners + 1 Omar
         public const int DefaultPort = 27015;

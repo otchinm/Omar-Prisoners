@@ -19,7 +19,7 @@ namespace PrisonersOfOmar.Gameplay
 
         float _gThink, _gVoiceAt, _gLostAt = -1f, _gSnapTimer, _gPauseUntil, _gSitUntil = -1f, _gNoiseUntil, _gRepath;
         int _gTarget = -1;
-        bool _gRoaming, _gSeesTarget, _gOuting;
+        bool _gRoaming, _gSeesTarget, _gOuting, _gTapeRecall;
         int _gOutingLegs;
         float _gNextOuting = -1f, _gNextInvestigate;
         List<int> _gRoamOut;
@@ -57,7 +57,7 @@ namespace PrisonersOfOmar.Gameplay
                 _gOuting = false;
                 g.Stage = 2;
             }
-            else if (!_gRoaming && g.Mode == GrandmaMode.WatchingTv && now >= _gNextOuting)
+            else if (!_gRoaming && g.Mode == GrandmaMode.WatchingTv && now >= _gNextOuting && !W.TapeEntrancing)
             {
                 // a short trip out of her room, then back to the TV
                 _gRoaming = true;
@@ -67,6 +67,18 @@ namespace PrisonersOfOmar.Gameplay
                 _gPath = null;
                 _gSitUntil = -1f;
                 _gPauseUntil = now + 1.5f;
+            }
+
+            // (iteration 3) the birthday tape calls her home: wherever she is, she rolls back to her chair to watch it
+            if (!W.TapePlaying) _gTapeRecall = false;
+            else if (_gRoaming && !_gTapeRecall && g.Mode != GrandmaMode.Screaming && !AtChair(g))
+            {
+                _gTapeRecall = true;
+                GrandmaPathTo(g, g.Info.ChairPose.position);
+                _gGoingHome = true;
+                _gSitUntil = -1f;
+                _gPauseUntil = 0f;
+                if (_gOuting) _gOutingLegs = 0;
             }
 
             _gThink -= dt;
@@ -153,8 +165,10 @@ namespace PrisonersOfOmar.Gameplay
         {
             Vector3 eye = g.Eye;
             Vector3 fwd = g.Forward;
-            // (iteration 3) in her chair while the VCR plays that tape she only has eyes for it: just right next to her
-            bool entranced = W.TapePlaying && !_gRoaming && g.Mode == GrandmaMode.WatchingTv;
+            // (iteration 3) in her chair while the VCR plays that tape (and a moment after) she only has eyes for it: she
+            // notices only who is right next to her; on her way home to it she hurries and hardly looks around
+            bool entranced = Entranced(g);
+            bool hurrying = _gTapeRecall && _gRoaming && _gGoingHome && !entranced;
             int best = -1;
             float bestD = float.MaxValue;
             foreach (var kv in W.Avatars)
@@ -167,12 +181,12 @@ namespace PrisonersOfOmar.Gameplay
                 Vector3 chest = a.ChestPosition;
                 Vector3 to = chest - eye;
                 float d = to.magnitude;
-                bool close = d < (entranced ? 1.2f : 2.5f);
+                bool close = d < (entranced ? Tuning.TapeEntrancedRadius : 2.5f);
                 if (!close && entranced) continue;
                 if (!close)
                 {
                     // old eyes in a dark room: light gives you away, the TV glare doesn't help her
-                    float range = DetectionSystem.VisibilityRange(a) * 0.8f;
+                    float range = DetectionSystem.VisibilityRange(a) * (hurrying ? 0.4f : 0.8f);
                     if (d > range) continue;
                     to.y = 0f;
                     if (Vector3.Angle(fwd, to) > 60f) continue;
@@ -228,7 +242,7 @@ namespace PrisonersOfOmar.Gameplay
             if (g == null || g.Dead || AdminState.GrandmaDisabled) return;
             float d = Vector3.Distance(pos, g.Position);
             if (d < 1.2f || d > radius) return; // her own voice / out of earshot
-            if (g.Mode == GrandmaMode.Screaming) return;
+            if (g.Mode == GrandmaMode.Screaming || Entranced(g)) return;
             _gNoise = pos;
             _gNoiseUntil = W.Time + 5f;
             // once she is out of her chair a loud noise nearby brings her rolling (same floor only)
@@ -253,7 +267,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             float tvYaw = g.Info.ChairPose.rotation.eulerAngles.y;
             float want = tvYaw;
-            if (now < _gNoiseUntil)
+            if (now < _gNoiseUntil && !Entranced(g))
             {
                 // she turns the chair towards a sound, then back to her programme
                 Vector3 to = _gNoise - g.Position; to.y = 0f;
@@ -288,6 +302,8 @@ namespace PrisonersOfOmar.Gameplay
 
         void GrandmaRoamStep(GrandmaEntity g, float dt, float now)
         {
+            // the tape is on and she is home: she watches it to the end, whatever else she meant to do
+            if (AtChair(g) && W.TapeEntrancing) { _gPath = null; GrandmaChairStep(g, dt, now); return; }
             if (_gSitUntil > 0f)
             {
                 // back in front of her TV for a while
@@ -336,12 +352,23 @@ namespace PrisonersOfOmar.Gameplay
                         _gNextOuting = now + Random.Range(Tuning.GrandmaOutingMin, Tuning.GrandmaOutingMax);
                         SetGrandma(GrandmaMode.WatchingTv, GrandmaEntity.VoiceNone, -1);
                     }
-                    else _gSitUntil = now + Random.Range(Tuning.GrandmaSitMin, Tuning.GrandmaSitMax);
+                    else _gSitUntil = now + Random.Range(Tuning.GrandmaSitMin, Tuning.GrandmaSitMax) + (W.TapePlaying ? W.TapeRemaining + Tuning.TapeGrace : 0f);
                 }
             }
         }
 
         bool _gGoingHome;
+
+        /// <summary>She is (back) at her chair in front of the TV.</summary>
+        bool AtChair(GrandmaEntity g)
+        {
+            Vector3 d = g.Position - g.Info.ChairPose.position;
+            d.y = 0f;
+            return d.sqrMagnitude < 0.25f;
+        }
+
+        /// <summary>In her chair, staring at the birthday tape (it plays, or stopped a moment ago).</summary>
+        bool Entranced(GrandmaEntity g) => W.TapeEntrancing && g.Mode == GrandmaMode.WatchingTv && AtChair(g);
         float _gRng() => Random.value;
 
         /// <summary>Path over her roam nodes only (doors that are locked or boarded stop her).</summary>

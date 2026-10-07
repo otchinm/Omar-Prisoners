@@ -75,6 +75,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             switch (name)
             {
+                case "Vcr": StartTapeHost(player); break;
                 default: break;
             }
         }

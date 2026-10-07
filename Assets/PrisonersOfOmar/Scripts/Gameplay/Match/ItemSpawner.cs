@@ -63,18 +63,85 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Supplies a key padlock guards (small, a reward for finding the key / spending a lockpick).</summary>
         static readonly ItemType[] KeyDrawerLoot = { ItemType.Pills, ItemType.Batteries, ItemType.Bandages, ItemType.Lockpick, ItemType.Pills };
 
+        /// <summary>(iteration 3) Where the home video tape lies tonight (see <see cref="PickTapePlace"/>).</summary>
+        public sealed class TapePlace
+        {
+            /// <summary>A <see cref="TapeSpotInfo.Kind"/>, or "keydrawer" / "codedrawer" (inside a padlocked drawer).</summary>
+            public string Kind;
+            public string Area;
+            public Vector3 Position;
+            public float Yaw;
+            /// <summary>keydrawer / codedrawer: index into the key / combination padlocked drawer spots; else -1.</summary>
+            public int Drawer = -1;
+        }
+
+        /// <summary>(iteration 3) Picks tonight's place for the tape among the map's prepared ones allowed on this difficulty
+        /// (Hard and Nightmare add "inside a padlocked drawer": a key one - small keys always lie free - or the first
+        /// combination one, whose code is in a note; never the one whose code only the tape gives). Its own random stream,
+        /// so the rest of the layout does not depend on it. Null = no prepared place: an ordinary key spot.</summary>
+        public static TapePlace PickTapePlace(MapData map, int seed, Difficulty difficulty, IList<Vector3> keyLockedSpots, IList<Vector3> codeLockedSpots)
+        {
+            if (!map.Sockets.Exists(s => s.Name == "Vcr")) return null;
+            int bit = 1 << (int)difficulty;
+            var cands = new List<TapePlace>();
+            foreach (var t in map.TapeSpots)
+            {
+                if ((t.Difficulties & bit) == 0) continue;
+                var p = new TapePlace { Kind = t.Kind, Area = t.Area, Position = t.Position, Yaw = t.Yaw };
+                if (t.Drawer)
+                {
+                    // the nearest drawer that is not padlocked
+                    ItemSpawnInfo best = null;
+                    float bd = 0.81f;
+                    foreach (var s in map.ItemSpawns)
+                    {
+                        if (!s.Small || IsAny(keyLockedSpots, s.Position) || IsAny(codeLockedSpots, s.Position)) continue;
+                        float d = (s.Position - t.Position).sqrMagnitude;
+                        if (d < bd) { bd = d; best = s; }
+                    }
+                    if (best == null) continue;
+                    p.Position = best.Position;
+                    p.Area = best.Area ?? t.Area;
+                }
+                cands.Add(p);
+            }
+            if (difficulty == Difficulty.Hard || difficulty == Difficulty.Nightmare)
+            {
+                if (keyLockedSpots != null && keyLockedSpots.Count > 0) cands.Add(new TapePlace { Kind = "keydrawer" });
+                if (codeLockedSpots != null && codeLockedSpots.Count >= 2) cands.Add(new TapePlace { Kind = "codedrawer" });
+            }
+            if (cands.Count == 0) return null;
+            var rng = DeterministicRandom.For(seed, "tapespot");
+            var pick = cands[rng.Range(0, cands.Count)];
+            if (pick.Kind == "keydrawer" || pick.Kind == "codedrawer")
+            {
+                var list = pick.Kind == "keydrawer" ? keyLockedSpots : codeLockedSpots;
+                pick.Drawer = pick.Kind == "keydrawer" ? rng.Range(0, list.Count) : 0;
+                pick.Position = list[pick.Drawer];
+                pick.Area = map.AreaAt(pick.Position);
+            }
+            return pick;
+        }
+
+        static bool IsAny(IList<Vector3> list, Vector3 p)
+        {
+            if (list != null) foreach (var q in list) if ((q - p).sqrMagnitude < 0.0004f) return true;
+            return false;
+        }
+
         /// <param name="keyLockedSpots">(iteration 3) item points of drawers with a key padlock: each gets a supply and one small
         /// key is placed elsewhere for each of them.</param>
         /// <param name="codeLockedSpots">item points of drawers with a combination padlock: each gets one of the key items that
         /// fit a drawer (the code is in the notes, a crowbar pries it open).</param>
+        /// <param name="tape">(iteration 3) tonight's place for the tape (<see cref="PickTapePlace"/>); null = an ordinary key spot.</param>
         public static List<Placement> Place(MapData map, int seed, bool needBattery, float supplyMul = 1f,
-            IList<Vector3> keyLockedSpots = null, IList<Vector3> codeLockedSpots = null)
+            IList<Vector3> keyLockedSpots = null, IList<Vector3> codeLockedSpots = null, TapePlace tape = null)
         {
             var rng = DeterministicRandom.For(seed, "items");
             var result = new List<Placement>();
             var keyList = new List<ItemType> { ItemType.BoltCutters, ItemType.CarKeys, ItemType.GasCan, ItemType.Fuse, ItemType.CageKey, ItemType.Crowbar, ItemType.Screwdriver };
             if (needBattery) keyList.Add(ItemType.CarBattery);
-            if (map.Sockets.Exists(s => s.Name == "Vcr")) keyList.Add(ItemType.VhsTape);   // (iteration 3) the home video
+            if (map.Sockets.Exists(s => s.Name == "Vcr") && tape == null) keyList.Add(ItemType.VhsTape);   // (iteration 3) the home video
             var common = new List<ItemType>();
             void AddN(ItemType t, int n) { n = Mathf.Max(1, Mathf.RoundToInt(n * supplyMul)); for (int i = 0; i < n; i++) common.Add(t); }
             AddN(ItemType.LighterFuel, 4);
@@ -96,12 +163,14 @@ namespace PrisonersOfOmar.Gameplay
             // the way out of the cage room.
             int smallKeys = 0;
             if (keyLockedSpots != null)
-                foreach (var p in keyLockedSpots)
+                for (int k = 0; k < keyLockedSpots.Count; k++)
                 {
-                    var s = SpotAt(spots, p);
+                    var s = SpotAt(spots, keyLockedSpots[k]);
                     if (s == null) continue;
                     used.Add(s);
-                    result.Add(new Placement { Type = KeyDrawerLoot[rng.Range(0, KeyDrawerLoot.Length)], Position = s.Position, Yaw = s.Yaw + rng.Range(-30f, 30f), Charge = 1f });
+                    var loot = KeyDrawerLoot[rng.Range(0, KeyDrawerLoot.Length)];
+                    if (tape != null && tape.Kind == "keydrawer" && tape.Drawer == k) loot = ItemType.VhsTape;
+                    result.Add(new Placement { Type = loot, Position = s.Position, Yaw = s.Yaw + rng.Range(-30f, 30f), Charge = 1f });
                     smallKeys++;
                 }
             if (codeLockedSpots != null)
@@ -111,7 +180,8 @@ namespace PrisonersOfOmar.Gameplay
                     if (s == null) continue;
                     used.Add(s);
                     ItemType t = ItemType.None;
-                    if (k > 0 && smallKeys > 0) { t = ItemType.SmallKey; smallKeys--; }
+                    if (k == 0 && tape != null && tape.Kind == "codedrawer") t = ItemType.VhsTape;   // the car keys / fuse lie free then
+                    else if (k > 0 && smallKeys > 0) { t = ItemType.SmallKey; smallKeys--; }
                     else
                     {
                         var fits = keyList.FindAll(x => (x == ItemType.CarKeys || x == ItemType.Fuse) && (Forbidden(x) == null || s.Area == null || !MatchesAny(s.Area, Forbidden(x))));
@@ -121,6 +191,20 @@ namespace PrisonersOfOmar.Gameplay
                     result.Add(new Placement { Type = t, Position = s.Position, Yaw = s.Yaw, Charge = 1f });
                 }
             for (int k = 0; k < smallKeys; k++) common.Insert(0, ItemType.SmallKey);   // first, so they always find a spot
+            // (iteration 3) the tape at its prepared place (it takes the item spot there, if any)
+            if (tape != null && tape.Drawer < 0)
+            {
+                ItemSpawnInfo near = null;
+                float bd = 0.36f;
+                foreach (var s in spots)
+                {
+                    if (used.Contains(s)) continue;
+                    float d = (s.Position - tape.Position).sqrMagnitude;
+                    if (d < bd) { bd = d; near = s; }
+                }
+                if (near != null) used.Add(near);
+                result.Add(new Placement { Type = ItemType.VhsTape, Position = tape.Position, Yaw = tape.Yaw, Charge = 1f });
+            }
             // (iteration 2) exactly one revolver (2 rounds) at one of the dedicated spots
             if (map.GunSpots.Count > 0)
             {

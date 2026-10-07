@@ -24,6 +24,7 @@ namespace PrisonersOfOmar.Gameplay
             s.On(Msg.CodeResult, OnCodeResult);
             s.On(Msg.CodeLockState, OnCodeLockState);
             s.On(Msg.DrawerLock, OnDrawerLock);
+            s.On(Msg.TapeState, OnTapeState);
         }
 
         void UnregisterPuzzleHandlers(NetSession s)
@@ -33,6 +34,7 @@ namespace PrisonersOfOmar.Gameplay
             s.Off(Msg.CodeResult);
             s.Off(Msg.CodeLockState);
             s.Off(Msg.DrawerLock);
+            s.Off(Msg.TapeState);
         }
 
         void TickPuzzles(float dt)

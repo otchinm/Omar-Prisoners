@@ -40,6 +40,7 @@ namespace PrisonersOfOmar.Gameplay
         PsxLight _lighterLight, _flashLight, _flashFill;
         GameObject _flame;
         AudioSource _flameLoop;
+        AudioSource _holdLoop;
         ItemType _shownItem = (ItemType)255;
         ItemType _actionItem = ItemType.None;
 
@@ -110,9 +111,17 @@ namespace PrisonersOfOmar.Gameplay
             return c;
         }
 
+        void StopHoldLoop()
+        {
+            if (_holdLoop == null) return;
+            AudioManager.Stop(_holdLoop, 0.1f);
+            _holdLoop = null;
+        }
+
         void OnDestroy()
         {
             EndDrag();
+            StopHoldLoop();
             if (_arms != null) Destroy(_arms.gameObject);
             DestroyHandLights();
         }
@@ -130,6 +139,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 // the ending screen owns the picture: drop every local effect once and stop driving them
                 EndDrag();
+                StopHoldLoop();
                 if (_arms != null) _arms.SetVisible(false);
                 SetHandLights(false, false);
                 _captureFx = 0f; _hitFx = 0f;
@@ -141,6 +151,7 @@ namespace PrisonersOfOmar.Gameplay
             if (!active)
             {
                 EndDrag();
+                StopHoldLoop();
                 if (_arms != null) _arms.SetVisible(false);
                 SetHandLights(false, false);
                 // let the capture / death static fade out, clear the rest
@@ -683,6 +694,8 @@ namespace PrisonersOfOmar.Gameplay
 
         void HandleInteraction(PlayerStatus st, float dt)
         {
+            // the hold sound (a VCR rewinding...) lasts exactly as long as the hold
+            if (_hold <= 0f || !GameInput.InteractHeld) StopHoldLoop();
             _who.Status = st;
             _who.Position = _avatar.Position;
             _who.Crouching = _crouch;
@@ -766,6 +779,7 @@ namespace PrisonersOfOmar.Gameplay
                 if (_prompt.UsesItem == ItemType.Screwdriver) AudioManager.Play2D(AudioManager.Variant(Snd.VentScrew, 3), 0.55f);
                 if (_prompt.UsesItem == ItemType.GasCan) AudioManager.Play2D(Snd.GasPour, 0.6f);
                 if (_prompt.UsesItem == ItemType.LighterFuel) AudioManager.Play2D(Snd.FuelPour, 0.6f);
+                if (_prompt.HoldSound != null && _holdLoop == null) _holdLoop = AudioManager.Loop2D(_prompt.HoldSound, 0.55f, AudioCategory.Sfx, 0.05f);
             }
             _actionItem = _prompt.UsesItem;
             _hold += dt;

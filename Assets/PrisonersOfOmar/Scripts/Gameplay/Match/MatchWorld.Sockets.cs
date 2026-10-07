@@ -69,6 +69,9 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>Feature hooks for a completed socket (the VCR: "WATCH THE TAPE"); null = <see cref="SocketInfo.DoneText"/>.</summary>
         public System.Func<Interactor, InteractPrompt?> SolvedPrompt;
         public System.Action<Interactor> SolvedInteract;
+        /// <summary>The same for Omar (the VCR: "STOP MAMA'S TAPE"); null = Omar ignores the socket.</summary>
+        public System.Func<Interactor, InteractPrompt?> OmarPrompt;
+        public System.Action<Interactor> OmarInteract;
 
         public SocketEntity(int index, SocketInfo info)
         {
@@ -99,7 +102,13 @@ namespace PrisonersOfOmar.Gameplay
         public bool GetPrompt(Interactor who, out InteractPrompt p)
         {
             p = default;
-            if (who.IsOmar) return false;
+            if (who.IsOmar)
+            {
+                var op = Solved ? OmarPrompt?.Invoke(who) : null;
+                if (!op.HasValue) return false;
+                p = op.Value;
+                return true;
+            }
             if (Solved)
             {
                 var sp = SolvedPrompt?.Invoke(who);
@@ -122,6 +131,7 @@ namespace PrisonersOfOmar.Gameplay
 
         public void Interact(Interactor who)
         {
+            if (who.IsOmar) { if (Solved) OmarInteract?.Invoke(who); return; }
             if (Solved) { SolvedInteract?.Invoke(who); return; }
             int id = PickItem(who);
             if (id >= 0) MatchWorld.Instance?.SendUse(UseTarget.Socket, Index, id);

@@ -34,6 +34,7 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(2.66f, F + 0.8f, -6.8f));
             Props.Crate(ctx, mb, V(-2.5f, F, 7.45f), 12f, 0.5f, true);
             ctx.Key(A, V(-2.5f, F + 0.4f, 7.45f));
+            ctx.TapeSpot("crate", A, V(-2.5f, F + 0.4f, 7.45f), 20f, 1 | 2);   // (iteration 3) dropped running down to the basement
             Props.Papers(mb, V(0.6f, F, 2.2f), 102, 4, 0.5f);
             Props.Bottles(mb, V(-1.1f, F, -7.3f), 103, 3, 0.2f);
             ctx.Common(A, V(1.0f, F, -7.5f));
@@ -252,7 +253,7 @@ namespace PrisonersOfOmar.Map
             ctx.Data.Sockets.Add(new SocketInfo
             {
                 Name = "Vcr", Area = A, Label = "THE VCR", Verb = "PUT", Prep = "IN",
-                EmptyText = "AN OLD VCR. THE TAPE SLOT IS EMPTY.",
+                EmptyText = "AN OLD VCR. THE TAPE SLOT IS EMPTY. A STICKER ON IT SAYS 'MAMA'S TAPES'.",
                 Interact = ctx.Interact(null, V(10.6f, F + Props.TvStandTop, -4.5f) + MapMath.Yaw(90f) * new Vector3(0f, 0.53f, -0.15f), new Vector3(0.44f, 0.14f, 0.16f), MapMath.Yaw(90f), "VcrInteract"),
                 Accepts = new[] { ItemType.VhsTape }, Needed = 1, SlotPoses = new[] { tapeIn }, HoldTime = 0.6f,
                 InsertNoise = 2f, SolveNoise = 6f, InsertSound = "Audio/UI/tape_insert", SolveSound = "Audio/UI/tape_play",
@@ -286,6 +287,7 @@ namespace PrisonersOfOmar.Map
             ctx.Key(A, V(9.9f, F + Props.BookshelfLevel(3), -1.32f));
             ctx.Common(A, V(5.0f, F, -7.45f));
             ctx.Common(A, V(5.65f, F + 0.485f, -5.2f));
+            ctx.TapeSpot("sofa", A, V(5.65f, F + 0.485f, -5.2f), 75f, 2 | 4 | 8);   // (iteration 3) right behind her: come in quietly
             Dyn.Wardrobe(ctx, "Living.Wardrobe", V(4.3f, F, -1.39f), 0f);
             ctx.WallNote(A, V(3.08f, F + 1.5f, -2.6f), Vector3.right);
             ctx.Nav.Add(V(4.6f, F, -3.0f), A);
@@ -354,6 +356,8 @@ namespace PrisonersOfOmar.Map
             ctx.Common(A, V(6.2f, F + 0.74f, 7.8f));
             ctx.Common(A, V(8.5f, F, 6.5f));
             ctx.Key(A, V(10.62f, F + Props.NightstandTop, 6.05f));
+            // (iteration 3) under the bed with the dead man, at the edge you crawl in from: he stole it for her
+            ctx.TapeSpot("underbed", A, V(9.55f, F, 4.86f), 170f, 2 | 4 | 8);
             ctx.WallNote(A, V(10.89f, F + 1.5f, 3.9f), Vector3.left);
             Arch.Bulb(ctx, mb, GlowBulbs, V(7f, CG, 5.5f), 0.5f, Warm, 1.0f, 5.5f, PsxFlicker.FaultyBulb, LightGroup.Power, "Clock_Bulb", false, 0.4f);
             ctx.Nav.Add(V(5.5f, F, 5.5f), A);
@@ -463,6 +467,7 @@ namespace PrisonersOfOmar.Map
             Arch.Decal(mb, Mat.Decal("writing_let_me_out"), V(-3.08f, F + 1.6f, -2.4f), Vector3.left, 1.4f, 0.7f, 4f);
             Arch.Decal(mb, Mat.Decal("blood_handprint"), V(-7.5f, F + 1.0f, 1.92f), Vector3.back, 0.25f, 0.25f, 0f);
             ctx.Key(A, V(-3.5f, F + Props.TableTop, -1.0f));
+            ctx.TapeSpot("cagetable", A, V(-3.5f, F + Props.TableTop, -1.0f), 10f, 1);   // (iteration 3) he wants them to watch it
             ctx.Common(A, V(-4.0f, F, -7.45f));
             ctx.Common(A, V(-5.0f, F, -1.6f));
             ctx.WallNote(A, V(-3.08f, F + 1.45f, -6.9f), Vector3.left);
@@ -636,6 +641,7 @@ namespace PrisonersOfOmar.Map
             Arch.FloorDecal(mb, Mat.Decal("water_stain"), V(-7f, F, 3.6f), 2.0f, 1.5f, 0f);
             // the shelves keep the left 0.5 m of their 2nd level free for items
             ctx.Key(A, V(-9.9f - 0.62f, F + Props.ShelfLevel(1), 7.52f));
+            ctx.TapeSpot("shelf", A, V(-9.9f - 0.62f, F + Props.ShelfLevel(1), 7.52f), 0f, 1 | 2);   // (iteration 3) with the prisoners' things
             ctx.Common(A, V(-8.0f - 0.62f, F + Props.ShelfLevel(1), 7.52f));
             ctx.Key(A, V(-9.4f - 0.62f, F + Props.ShelfLevel(1), 4.78f));
             ctx.Common(A, V(-7.5f + 0.62f, F + Props.ShelfLevel(1), 5.54f));
@@ -686,6 +692,7 @@ namespace PrisonersOfOmar.Map
             ctx.Key(A, V(6.0f, F + Props.CotTop + 0.05f, -1.4f));
             ctx.Common(A, V(4.0f, F + 0.55f, -7.35f));
             ctx.Common(A, V(7.65f, F + 1.9f, -7.65f));
+            ctx.TapeSpot("locker", A, V(7.62f, F + 1.9f, -7.43f), 180f, 2 | 4 | 8);   // (iteration 3) up where she can't reach, its spine over the edge
             ctx.DeskNote(A, V(10.45f, F + Props.DeskTop + 0.003f, -3.75f), 90f);
             ctx.WallNote(A, V(8.6f, F + 1.5f, -1.09f), Vector3.back);
             // radio room lights: off until the fuse is inserted
@@ -751,6 +758,7 @@ namespace PrisonersOfOmar.Map
             ctx.Key(A, V(8.45f, F + Props.DeskTop, 7.48f));
             ctx.Gun(A, V(8.26f, F + Props.DeskTop, 7.73f), 110f);
             ctx.Common(A, V(9.0f, F + Props.DeskTop, 7.42f));
+            ctx.TapeSpot("desk", A, V(8.8f, F + 0.4f, 7.3f), 0f, 1 | 2 | 4, true);   // (iteration 3) his desk drawer: he watches it alone
             ctx.Common(A, V(10.74f - 0.12f, F + Props.BookshelfLevel(2), 4.0f));
             ctx.Common(A, V(10.4f, F, 6.6f));
             ctx.Key(A, V(4.1f, F + Props.BedTop, 4.5f));

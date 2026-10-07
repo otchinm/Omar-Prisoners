@@ -12,6 +12,7 @@ namespace PrisonersOfOmar.Gameplay
         {
             TickGrandma(dt);
             TickKitchen(dt);
+            TickTapeHost(dt);
         }
 
         partial void TickGrandma(float dt);

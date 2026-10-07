@@ -528,6 +528,7 @@ namespace PrisonersOfOmar.Gameplay
             {
                 if (target == UseTarget.Door && tid >= 0 && tid < W.Doors.Length && Near(sender, W.Doors[tid].Info.Center, 3.6f)) SmashBoards(sender, tid);
                 else if (target == UseTarget.Cage) PunishCage(sender, tid);
+                else if (target == UseTarget.Vcr) UseVcr(sender, tid);
                 return;
             }
             if (!IsPrisoner(sender)) return;
@@ -557,6 +558,7 @@ namespace PrisonersOfOmar.Gameplay
                 case UseTarget.VentHatch: UseVentHatch(sender); break;
                 case UseTarget.Socket: UseSocket(sender, tid, itemId); break;
                 case UseTarget.DrawerLock: UseDrawerLock(sender, tid, itemId); break;
+                case UseTarget.Vcr: UseVcr(sender, tid); break;
             }
         }
 

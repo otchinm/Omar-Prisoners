@@ -243,6 +243,11 @@ namespace PrisonersOfOmar.Map
         public void Gun(string area, Vector3 p, float yaw = 0f)
             => Data.GunSpots.Add(new ItemSpawnInfo { Position = p, Yaw = yaw, Area = area, Tier = ItemSpawnTier.Key });
 
+        /// <summary>(iteration 3) A prepared place for the home video tape (<see cref="TapeSpotInfo"/>); <paramref name="difficulties"/> =
+        /// bit (1 &lt;&lt; (int)Difficulty) per difficulty it may be picked on.</summary>
+        public void TapeSpot(string kind, string area, Vector3 p, float yaw, int difficulties, bool drawer = false)
+            => Data.TapeSpots.Add(new TapeSpotInfo { Kind = kind, Area = area, Position = p, Yaw = yaw, Difficulties = difficulties, Drawer = drawer });
+
         public void Tripwire(string area, Vector3 a, Vector3 b)
             => Data.TrapSpots.Add(new TrapSpotInfo { Kind = TrapKind.Tripwire, A = a, B = b, Area = area });
 

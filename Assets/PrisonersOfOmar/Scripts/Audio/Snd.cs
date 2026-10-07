@@ -35,6 +35,7 @@ namespace PrisonersOfOmar.Audio
             AmbMenu = "Audio/Ambience/amb_menu_loop", StaticLoop = "Audio/Ambience/static_loop",
             StaticHeavyLoop = "Audio/Ambience/static_heavy_loop", ChaseLoop = "Audio/Ambience/chase_loop",
             AnomalyLoop = "Audio/Ambience/anomaly_loop", TvStaticLoop = "Audio/Ambience/tv_static_loop",
+            TapeVideoLoop = "Audio/Ambience/tape_video_loop", TapeScream = "Audio/Ambience/tape_scream",
             RadioStaticLoop = "Audio/Ambience/radio_static_loop", GeneratorLoop = "Audio/Ambience/generator_loop",
             FireLoop = "Audio/Ambience/fire_loop", CarIdleLoop = "Audio/Ambience/car_idle_loop",
             HelicopterLoop = "Audio/Ambience/helicopter_loop", FlameLoop = "Audio/Ambience/flame_loop",

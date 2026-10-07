@@ -268,35 +268,98 @@ namespace PrisonersOfOmar.Gameplay
             }
         }
 
-        /// <summary>Index of the shot in <see cref="TapeShots"/> that gives the code away (the tape screen waits on it).</summary>
+        /// <summary>Index of the shot in <see cref="TapeShots"/> that gives the code away.</summary>
         public const int TapeCodeShot = 3;
+        /// <summary>Index of the shot during which the scream on the tape comes (Tuning.TapeScreamAt falls in it).</summary>
+        public const int TapeScreamShot = 4;
+        /// <summary>Index of the shot that may hold a spare digit of the shelter code (a child's drawing).</summary>
+        public const int TapeSpareShot = 1;
 
-        /// <summary>The home video on the tape: what you see, one caption a shot. <paramref name="lk"/> (may be null) is the lock
-        /// whose code the tape gives away.</summary>
-        public static string[] TapeShots(CodeLockEntity lk, string place, int firstShelterDigit, DeterministicRandom rng)
+        /// <summary>The home video on the tape, one captioned shot (with its picture, Textures/Props/tape_*) per slot, picked
+        /// by the seed: an opening, the family, the man, the code (<paramref name="lk"/>, may be null: then a shelter digit),
+        /// the jump with the scream, the aftermath, the end (and, rarely, an empty wheelchair). <paramref name="spareDigit"/>
+        /// = the shelter code position the child's drawing gives away (-1 = none on this tape).</summary>
+        public static TapeShot[] TapeShots(CodeLockEntity lk, string place, int[] shelter, DeterministicRandom rng, out int spareDigit)
         {
-            var shots = new System.Collections.Generic.List<string>
+            string date = "OCT 31 19" + rng.Range(84, 92);
+            var shots = new TapeShot[7];
+            switch (rng.Range(0, 3))
             {
-                "OCT 31 1987  11:48 PM\n\nA KITCHEN. SOMEONE HUMS. THE CAMERA SHAKES.",
-                "AN OLD WOMAN IN A WHEELCHAIR. A CAKE. SHE IS TRYING TO BLOW OUT THE CANDLES.",
-                "A HUGE MAN FILLS THE DOORWAY BEHIND HER. HE DOES NOT MOVE. HE HOLDS A CLEAVER.",
-            };
-            if (lk != null && lk.Info.Kind == Map.CodeKind.Time)
-                shots.Add("SHE POINTS AT THE BIG CLOCK. IT SAYS " + lk.Pretty() + ".\n\n'IT STOPPED WHEN YOUR FATHER LEFT. LEAVE IT LIKE THAT, MY BOY.'");
-            else if (lk != null)
-                shots.Add("SHE LAUGHS AND TAPS A LITTLE PADLOCK.\n\n'MY THINGS IN THE " + place + ". " + Spaced(lk.Code) + ". DON'T YOU FORGET IT, MY BOY.'");
+                case 0: shots[0] = Shot("kitchen", date + "  11:48 PM\n\nA KITCHEN. SOMEONE HUMS. THE CAMERA SHAKES."); break;
+                case 1: shots[0] = Shot("porch", date + "  9:02 PM\n\nTHE FRONT PORCH. TWO PUMPKINS GRIN IN THE DARK. SOMEONE GIGGLES BEHIND THE CAMERA."); break;
+                default: shots[0] = Shot("livingtv", date + "  10:15 PM\n\nTHIS VERY ROOM. THE TV HISSES. THE CHAIR IN FRONT OF IT IS EMPTY."); break;
+            }
+            // the tape gives a shelter digit anyway when there is no lock for it: the drawing then shows another one
+            spareDigit = -1;
+            int first = shelter != null && shelter.Length > 0 ? shelter[0] : 0;
+            if (shelter != null && shelter.Length == 4 && rng.Chance(0.5f)) spareDigit = lk == null ? rng.Range(1, 4) : rng.Range(0, 4);
+            if (spareDigit >= 0)
+                shots[1] = Shot("drawing", "A CHILD'S DRAWING ON THE FRIDGE: A HOUSE, A BIG DARK MAN, A RED " + shelter[spareDigit] + ".\n\n'MY BOY DREW THE "
+                                + Ordinals[spareDigit] + " NUMBER OF THE BUNKER. CLEVER BOY.'");
             else
-                shots.Add("SHE WHISPERS TO THE CAMERA: 'THE BUNKER. IT STARTS WITH " + firstShelterDigit + "...'");
-            shots.Add("THE PICTURE JUMPS. STATIC.");
-            shots.Add(rng.Chance(0.5f)
-                ? "A CAGE IN A DARK ROOM. SOMEONE INSIDE RATTLES THE DOOR. THE CAMERA MOVES CLOSER. AND CLOSER."
-                : "THE YARD AT NIGHT. A FLASHLIGHT RUNS BETWEEN THE CORN. THE MAN WALKS AFTER IT. HE IS NOT IN A HURRY.");
-            shots.Add("THE MAN LOOKS INTO THE LENS. HE SMILES.\n\n■ STOP");
-            return shots.ToArray();
+                switch (rng.Range(0, 3))
+                {
+                    case 0: shots[1] = Shot("cake", "AN OLD WOMAN IN A WHEELCHAIR. A CAKE. SHE IS TRYING TO BLOW OUT THE CANDLES."); break;
+                    case 1: shots[1] = Shot("cake", "SHE SINGS TO THE CAMERA, OFF KEY: 'HAPPY BIRTHDAY TO YOU...' NOBODY SINGS WITH HER."); break;
+                    default: shots[1] = Shot("drawing", "A CHILD'S DRAWING ON THE FRIDGE: A HOUSE, A WOMAN IN A CHAIR, A BIG DARK MAN WITH NO FACE."); break;
+                }
+            switch (rng.Range(0, 3))
+            {
+                case 0: shots[2] = Shot("doorway", "A HUGE MAN FILLS THE DOORWAY BEHIND HER. HE DOES NOT MOVE. HE HOLDS A CLEAVER."); break;
+                case 1: shots[2] = Shot("reflection", "THE TV IS OFF. IN THE BLACK GLASS: THE ONE HOLDING THE CAMERA. HE IS ENORMOUS."); break;
+                default: shots[2] = Shot("hand", "HEAVY BREATHING BEHIND THE CAMERA. A HUGE HAND COVERS THE LENS. SHE LAUGHS: 'NOT YET, MY BOY.'"); break;
+            }
+            if (lk != null && lk.Info.Kind == Map.CodeKind.Time)
+                shots[TapeCodeShot] = Shot("clock", "SHE POINTS AT THE BIG CLOCK. IT SAYS " + lk.Pretty() + ".\n\n'IT STOPPED WHEN YOUR FATHER LEFT. LEAVE IT LIKE THAT, MY BOY.'");
+            else if (lk != null)
+                shots[TapeCodeShot] = Shot("padlock", "SHE LAUGHS AND TAPS A LITTLE PADLOCK.\n\n'MY THINGS IN THE " + place + ". " + Spaced(lk.Code) + ". DON'T YOU FORGET IT, MY BOY.'");
+            else
+                shots[TapeCodeShot] = Shot("mama", "SHE WHISPERS TO THE CAMERA: 'THE BUNKER. IT STARTS WITH " + first + "...'");
+            shots[TapeScreamShot] = rng.Chance(0.5f)
+                ? Shot(null, "THE PICTURE JUMPS. SOMEONE SCREAMS. STATIC.")
+                : Shot(null, "THE PICTURE ROLLS. A SCREAM. FOR A MOMENT THE DATE IN THE CORNER SAYS NOV 02 1993.");
+            switch (rng.Range(0, 3))
+            {
+                case 0: shots[5] = Shot("cage", "A CAGE IN A DARK ROOM. SOMEONE INSIDE RATTLES THE DOOR. THE CAMERA MOVES CLOSER. AND CLOSER."); break;
+                case 1: shots[5] = Shot("corn", "THE YARD AT NIGHT. A FLASHLIGHT RUNS BETWEEN THE CORN. THE MAN WALKS AFTER IT. HE IS NOT IN A HURRY."); break;
+                default: shots[5] = Shot("stairs", "THE BASEMENT STAIRS. A FLASHLIGHT GOES DOWN. A DOOR SLAMS. THE LIGHT DOES NOT COME BACK UP."); break;
+            }
+            if (rng.Chance(0.05f))
+                shots[6] = Shot("wheelchair", "THE CAMERA TURNS. A LIVING ROOM. A TV PLAYING A BLUE SCREEN. AN EMPTY WHEELCHAIR.\n\n■ STOP");
+            else
+                switch (rng.Range(0, 3))
+                {
+                    case 0: shots[6] = Shot("smile", "THE MAN LOOKS INTO THE LENS. HE SMILES.\n\n■ STOP"); break;
+                    case 1: shots[6] = Shot("fallen", "THE CAMERA FALLS. SIDEWAYS: CAGES, A BARE FOOT. IT DOES NOT MOVE.\n\n■ STOP"); break;
+                    default: shots[6] = Shot("mama", "SHE LEANS INTO THE LENS: 'BE GOOD FOR MAMA.'\n\n■ STOP"); break;
+                }
+            return shots;
+        }
+
+        static TapeShot Shot(string frame, string caption) => new TapeShot { Frame = frame, Caption = caption };
+
+        /// <summary>(iteration 3) The note that points at tonight's tape (<see cref="ItemSpawner.TapePlace"/> kinds).</summary>
+        public static string TapePointer(string kind, string place)
+        {
+            switch (kind)
+            {
+                case "underbed": return "MAMA'S TAPE IS UNDER THE BED WITH THE DEAD MAN. HE STOLE IT FOR HER. HE DIDN'T GET FAR.";
+                case "desk": return "HE KEEPS HER BIRTHDAY TAPE IN HIS DESK UPSTAIRS. HE WATCHES IT ALONE.";
+                case "locker": return "THE TAPE IS ON TOP OF THE LOCKER IN THE RADIO ROOM. SO SHE CAN'T REACH IT.";
+                case "sofa": return "SHE SITS ON IT. THE TAPE IS ON THE SOFA RIGHT BEHIND HER. DON'T LET HER HEAR YOU.";
+                case "shelf": return "HE PUT MAMA'S TAPE ON THE SHELF WITH OUR THINGS. IN THE STORAGE ROOM.";
+                case "cagetable": return "THE TAPE IS ON THE TABLE BY THE CAGES. HE WANTS US TO WATCH IT.";
+                case "crate": return "HE DROPPED MAMA'S TAPE RUNNING DOWN TO THE BASEMENT. IT'S IN THE CRATE BY THE STAIRS.";
+                default: return "SHE LOCKED HER TAPE IN A DRAWER IN THE " + place + ". A LITTLE PADLOCK.";
+            }
         }
 
         public static readonly string[] Lore =
         {
+            "SHE ONLY GOES QUIET WHEN THE BIRTHDAY TAPE PLAYS. THEN SHE SEES NOTHING BUT THE SCREEN.",
+            "THE OLD WOMAN NEVER LOOKS AWAY FROM THE TV. COME FROM BEHIND. SLOW. LOW.",
+            "THE TAPE HAS A SCREAM ON IT. HE ALWAYS COMES DOWN TO SEE WHO PUT IT ON.",
+            "THOSE LITTLE KEYS FIT ALL HER CHEAP PADLOCKS.",
             "DAY 41. HE CALLS THIS PLACE THE BASE OF THE SECOND CLASS. THE FIRST CLASS NEVER CAME BACK.",
             "IF THE PICTURE STARTS TO HISS AND JUMP, HE IS CLOSE. HIDE. DON'T BREATHE.",
             "THE CAR IN THE LOT STILL RUNS. THE KEYS ARE SOMEWHERE IN THE HOUSE. THE TANK IS EMPTY.",
@@ -314,5 +377,11 @@ namespace PrisonersOfOmar.Gameplay
             "PLAY. REWIND. PLAY. REWIND. HE WATCHES THE TAPES OF THE OTHERS EVERY NIGHT.",
             "THE PHONE IN THE KITCHEN RINGS AT 3 AM. DON'T ANSWER IT.",
         };
+    }
+
+    /// <summary>(iteration 3) One shot of the home video: its caption and its picture (Textures/Props/tape_&lt;Frame&gt;, null = static).</summary>
+    public struct TapeShot
+    {
+        public string Caption, Frame;
     }
 }

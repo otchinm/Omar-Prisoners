@@ -170,6 +170,9 @@ namespace PrisonersOfOmar.Gameplay
             if (Instance == this) Instance = null;
         }
 
+        /// <summary>(iteration 3) Where the home video tape lies tonight (null = an ordinary key spot).</summary>
+        public ItemSpawner.TapePlace TapePlace { get; private set; }
+
         void BuildEntities()
         {
             var rng = DeterministicRandom.For(Seed, "entities");
@@ -204,6 +207,10 @@ namespace PrisonersOfOmar.Gameplay
             for (int i = 0; i < 4; i++) ShelterCode[i] = rng.Range(i == 0 ? 1 : 0, 10);
             // (iteration 3) sockets, code locks (the shelter keypad needs its code), padlocked drawers, tapes
             BuildPuzzles();
+            // (iteration 3) tonight's place for the home video (a note below points at it)
+            LockedDrawerSpots(out var tapeKeySpots, out var tapeCodeSpots);
+            TapePlace = ItemSpawner.PickTapePlace(Map, Seed, Tuning.CurrentDifficulty, tapeKeySpots, tapeCodeSpots);
+            bool tapePointer = TapePlace != null;
             var spots = new List<int>();
             for (int i = 0; i < Map.NoteSpots.Count; i++) spots.Add(i);
             rng.Shuffle(spots);
@@ -238,6 +245,12 @@ namespace PrisonersOfOmar.Gameplay
                     title = info.OnWall ? "SCRAWLED ON THE WALL" : "A FOLDED NOTE";
                     text = NoteTexts.LockHint(lk, NoteTexts.PlaceName(lk.Info.Area), rng, info.OnWall);
                     clueLock[idx] = lk.Index;
+                }
+                else if (tapePointer && !NoteTexts.LateArea(info.Area) && info.Area != TapePlace.Area)
+                {
+                    tapePointer = false;
+                    title = info.OnWall ? "SCRAWLED ON THE WALL" : "A NOTE";
+                    text = NoteTexts.TapePointer(TapePlace.Kind, NoteTexts.PlaceName(TapePlace.Area ?? ""));
                 }
                 else
                 {
@@ -274,7 +287,7 @@ namespace PrisonersOfOmar.Gameplay
         void SpawnItems()
         {
             LockedDrawerSpots(out var keySpots, out var codeSpots);
-            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead, Tuning.SupplyMul, keySpots, codeSpots);
+            var placements = ItemSpawner.Place(Map, Seed, CarBatteryStartsDead, Tuning.SupplyMul, keySpots, codeSpots, TapePlace);
             foreach (var p in placements)
             {
                 var e = new ItemEntity { Id = Items.Count, Type = p.Type, Charge = p.Charge };

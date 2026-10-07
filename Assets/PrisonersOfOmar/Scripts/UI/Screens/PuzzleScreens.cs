@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PrisonersOfOmar.Audio;
+using PrisonersOfOmar.Characters;
 using PrisonersOfOmar.Gameplay;
 using PrisonersOfOmar.Map;
 using PrisonersOfOmar.Rendering;
@@ -289,102 +290,161 @@ namespace PrisonersOfOmar.UI
         }
     }
 
-    /// <summary>(iteration 3) Watching the home video: PLAY OSD, one captioned shot after another with static between them.
-    /// Each shot stays as long as its caption needs; the shot that gives the code away waits for ENTER. ENTER first finishes
-    /// the caption, then goes on; ESC stops. The tape cuts out when Omar is after you or you are caught.</summary>
+    /// <summary>(iteration 3) Watching the home video up close: a CRT window over the game (the room stays visible around
+    /// it) showing the same shot as the TV, in step with it, its caption typing out underneath. A tape can't be skipped -
+    /// whoever comes late rewinds it afterwards. What is seen goes into the journal. It cuts out when Omar is after you,
+    /// the grandmother screams at you, you are caught or the power goes; it ends with the tape.
+    /// <paramref name="preview"/> (admin): runs its own clock from the start and changes nothing.</summary>
     public sealed class TapeScreen : UIScreen
     {
-        readonly string[] _shots;
-        readonly int _holdShot;
+        readonly MatchWorld _w;
+        readonly bool _preview;
+        readonly string _date;
+        float _t, _previewT, _shotT, _stopAt = -1f, _capH = -1f;
         int _shot = -1;
-        float _t, _shotT;
+        bool _seen;
         List<string> _lines;
         VhsFont _font;
         int _chars;
-        const float TearSeconds = 0.45f, TypeRate = 40f;
+        const float TearSeconds = 0.45f, TypeRate = 40f, StopCard = 1.6f;
+        static readonly Color Osd = new Color(0.6f, 1f, 0.62f, 1f);
 
-        public TapeScreen(string[] shots, int holdShot = -1) { _shots = shots ?? new string[0]; _holdShot = holdShot; }
+        public TapeScreen(MatchWorld w, bool preview)
+        {
+            _w = w;
+            _preview = preview;
+            string first = w != null && w.TapeShots.Length > 0 ? w.TapeShots[0].Caption : "";
+            _date = first.StartsWith("OCT") && first.Length >= 11 ? first.Substring(0, 11) : "OCT 31";
+        }
+
         public override bool ShowCursor => false;
 
         public override void OnOpen()
         {
-            AudioManager.Play2D(Snd.TapePlay, 0.8f, 1f, AudioCategory.Ui);
-            VhsEffect.TriggerGlitch(0.6f, 0.4f);
+            if (_preview) AudioManager.Play2D(Snd.TapePlay, 0.8f, 1f, AudioCategory.Ui);
+            VhsEffect.TriggerGlitch(0.4f, 0.3f);
         }
 
         public override void OnClose()
         {
             VhsEffect.StaticOverride = 0f;
-            AudioManager.Play2D(Snd.TapeStop, 0.7f, 1f, AudioCategory.Ui);
-            MatchWorld.Instance?.ShowJournalHint();
+            if (_preview) AudioManager.Play2D(Snd.TapeStop, 0.7f, 1f, AudioCategory.Ui);
+            _w?.ShowJournalHint();
         }
 
-        void Next()
+        float Elapsed => _preview ? _previewT : _w.TapeElapsed;
+        bool Playing => _preview ? _previewT < Tuning.TapeSeconds : _w.TapePlaying;
+
+        bool CutOut(out string why)
         {
-            _shot++;
-            _shotT = 0f;
-            _lines = null;
-            if (_shot >= _shots.Length) { UIManager.Instance.Remove(this); return; }
-            AudioManager.Play2D(Snd.StaticBurst, 0.35f, Random.Range(0.9f, 1.1f), AudioCategory.Ui);
-            VhsEffect.TriggerGlitch(0.35f, 0.25f);
+            why = null;
+            if (_preview) return false;
+            var st = _w.LocalStatus;
+            if (st != null && st.Life != LifeState.Free) why = "";
+            else if (_w.Chase != null && _w.Chase.IsTarget(_w.LocalId)) why = "THE TAPE CUTS OUT";
+            else if (_w.Grandma != null && _w.Grandma.Mode == GrandmaMode.Screaming && _w.Grandma.Target == _w.LocalId) why = "SHE SAW ME!";
+            else if (!_w.PowerOn) why = "THE POWER IS OUT";
+            return why != null;
         }
 
-        float TypedAt => TearSeconds + _chars / TypeRate;
-        float ShotLength => TypedAt + Mathf.Max(3f, _chars / 15f);
+        void Close(string why)
+        {
+            if (!string.IsNullOrEmpty(why)) _w.AddMessage(why, 2f);
+            UIManager.Instance.Remove(this);
+        }
 
         public override void Draw(VhsUI ui, bool input)
         {
-            // the tape cuts out when Omar comes for you
-            var w = MatchWorld.Instance;
-            var st = w != null ? w.LocalStatus : null;
-            if (w != null && ((st != null && st.Life != LifeState.Free) || (w.Chase != null && w.Chase.IsTarget(w.LocalId))))
-            {
-                w.AddMessage("THE TAPE CUTS OUT", 2f);
-                UIManager.Instance.Remove(this);
-                return;
-            }
+            if (_w == null || _w.TapeShots.Length == 0) { UIManager.Instance.Remove(this); return; }
+            if (CutOut(out string why)) { Close(why); return; }
             float dt = Time.unscaledDeltaTime;
             _t += dt;
-            _shotT += dt;
-            ui.Rect(0, 0, ui.Width, ui.Height, new Color(0.02f, 0.03f, 0.08f, 0.95f));
-            if (_shot < 0) { if (_t > 0.8f) Next(); }
-            else if (_lines != null && _shot != _holdShot && _shotT > ShotLength) Next();
-            if (_shot >= _shots.Length) return;
-            bool tear = _shot < 0 || _shotT < TearSeconds;
-            VhsEffect.StaticOverride = tear ? 0.8f : 0.08f;
-            UIStyle.Osd(ui, "PLAY ▶", UIStyle.TapeCounter());
-            int wrapW = Mathf.Min(ui.Width - 40, 380);
-            if (_shot >= 0 && _lines == null)
+            if (_preview) _previewT += dt;
+            if (!Playing && _stopAt < 0f)
             {
-                // wrap the whole caption once, so the words don't jump between lines while it types out
-                string text = _shots[_shot];
-                _font = ui.Wrap(text, wrapW, 1, ui.Font).Count * ui.LineHeight() > ui.Height * 0.6f ? ui.TinyFont : ui.Font;
-                _lines = ui.Wrap(text, wrapW, 1, _font);
+                _stopAt = _t;
+                AudioManager.Play2D(Snd.StaticBurst, 0.3f, 0.9f, AudioCategory.Ui);
+            }
+            if (_stopAt >= 0f && _t - _stopAt > StopCard) { Close(null); return; }
+
+            int shot = _stopAt >= 0f ? _shot : _w.TapeShotAt(Elapsed);
+            if (shot != _shot)
+            {
+                _shot = shot;
+                _shotT = 0f;
+                _lines = null;
+                _seen = false;
+                AudioManager.Play2D(Snd.StaticBurst, 0.3f, Random.Range(0.9f, 1.1f), AudioCategory.Ui);
+                VhsEffect.TriggerGlitch(0.3f, 0.2f);
+            }
+            _shotT += dt;
+
+            // layout: the window is as tall as the longest caption needs, so it never jumps between shots
+            float W = ui.Width, H = ui.Height;
+            float ww = Mathf.Min(W - 24f, Mathf.Max(240f, W * 0.7f)), inner = ww - 16f;
+            if (_capH < 0f)
+            {
+                _capH = 0f;
+                foreach (var s in _w.TapeShots)
+                {
+                    var f = PickFont(ui, s.Caption, inner);
+                    _capH = Mathf.Max(_capH, ui.Wrap(s.Caption, (int)inner, 1, f).Count * f.LineHeight);
+                }
+                _capH += 8f;
+            }
+            if (_lines == null && _shot >= 0)
+            {
+                string text = _w.TapeShots[_shot].Caption;
+                _font = PickFont(ui, text, inner);
+                _lines = ui.Wrap(text, (int)inner, 1, _font);
                 _chars = 0;
                 foreach (var l in _lines) _chars += l.Length;
             }
-            bool typed = _shotT >= TypedAt;
+            float ph = Mathf.Max(60f, Mathf.Min(H - 44f - _capH, inner * 0.75f)), pw = ph * 4f / 3f;
+            float wh = ph + _capH + 16f;
+            float x0 = (W - ww) * 0.5f, y0 = Mathf.Max(4f, (H - wh) * 0.5f - 6f);
+
+            UIStyle.Dim(ui, 0.45f);
+            ui.Rect(x0, y0, ww, wh, new Color(0.08f, 0.07f, 0.065f, 0.97f));
+            ui.Frame(new Rect(x0, y0, ww, wh), new Color(0.28f, 0.26f, 0.24f, 1f));
+            var pr = new Rect((W - pw) * 0.5f, y0 + 8f, pw, ph);
+            bool tear = _stopAt >= 0f || _shot < 0 || _shotT < TearSeconds;
+            string frame = !tear ? _w.TapeShots[_shot].Frame : null;
+            Texture pic = frame != null ? UITex.Get(Tex.Props + "tape_" + frame) : null;
+            if (pic == null) pic = UITex.Get(Tex.Props + "tv_static_" + ((int)(_t * 14f) % 4));
+            ui.Rect(pr, new Color(0.02f, 0.03f, 0.08f, 1f));
+            if (pic != null) ui.Image(pic, pr, Color.white);
+            VhsEffect.StaticOverride = tear ? 0.35f : 0.04f;
+
+            // the VCR's on-screen display, inside the picture
+            var tf = ui.TinyFont;
+            if (_stopAt >= 0f) ui.Text("■ STOP", pr.center.x, pr.center.y - tf.LineHeight, Osd, 2, Align.Center, tf);
+            else ui.Text("PLAY ▶", pr.x + 4f, pr.y + 3f, Osd, 1, Align.Left, tf);
+            int secs = Mathf.FloorToInt(Elapsed);
+            ui.Text(_date + "  0:" + (secs / 60).ToString("00") + ":" + (secs % 60).ToString("00"), pr.xMax - 4f, pr.yMax - tf.LineHeight - 3f, Osd, 1, Align.Right, tf);
+
+            // the caption types out under the picture
+            bool typed = _shotT >= TearSeconds + _chars / TypeRate;
             if (!tear && _lines != null)
             {
                 int left = Mathf.Clamp(Mathf.FloorToInt((_shotT - TearSeconds) * TypeRate), 0, _chars);
-                float y = ui.Height * 0.32f;
+                float y = pr.yMax + 6f;
                 foreach (var l in _lines)
                 {
                     if (left <= 0) break;
-                    ui.Text(l.Length <= left ? l : l.Substring(0, left), ui.Width * 0.5f - ui.TextWidth(l, 1, _font) * 0.5f, y, VhsUI.White, 1, Align.Left, _font);
+                    ui.Text(l.Length <= left ? l : l.Substring(0, left), W * 0.5f - ui.TextWidth(l, 1, _font) * 0.5f, y, VhsUI.White, 1, Align.Left, _font);
                     left -= l.Length;
                     y += _font.LineHeight;
                 }
             }
-            UIStyle.Footer(ui, typed && _shot == _holdShot ? "ENTER NEXT   ESC STOP   (IT IS IN THE JOURNAL)" : "ENTER NEXT   ESC STOP");
-            if (!input) return;
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E) && _t > 0.5f)
-            {
-                if (_shot >= 0 && !tear && !typed) _shotT = TypedAt;   // first press finishes the caption
-                else Next();
-            }
-            else if (Input.GetKeyDown(KeyCode.Escape)) UIManager.Instance.Remove(this);
+            // read to the end = seen (the journal gets it)
+            if (typed && !_seen && !_preview && _shot >= 0) { _seen = true; _w.SeeTapeShot(_shot); }
+            UIStyle.Footer(ui, _preview ? "ESC CLOSE (ADMIN PREVIEW)" : "ESC STOP WATCHING   (WHAT I SEE GOES INTO THE JOURNAL)");
+            if (input && Input.GetKeyDown(KeyCode.Escape)) Close(null);
         }
+
+        static VhsFont PickFont(VhsUI ui, string text, float width)
+            => ui.Wrap(text, (int)width, 1, ui.Font).Count > 4 ? ui.TinyFont : ui.Font;
     }
 
     /// <summary>(iteration 3) Everything this prisoner has read or watched tonight (notes, the tape), newest last. Clues

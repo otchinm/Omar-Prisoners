@@ -68,6 +68,17 @@ static class Program
         Console.WriteLine("iteration 3: lockable drawers " + lockable.Count + " (" + string.Join(", ", lockable.GroupBy(d => data.AreaAt(d.ItemPoint)).Select(g => g.Key + " " + g.Count())) + ")"
             + ", sockets " + data.Sockets.Count + " (" + string.Join(", ", data.Sockets.Select(k => k.Name + "@" + k.Area)) + ")"
             + ", code locks " + data.CodeLocks.Count + " (" + string.Join(", ", data.CodeLocks.Select(k => k.Name + ":" + k.Kind + "@" + k.Area)) + ")");
+        // iteration 3: prepared tape places - each must be in a walkable room (a nav node within 3.5 m on its floor), a drawer place
+        // needs a drawer item spot within 0.9 m, and every difficulty needs at least one place
+        foreach (var t in data.TapeSpots)
+        {
+            float nav = data.Nav != null && data.Nav.Nodes.Count > 0 ? data.Nav.Nodes.Where(n => n.y > t.Position.y - 2.2f && n.y < t.Position.y + 0.5f).Select(n => Vector3.Distance(new Vector3(n.x, 0, n.z), new Vector3(t.Position.x, 0, t.Position.z))).DefaultIfEmpty(99f).Min() : 99f;
+            float spot = data.ItemSpawns.Where(s => !t.Drawer || s.Small).Select(s => Vector3.Distance(s.Position, t.Position)).DefaultIfEmpty(99f).Min();
+            bool ok = nav <= 3.5f && (!t.Drawer || spot <= 0.9f);
+            Console.WriteLine("tape spot " + t.Kind + "@" + t.Area + " " + t.Position.ToString("F2") + " difficulties " + t.Difficulties + " nav " + nav.ToString("F2") + " m, item spot " + spot.ToString("F2") + " m" + (ok ? "" : "  << PROBLEM"));
+        }
+        for (int dif = 0; dif < 4; dif++)
+            if (!data.TapeSpots.Any(t => (t.Difficulties & (1 << dif)) != 0) && dif < 2) Console.WriteLine("tape spots: none for difficulty " + dif + "  << PROBLEM");
         var world = UnityEngine.Object.AllGameObjects.ToList();
         var colliders = Physics.AllColliders.ToList();
 

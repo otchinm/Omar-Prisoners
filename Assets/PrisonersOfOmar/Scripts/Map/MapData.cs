@@ -74,6 +74,8 @@ namespace PrisonersOfOmar.Map
         public readonly List<DrawerInfo> Drawers = new List<DrawerInfo>();
         /// <summary>Candidate spots for the revolver (one is used per match).</summary>
         public readonly List<ItemSpawnInfo> GunSpots = new List<ItemSpawnInfo>();
+        /// <summary>(iteration 3) Prepared places for the home video tape, each with its own little story (one is picked per match).</summary>
+        public readonly List<TapeSpotInfo> TapeSpots = new List<TapeSpotInfo>();
         /// <summary>Crouch-only crawlspaces / vents (Omar does not fit; no nav nodes inside).</summary>
         public readonly List<Bounds> CrawlSpaces = new List<Bounds>();
 
@@ -160,6 +162,22 @@ namespace PrisonersOfOmar.Map
         public ItemSpawnTier Tier = ItemSpawnTier.Any;
         /// <summary>Inside a drawer: only small items fit (no bolt cutters, cans, bottles...).</summary>
         public bool Small;
+    }
+
+    /// <summary>(iteration 3) A prepared place for the home video tape (Gameplay.ItemSpawner picks one per match).</summary>
+    public sealed class TapeSpotInfo
+    {
+        /// <summary>Story key, also picks the note that points at it: "underbed", "desk", "locker", "sofa", "shelf",
+        /// "cagetable", "crate".</summary>
+        public string Kind;
+        public string Area;
+        /// <summary>Surface point; when an item spot lies within 0.6 m the tape takes that spot instead.</summary>
+        public Vector3 Position;
+        public float Yaw;
+        /// <summary>Difficulties it may be picked on: bit (1 &lt;&lt; (int)Difficulty).</summary>
+        public int Difficulties;
+        /// <summary>Goes into the nearest (unlocked) drawer within 0.9 m of <see cref="Position"/>.</summary>
+        public bool Drawer;
     }
 
     public sealed class TrapSpotInfo

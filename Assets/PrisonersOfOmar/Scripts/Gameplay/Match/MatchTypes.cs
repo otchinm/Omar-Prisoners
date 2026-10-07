@@ -135,6 +135,7 @@ namespace PrisonersOfOmar.Gameplay
         VentHatch,     // push the kitchen ceiling grate out from inside the duct
         Socket,        // (iteration 3) id = item socket index: put the item in
         DrawerLock,    // (iteration 3) id = drawer index: unlock it (small key / lockpick) or pry it open (crowbar)
+        Vcr,           // (iteration 3) id = 0: rewind and play the tape again (prisoner), 1: stop it (Omar)
     }
 
     public enum WorldEventKind : byte
@@ -322,6 +323,17 @@ namespace PrisonersOfOmar.Gameplay
         /// <summary>A loud noise this close draws her towards it once she roams (0 = never).</summary>
         public static float GrandmaNoiseInvestigate = 10f;
         public static Difficulty CurrentDifficulty = Difficulty.Normal;
+        // ---- the home video tape (iteration 3): how long it plays, how often it can be rewound, the scream on it
+        /// <summary>Seconds one play of the tape lasts.</summary>
+        public static float TapeSeconds = 75f;
+        /// <summary>Plays per match (the first one included) before the VCR chews the tape; 0 = no limit.</summary>
+        public static int TapePlays = 3;
+        /// <summary>The scream on the tape: seconds into a play (negative = none) and the noise radius it makes.</summary>
+        public static float TapeScreamAt = 48f, TapeScreamRadius = 12f;
+        /// <summary>The grandmother keeps staring at the screen this long after the tape stops.</summary>
+        public static float TapeGrace = 4f;
+        /// <summary>How close you can get to her while she stares at the tape.</summary>
+        public static float TapeEntrancedRadius = 1.2f;
 
         /// <summary>Sets every difficulty-dependent value (identical on every peer: comes from the match settings).</summary>
         public static void ApplyDifficulty(Difficulty d)
@@ -352,6 +364,13 @@ namespace PrisonersOfOmar.Gameplay
                     GrandmaHomeChance = 0.15f; GrandmaSitMin = 12f; GrandmaSitMax = 25f; GrandmaPauseMin = 2f; GrandmaPauseMax = 5f;
                     GrandmaRollSpeed = 0.95f; GrandmaFollowSpeed = 0.55f; GrandmaNoiseInvestigate = 10f;
                     break;
+            }
+            switch (d)
+            {
+                case Difficulty.Easy: TapeSeconds = 90f; TapePlays = 0; TapeScreamAt = -1f; TapeScreamRadius = 0f; TapeGrace = 5f; TapeEntrancedRadius = 1.2f; break;
+                case Difficulty.Hard: TapeSeconds = 60f; TapePlays = 2; TapeScreamAt = 40f; TapeScreamRadius = 14f; TapeGrace = 3f; TapeEntrancedRadius = 1.2f; break;
+                case Difficulty.Nightmare: TapeSeconds = 50f; TapePlays = 1; TapeScreamAt = 30f; TapeScreamRadius = 16f; TapeGrace = 2f; TapeEntrancedRadius = 1.6f; break;
+                default: TapeSeconds = 75f; TapePlays = 3; TapeScreamAt = 48f; TapeScreamRadius = 12f; TapeGrace = 4f; TapeEntrancedRadius = 1.2f; break;
             }
             switch (d)
             {
