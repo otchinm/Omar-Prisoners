@@ -642,15 +642,32 @@ namespace PrisonersOfOmar.Characters
             Box(mb, new Vector3(-0.009f, 0, -0.043f) + tagRot * new Vector3(0f, 0f, 0.018f), tagRot, new Vector3(0.016f, 0.0012f, 0.006f), BoxUVRects.All(card));
         }
 
-        // vhstape.png 64x32: label (0,0,48,16) shell (0,16,48,16) spine label (48,0,16,16) window + reels (48,16,16,16)
-        /// <summary>(iteration 3) A VHS cassette lying flat, label up (pivot = its centre; the spine faces -Z).</summary>
+        // vhstape.png 128x64: paper label (0,0,64,28) reel window (64,0,64,18) spine (64,18,64,9) back edge (64,27,64,9)
+        //                    shell top (0,28,64,36) sides (64,36,32,8) bottom (64,44,64,20)
+        /// <summary>(iteration 3) A VHS cassette lying flat, label up (pivot = its centre; the spine faces -Z). The paper
+        /// label sits on the spine half of the top, the reel window on the back half - like a real tape.</summary>
         static void VhsTape(MeshBuilder mb)
         {
-            const float W = 64, H = 32;
+            const float W = 128, H = 64;
             mb.SetMaterial(Mat("vhstape"));
-            Rect label = R(0, 0, 48, 16, W, H), shell = R(0, 16, 48, 16, W, H), spine = R(48, 0, 16, 16, W, H), window = R(48, 16, 16, 16, W, H);
-            mb.AddBox(Vector3.zero, new Vector3(0.187f, 0.025f, 0.103f), new BoxUVRects { PosY = label, NegY = shell, NegZ = spine, PosZ = shell, PosX = shell, NegX = shell });
-            mb.AddBox(new Vector3(0f, 0.0128f, 0.012f), new Vector3(0.09f, 0.0006f, 0.03f), BoxUVRects.All(window));   // the reel window
+            Rect label = R(0, 0, 64, 28, W, H), window = R(64, 0, 64, 18, W, H), spine = R(64, 18, 64, 9, W, H), back = R(64, 27, 64, 9, W, H);
+            Rect top = R(0, 28, 64, 36, W, H), side = R(64, 36, 32, 8, W, H), bottom = R(64, 44, 64, 20, W, H);
+            const float h = 0.025f;
+            mb.AddBox(Vector3.zero, new Vector3(0.187f, h, 0.103f), new BoxUVRects { PosY = top, NegY = bottom, NegZ = spine, PosZ = back, PosX = side, NegX = side });
+            mb.AddBox(new Vector3(0f, h * 0.5f + 0.0002f, -0.025f), new Vector3(0.09f, 0.0004f, 0.04f), BoxUVRects.All(label));
+            mb.AddBox(new Vector3(0f, h * 0.5f + 0.0002f, 0.024f), new Vector3(0.096f, 0.0004f, 0.026f), BoxUVRects.All(window));
+            // the hinged dust flap along the back edge
+            mb.AddBox(new Vector3(0f, -0.001f, 0.0525f), new Vector3(0.183f, 0.02f, 0.003f), BoxUVRects.All(back));
+        }
+
+        /// <summary>Inventory preview pitch: flat things are shown from higher up so their top (label, tag) reads.</summary>
+        public static float PreviewPitch(ItemType type)
+        {
+            switch (type)
+            {
+                case ItemType.VhsTape: case ItemType.SmallKey: case ItemType.CarKeys: case ItemType.CageKey: case ItemType.Lockpick: return 55f;
+                default: return 20f;
+            }
         }
 
         // padlock.png 64x32: brass (0,0,16,16) steel (16,0,16,16) keyhole face (0,16,16,16) enamel face (16,16,16,16)

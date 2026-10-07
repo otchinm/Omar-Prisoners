@@ -68,7 +68,7 @@ namespace PrisonersOfOmar.UI
                 }
             }
             _yaw += Time.unscaledDeltaTime * 50f;
-            if (_model != null) { try { PreviewRenderer.Render(_model.transform, _rt, _yaw, 20f, 1f); } catch { } }
+            if (_model != null) { try { PreviewRenderer.Render(_model.transform, _rt, _yaw, ItemMeshFactory.PreviewPitch(_modelType), 1f); } catch { } }
 
             float textX = Mathf.Max(16, ui.Width * 0.5f - 200);
             float y = 62;

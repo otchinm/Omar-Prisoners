@@ -781,26 +781,66 @@ def padlock():
 
 
 def vhstape():
-    """vhstape.png 64x32 (iteration 3): label (0,0,48,16) with 'MAMA 10/31' in marker, black shell (0,16,48,16),
-    spine label (48,0,16,16), reel window (48,16,16,16)."""
-    c = Canvas(64, 32, 34)
+    """vhstape.png 128x64 (iteration 3, home video tape): paper label (0,0,64,28) with 'MAMA' / '10/31' in marker, reel
+    window (64,0,64,18), spine (64,18,64,9) with a marker strip and the record tab broken out, back edge / dust flap
+    (64,27,64,9), black ribbed shell top with 'T-120' (0,28,64,36), sides (64,36,32,8), bottom with the two hubs (64,44,64,20)."""
+    c = Canvas(128, 64, 34)
     r = c.rng
-    shell = plastic(16 * S, 48 * S, "#18181a", r, dirt=0.35)
-    c.put(0, 16, shell)
-    lab = plastic(16 * S, 48 * S, "#18181a", r, dirt=0.3)
-    paper_lab = paper(12 * S, 40 * S, "#e0dccb", r, dirt=0.5)
-    paper_lab = mix(paper_lab, rgb("#1a1a40"), text_mask(12 * S, 40 * S, "MAMA 10/31", 20 * S, 6 * S, int(7 * S), stroke=1, stretch_x=0.8) * 0.9)
-    lab[2 * S:14 * S, 4 * S:44 * S] = paper_lab
+    ink = rgb("#1a1a40")
+
+    def shell(h, w, dirt=0.3):
+        return plastic(h, w, "#1c1c20", r, dirt=dirt)
+
+    # the label: yellowed paper, scotch-tape stained corners, MAMA big and tilted, the date smaller, an old title crossed out
+    lab = paper(28 * S, 64 * S, "#d8d2bc", r, dirt=0.5)
+    for (x, y) in ((3, 3), (61, 3), (3, 25), (61, 25)):
+        lab = mix(lab, rgb("#b89a5a"), soft_ellipse(28 * S, 64 * S, x * S, y * S, 5 * S, 3 * S, soft=4) * 0.5)
+    from PIL import Image
+    big = text_mask(28 * S, 64 * S, "MAMA", 30 * S, 10 * S, int(11 * S), stroke=1, stretch_x=0.9)
+    big = np.asarray(Image.fromarray((big * 255).astype(np.uint8)).rotate(4, resample=Image.BILINEAR, center=(30 * S, 10 * S)), np.float32) / 255.0
+    lab = mix(lab, ink, big * 0.9)
+    lab = mix(lab, ink, text_mask(28 * S, 64 * S, "10/31", 40 * S, 19.5 * S, int(6 * S), stroke=1) * 0.85)
+    old = text_mask(28 * S, 64 * S, "XMAS '85", 17 * S, 24.5 * S, int(4 * S), stroke=0)
+    lab = mix(lab, rgb("#6a6a6a"), old * 0.55)
+    lab = mix(lab, rgb("#5a5a5a"), draw_mask(28 * S, 64 * S, lambda d: d.line([5 * S, 24.6 * S, 30 * S, 24.0 * S], fill=255, width=S // 2 + 1)) * 0.6)
     c.put(0, 0, lab)
-    sp = plastic(16 * S, 16 * S, "#18181a", r, dirt=0.3)
-    sp[5 * S:11 * S, 1 * S:15 * S] = mix(paper(6 * S, 14 * S, "#e0dccb", r, dirt=0.6), rgb("#802018"),
-                                         text_mask(6 * S, 14 * S, "PLAY", 7 * S, 3 * S, int(4 * S), stroke=1) * 0.8)
-    c.put(48, 0, sp)
-    win = fill(16 * S, 16 * S, rgb("#0c0c10"))
-    for cx in (4.5, 11.5):
-        win = mix(win, rgb("#3a3028"), soft_ellipse(16 * S, 16 * S, cx * S, 8 * S, 3.2 * S, 3.2 * S))
-        win = mix(win, rgb("#d8d4c8"), soft_ellipse(16 * S, 16 * S, cx * S, 8 * S, 1.1 * S, 1.1 * S))
-    c.put(48, 16, win)
+
+    # the window: dark smoked plastic, white hubs with notches, wound tape of different sizes, a diagonal glint
+    win = fill(18 * S, 64 * S, rgb("#0a0a0e"))
+    for cx, rr in ((17, 8.0), (47, 5.0)):
+        win = mix(win, rgb("#4a3a2e"), soft_ellipse(18 * S, 64 * S, cx * S, 9 * S, rr * S, rr * S))
+        win = mix(win, rgb("#d8d4c8"), soft_ellipse(18 * S, 64 * S, cx * S, 9 * S, 3 * S, 3 * S))
+        for k in range(3):
+            a = k * 2.094
+            win = mix(win, rgb("#2a2a2a"), soft_ellipse(18 * S, 64 * S, (cx + np.cos(a) * 2.1) * S, (9 + np.sin(a) * 2.1) * S, 0.7 * S, 0.7 * S))
+    yy, xx = np.mgrid[0:18 * S, 0:64 * S] / float(S)
+    glint = smoothstep(1.6, 0.0, np.abs((xx - 6) - (18 - yy) * 1.4 - 26))
+    win = mix(win, rgb("#8a8a96"), glint * 0.35)
+    win[:S], win[-S:] = rgb("#26262c"), rgb("#26262c")
+    c.put(64, 0, win)
+
+    sp = shell(9 * S, 64 * S)
+    sp[1 * S:8 * S, 10 * S:58 * S] = mix(paper(7 * S, 48 * S, "#e0dccb", r, dirt=0.6), ink,
+                                       text_mask(7 * S, 48 * S, "MAMA 10/31", 24 * S, 3.6 * S, int(5 * S), stroke=1, stretch_x=0.9) * 0.85)
+    sp[0:3 * S, 2 * S:6 * S] = rgb("#040406")      # the record tab broken out: this tape must not be taped over
+    c.put(64, 18, sp)
+    bk = shell(9 * S, 64 * S, 0.4)
+    bk = shade(bk, 0.85 + 0.25 * (np.mgrid[0:9 * S, 0:64 * S][0] < 2 * S))
+    c.put(64, 27, bk)
+
+    tp = shell(36 * S, 64 * S)
+    ty = np.mgrid[0:36 * S, 0:64 * S][0]
+    tp = shade(tp, 1 - 0.12 * (((ty // S) % 6) == 0))                                   # moulded ribs
+    tp = mix(tp, rgb("#8a8a90"), text_mask(36 * S, 64 * S, "T-120", 54 * S, 32 * S, int(4 * S), stroke=0) * 0.6)
+    c.put(0, 28, tp)
+    sd = shell(8 * S, 32 * S)
+    sx = np.mgrid[0:8 * S, 0:32 * S][1]
+    c.put(64, 36, shade(sd, 0.85 + 0.25 * (((sx // S) % 2) == 0)))
+    bt = shell(20 * S, 64 * S, 0.45)
+    for cx in (17, 47):
+        bt = mix(bt, rgb("#060608"), soft_ellipse(20 * S, 64 * S, cx * S, 10 * S, 6 * S, 3.4 * S))
+        bt = mix(bt, rgb("#3a3a40"), soft_ellipse(20 * S, 64 * S, cx * S, 10 * S, 2.2 * S, 1.3 * S))
+    c.put(64, 44, bt)
     return c.done()
 
 
